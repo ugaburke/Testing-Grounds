@@ -83,8 +83,7 @@ class ResourceSystem {
                 tile.terrain = .grass
                 if let node = tile.node {
                     node.removeAllChildren()
-                    node.fillColor = TerrainType.grass.color
-                    node.strokeColor = TerrainType.grass.color.withAlphaComponent(0.7)
+                    node.color = TerrainType.grass.color
                 }
             }
         }

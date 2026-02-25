@@ -202,10 +202,7 @@ class GameMap {
             for x in minX...maxX {
                 let tile = tiles[y][x]
                 if tile.node == nil {
-                    let tileNode = SKShapeNode(rectOf: CGSize(width: tileSize, height: tileSize))
-                    tileNode.fillColor = tile.terrain.color
-                    tileNode.strokeColor = SKColor.clear
-                    tileNode.lineWidth = 0.0
+                    let tileNode = SKSpriteNode(color: tile.terrain.color, size: CGSize(width: tileSize, height: tileSize))
                     tileNode.position = gridToWorld(GridPosition(x: x, y: y))
                     tileNode.zPosition = 0
 

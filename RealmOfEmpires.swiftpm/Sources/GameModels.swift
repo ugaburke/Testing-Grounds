@@ -217,7 +217,7 @@ class MapTile {
     var building: Building?
     var isExplored: Bool = false
     var isVisible: Bool = false
-    var node: SKShapeNode?
+    var node: SKSpriteNode?
 
     init(terrain: TerrainType, position: GridPosition) {
         self.terrain = terrain

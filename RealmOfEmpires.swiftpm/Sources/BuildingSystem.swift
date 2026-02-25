@@ -70,8 +70,7 @@ class BuildingSystem {
                         map.tiles[tilePos.y][tilePos.x].resourceRemaining = TerrainType.farm.resourceAmount
                         if let node = map.tiles[tilePos.y][tilePos.x].node {
                             node.removeAllChildren()
-                            node.fillColor = TerrainType.farm.color
-                            node.strokeColor = TerrainType.farm.color.withAlphaComponent(0.7)
+                            node.color = TerrainType.farm.color
                         }
                     }
                 }
@@ -199,8 +198,7 @@ class BuildingSystem {
                     if building.type == .farm {
                         map.tiles[tilePos.y][tilePos.x].terrain = .grass
                         if let node = map.tiles[tilePos.y][tilePos.x].node {
-                            node.fillColor = TerrainType.grass.color
-                            node.strokeColor = TerrainType.grass.color.withAlphaComponent(0.7)
+                            node.color = TerrainType.grass.color
                         }
                     }
                 }

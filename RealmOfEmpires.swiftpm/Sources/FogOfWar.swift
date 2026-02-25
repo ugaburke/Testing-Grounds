@@ -4,7 +4,7 @@ import SpriteKit
 class FogOfWar {
     let map: GameMap
     let sightRange: Int = 8
-    var fogNodes: [[SKShapeNode?]]
+    var fogNodes: [[SKSpriteNode?]]
     private var previouslyVisible: Set<Int> = Set<Int>()
 
     init(map: GameMap) {
@@ -75,9 +75,8 @@ class FogOfWar {
                 } else if tile.isExplored {
                     tile.node?.alpha = 0.5
                     if fogNodes[y][x] == nil {
-                        let fogNode = SKShapeNode(rectOf: CGSize(width: map.tileSize, height: map.tileSize))
-                        fogNode.fillColor = SKColor.black.withAlphaComponent(0.4)
-                        fogNode.strokeColor = SKColor.clear
+                        let fogNode = SKSpriteNode(color: SKColor.black.withAlphaComponent(0.4),
+                                                    size: CGSize(width: map.tileSize, height: map.tileSize))
                         fogNode.position = map.gridToWorld(GridPosition(x: x, y: y))
                         fogNode.zPosition = 50
                         map.mapNode.addChild(fogNode)
@@ -86,9 +85,8 @@ class FogOfWar {
                 } else {
                     tile.node?.alpha = 0.0
                     if fogNodes[y][x] == nil {
-                        let fogNode = SKShapeNode(rectOf: CGSize(width: map.tileSize, height: map.tileSize))
-                        fogNode.fillColor = SKColor.black.withAlphaComponent(0.85)
-                        fogNode.strokeColor = SKColor.clear
+                        let fogNode = SKSpriteNode(color: SKColor.black.withAlphaComponent(0.85),
+                                                    size: CGSize(width: map.tileSize, height: map.tileSize))
                         fogNode.position = map.gridToWorld(GridPosition(x: x, y: y))
                         fogNode.zPosition = 50
                         map.mapNode.addChild(fogNode)
