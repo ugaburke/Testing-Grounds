@@ -15,7 +15,7 @@ let package = Package(
             teamIdentifier: "",
             displayVersion: "1.0",
             bundleVersion: "1",
-            appIcon: .placeholder(icon: .castle),
+            appIcon: .placeholder(icon: .gamecontroller),
             accentColor: .presetColor(.brown),
             supportedDeviceFamilies: [.pad, .phone],
             supportedInterfaceOrientations: [
