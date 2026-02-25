@@ -7,8 +7,9 @@ class GameMap {
     let tileSize: CGFloat
     var tiles: [[MapTile]]
     let mapNode: SKNode
+    private var activeTilePositions: Set<Int> = Set<Int>()
 
-    init(width: Int = 80, height: Int = 80, tileSize: CGFloat = 32) {
+    init(width: Int = 50, height: Int = 50, tileSize: CGFloat = 32) {
         self.width = width
         self.height = height
         self.tileSize = tileSize
@@ -183,11 +184,6 @@ class GameMap {
         }
     }
 
-    // Track which tiles have active nodes for efficient cleanup
-    private var activeTilePositions: Set<Int> = []
-
-    private func tileKey(_ x: Int, _ y: Int) -> Int { y * width + x }
-
     // MARK: - Rendering
 
     func renderVisibleTiles(cameraPosition: CGPoint, viewSize: CGSize) {
@@ -206,16 +202,16 @@ class GameMap {
             for x in minX...maxX {
                 let tile = tiles[y][x]
                 if tile.node == nil {
-                    let node = SKShapeNode(rectOf: CGSize(width: tileSize, height: tileSize))
-                    node.fillColor = tile.terrain.color
-                    node.strokeColor = .clear
-                    node.lineWidth = 0
-                    node.position = gridToWorld(GridPosition(x: x, y: y))
-                    node.zPosition = 0
+                    let tileNode = SKShapeNode(rectOf: CGSize(width: tileSize, height: tileSize))
+                    tileNode.fillColor = tile.terrain.color
+                    tileNode.strokeColor = SKColor.clear
+                    tileNode.lineWidth = CGFloat(0)
+                    tileNode.position = gridToWorld(GridPosition(x: x, y: y))
+                    tileNode.zPosition = 0
 
-                    mapNode.addChild(node)
-                    tile.node = node
-                    activeTilePositions.insert(tileKey(x, y))
+                    mapNode.addChild(tileNode)
+                    tile.node = tileNode
+                    activeTilePositions.insert(y * width + x)
                 }
             }
         }
@@ -230,11 +226,11 @@ class GameMap {
 
         var toRemove: [Int] = []
         for key in activeTilePositions {
-            let y = key / width
-            let x = key % width
-            if abs(x - centerTileX) > tilesX || abs(y - centerTileY) > tilesY {
-                tiles[y][x].node?.removeFromParent()
-                tiles[y][x].node = nil
+            let ty = key / width
+            let tx = key % width
+            if abs(tx - centerTileX) > tilesX || abs(ty - centerTileY) > tilesY {
+                tiles[ty][tx].node?.removeFromParent()
+                tiles[ty][tx].node = nil
                 toRemove.append(key)
             }
         }

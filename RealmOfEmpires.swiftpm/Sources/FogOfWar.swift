@@ -5,7 +5,7 @@ class FogOfWar {
     let map: GameMap
     let sightRange: Int = 8
     var fogNodes: [[SKShapeNode?]]
-    private var previouslyVisible: Set<Int> = []
+    private var previouslyVisible: Set<Int> = Set<Int>()
 
     init(map: GameMap) {
         self.map = map
@@ -77,7 +77,7 @@ class FogOfWar {
                     if fogNodes[y][x] == nil {
                         let fogNode = SKShapeNode(rectOf: CGSize(width: map.tileSize, height: map.tileSize))
                         fogNode.fillColor = SKColor.black.withAlphaComponent(0.4)
-                        fogNode.strokeColor = .clear
+                        fogNode.strokeColor = SKColor.clear
                         fogNode.position = map.gridToWorld(GridPosition(x: x, y: y))
                         fogNode.zPosition = 50
                         map.mapNode.addChild(fogNode)
@@ -88,7 +88,7 @@ class FogOfWar {
                     if fogNodes[y][x] == nil {
                         let fogNode = SKShapeNode(rectOf: CGSize(width: map.tileSize, height: map.tileSize))
                         fogNode.fillColor = SKColor.black.withAlphaComponent(0.85)
-                        fogNode.strokeColor = .clear
+                        fogNode.strokeColor = SKColor.clear
                         fogNode.position = map.gridToWorld(GridPosition(x: x, y: y))
                         fogNode.zPosition = 50
                         map.mapNode.addChild(fogNode)
