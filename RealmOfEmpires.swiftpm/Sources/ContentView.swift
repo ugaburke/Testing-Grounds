@@ -220,7 +220,7 @@ struct GameContainerView: View {
         GeometryReader { geometry in
             ZStack {
                 if let scene = scene {
-                    SpriteView(scene: scene, preferredFramesPerSecond: 60)
+                    SpriteView(scene: scene, preferredFramesPerSecond: 30)
                         .ignoresSafeArea()
                 } else {
                     Color.black

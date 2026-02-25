@@ -360,12 +360,12 @@ class HUDOverlay {
         let scaleX = (minimapSize - 10) / CGFloat(map.width)
         let scaleY = (minimapSize - 10) / CGFloat(map.height)
 
-        // Draw terrain features (sparse)
-        let step = max(1, map.width / 30)
+        // Draw terrain features (very sparse to reduce node count)
+        let step = max(2, map.width / 15)
         for y in stride(from: 0, to: map.height, by: step) {
             for x in stride(from: 0, to: map.width, by: step) {
                 let tile = map.tiles[y][x]
-                if tile.terrain != .grass && tile.terrain != .sand {
+                if tile.terrain == .water || tile.terrain == .deepWater || tile.terrain == .forest {
                     let dot = SKShapeNode(rectOf: CGSize(width: max(2, scaleX * CGFloat(step)),
                                                           height: max(2, scaleY * CGFloat(step))))
                     dot.fillColor = tile.terrain.color.withAlphaComponent(0.6)
@@ -379,11 +379,11 @@ class HUDOverlay {
             }
         }
 
-        // Draw buildings
+        // Draw buildings and units
         for player in players {
             let color = SpriteFactory.playerColors[player.id % SpriteFactory.playerColors.count]
             for building in player.buildings {
-                let dot = SKShapeNode(rectOf: CGSize(width: isCompact ? 3 : 4, height: isCompact ? 3 : 4))
+                let dot = SKShapeNode(rectOf: CGSize(width: 3, height: 3))
                 dot.fillColor = color
                 dot.strokeColor = .clear
                 dot.position = CGPoint(
@@ -393,9 +393,8 @@ class HUDOverlay {
                 minimapDots.addChild(dot)
             }
 
-            // Draw units
             for unit in player.units {
-                let dot = SKShapeNode(circleOfRadius: isCompact ? 1.0 : 1.5)
+                let dot = SKShapeNode(circleOfRadius: 1.0)
                 dot.fillColor = color
                 dot.strokeColor = .clear
                 dot.position = CGPoint(

@@ -46,13 +46,13 @@ class GameMap {
     }
 
     private func generateWater(_ rng: inout SeededRNG) {
-        // Create 2-3 lakes
-        let lakeCount = Int.random(in: 2...3, using: &rng)
+        // Create 1-2 lakes
+        let lakeCount = Int.random(in: 1...2, using: &rng)
         for _ in 0..<lakeCount {
-            let cx = Int.random(in: 15..<(width - 15), using: &rng)
-            let cy = Int.random(in: 15..<(height - 15), using: &rng)
-            let radiusX = Int.random(in: 4...8, using: &rng)
-            let radiusY = Int.random(in: 3...6, using: &rng)
+            let cx = Int.random(in: 12..<(width - 12), using: &rng)
+            let cy = Int.random(in: 12..<(height - 12), using: &rng)
+            let radiusX = Int.random(in: 3...6, using: &rng)
+            let radiusY = Int.random(in: 2...5, using: &rng)
 
             for y in max(0, cy - radiusY)...min(height - 1, cy + radiusY) {
                 for x in max(0, cx - radiusX)...min(width - 1, cx + radiusX) {
@@ -84,7 +84,7 @@ class GameMap {
     }
 
     private func generateForests(_ rng: inout SeededRNG) {
-        let clumpCount = Int.random(in: 8...15, using: &rng)
+        let clumpCount = Int.random(in: 5...10, using: &rng)
         for _ in 0..<clumpCount {
             let cx = Int.random(in: 5..<(width - 5), using: &rng)
             let cy = Int.random(in: 5..<(height - 5), using: &rng)
@@ -106,7 +106,7 @@ class GameMap {
 
     private func generateResources(_ rng: inout SeededRNG) {
         // Gold deposits
-        let goldCount = Int.random(in: 5...8, using: &rng)
+        let goldCount = Int.random(in: 3...5, using: &rng)
         for _ in 0..<goldCount {
             let cx = Int.random(in: 5..<(width - 5), using: &rng)
             let cy = Int.random(in: 5..<(height - 5), using: &rng)
@@ -126,7 +126,7 @@ class GameMap {
         }
 
         // Stone deposits
-        let stoneCount = Int.random(in: 4...7, using: &rng)
+        let stoneCount = Int.random(in: 3...5, using: &rng)
         for _ in 0..<stoneCount {
             let cx = Int.random(in: 5..<(width - 5), using: &rng)
             let cy = Int.random(in: 5..<(height - 5), using: &rng)
@@ -146,7 +146,7 @@ class GameMap {
         }
 
         // Berry bushes
-        let berryCount = Int.random(in: 4...6, using: &rng)
+        let berryCount = Int.random(in: 3...4, using: &rng)
         for _ in 0..<berryCount {
             let cx = Int.random(in: 5..<(width - 5), using: &rng)
             let cy = Int.random(in: 5..<(height - 5), using: &rng)
@@ -183,6 +183,11 @@ class GameMap {
         }
     }
 
+    // Track which tiles have active nodes for efficient cleanup
+    private var activeTilePositions: Set<Int> = []
+
+    private func tileKey(_ x: Int, _ y: Int) -> Int { y * width + x }
+
     // MARK: - Rendering
 
     func renderVisibleTiles(cameraPosition: CGPoint, viewSize: CGSize) {
@@ -203,37 +208,14 @@ class GameMap {
                 if tile.node == nil {
                     let node = SKShapeNode(rectOf: CGSize(width: tileSize, height: tileSize))
                     node.fillColor = tile.terrain.color
-                    node.strokeColor = tile.terrain.color.withAlphaComponent(0.7)
-                    node.lineWidth = 0.5
+                    node.strokeColor = .clear
+                    node.lineWidth = 0
                     node.position = gridToWorld(GridPosition(x: x, y: y))
                     node.zPosition = 0
 
-                    // Add detail for resources
-                    if tile.terrain == .forest {
-                        let tree = SKShapeNode(circleOfRadius: tileSize * 0.3)
-                        tree.fillColor = SKColor(red: 0.1, green: 0.35, blue: 0.08, alpha: 1.0)
-                        tree.strokeColor = .clear
-                        tree.position = CGPoint(x: 0, y: tileSize * 0.1)
-                        node.addChild(tree)
-                    } else if tile.terrain == .gold {
-                        let nugget = SKShapeNode(rectOf: CGSize(width: tileSize * 0.4, height: tileSize * 0.3))
-                        nugget.fillColor = SKColor(red: 0.9, green: 0.8, blue: 0.1, alpha: 1.0)
-                        nugget.strokeColor = .clear
-                        node.addChild(nugget)
-                    } else if tile.terrain == .stone {
-                        let rock = SKShapeNode(circleOfRadius: tileSize * 0.25)
-                        rock.fillColor = SKColor(red: 0.65, green: 0.65, blue: 0.65, alpha: 1.0)
-                        rock.strokeColor = .clear
-                        node.addChild(rock)
-                    } else if tile.terrain == .berryBush {
-                        let bush = SKShapeNode(circleOfRadius: tileSize * 0.25)
-                        bush.fillColor = SKColor(red: 0.6, green: 0.15, blue: 0.3, alpha: 1.0)
-                        bush.strokeColor = .clear
-                        node.addChild(bush)
-                    }
-
                     mapNode.addChild(node)
                     tile.node = node
+                    activeTilePositions.insert(tileKey(x, y))
                 }
             }
         }
@@ -246,15 +228,18 @@ class GameMap {
         let centerTileX = Int(cameraPosition.x / tileSize)
         let centerTileY = Int(cameraPosition.y / tileSize)
 
-        for y in 0..<height {
-            for x in 0..<width {
-                if abs(x - centerTileX) > tilesX || abs(y - centerTileY) > tilesY {
-                    if let node = tiles[y][x].node {
-                        node.removeFromParent()
-                        tiles[y][x].node = nil
-                    }
-                }
+        var toRemove: [Int] = []
+        for key in activeTilePositions {
+            let y = key / width
+            let x = key % width
+            if abs(x - centerTileX) > tilesX || abs(y - centerTileY) > tilesY {
+                tiles[y][x].node?.removeFromParent()
+                tiles[y][x].node = nil
+                toRemove.append(key)
             }
+        }
+        for key in toRemove {
+            activeTilePositions.remove(key)
         }
     }
 

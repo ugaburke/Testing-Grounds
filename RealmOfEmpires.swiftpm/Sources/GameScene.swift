@@ -59,6 +59,9 @@ class GameScene: SKScene {
     // Tile rendering timer
     var tileRenderTimer: CGFloat = 0
     var minimapTimer: CGFloat = 0
+    var fogTimer: CGFloat = 0
+    var spriteUpdateTimer: CGFloat = 0
+    var isReady = false
 
     // MARK: - Scene Lifecycle
 
@@ -79,6 +82,7 @@ class GameScene: SKScene {
 
         // Initial render
         renderTiles()
+        isReady = true
     }
 
     private func setupGameWorld() {
@@ -86,7 +90,7 @@ class GameScene: SKScene {
         gameWorld.name = "gameWorld"
         addChild(gameWorld)
 
-        gameMap = GameMap(width: 80, height: 80, tileSize: 32)
+        gameMap = GameMap(width: 50, height: 50, tileSize: 32)
         gameWorld.addChild(gameMap.mapNode)
 
         pathfinder = Pathfinder(map: gameMap)
@@ -110,8 +114,8 @@ class GameScene: SKScene {
         aiOpponents.append(ai)
 
         // Place starting positions
-        let p1Start = GridPosition(x: 12, y: 12)
-        let p2Start = GridPosition(x: gameMap.width - 15, y: gameMap.height - 15)
+        let p1Start = GridPosition(x: 10, y: 10)
+        let p2Start = GridPosition(x: gameMap.width - 12, y: gameMap.height - 12)
 
         gameMap.clearStartingArea(center: p1Start, radius: 8)
         gameMap.clearStartingArea(center: p2Start, radius: 8)
@@ -202,7 +206,7 @@ class GameScene: SKScene {
     // MARK: - Update Loop
 
     override func update(_ currentTime: TimeInterval) {
-        guard gameState == .playing else { return }
+        guard isReady, gameState == .playing else { return }
 
         let deltaTime: CGFloat
         if lastUpdateTime == 0 {
@@ -247,15 +251,23 @@ class GameScene: SKScene {
             }
         }
 
-        // Fog of war
-        fogOfWar.update(player: humanPlayer)
+        // Fog of war (throttled to ~4x per second instead of 60x)
+        fogTimer += deltaTime
+        if fogTimer >= 0.25 {
+            fogTimer = 0
+            fogOfWar.update(player: humanPlayer)
+        }
 
-        // Update sprite visuals
-        updateSpriteVisuals()
+        // Update sprite visuals (throttled to ~5x per second)
+        spriteUpdateTimer += deltaTime
+        if spriteUpdateTimer >= 0.2 {
+            spriteUpdateTimer = 0
+            updateSpriteVisuals()
+        }
 
         // Tile rendering (throttled)
         tileRenderTimer += deltaTime
-        if tileRenderTimer >= 0.5 {
+        if tileRenderTimer >= 0.75 {
             tileRenderTimer = 0
             renderTiles()
             fogOfWar.updateVisuals(cameraPosition: cameraPosition, viewSize: size)
@@ -263,7 +275,7 @@ class GameScene: SKScene {
 
         // Minimap (throttled)
         minimapTimer += deltaTime
-        if minimapTimer >= 1.0 {
+        if minimapTimer >= 2.0 {
             minimapTimer = 0
             hud.updateMinimap(players: players, map: gameMap,
                               cameraPos: cameraPosition, viewSize: size)
