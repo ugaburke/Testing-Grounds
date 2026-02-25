@@ -61,8 +61,9 @@ class ResourceSystem {
             return
         }
 
-        // Gather resources
-        let gatherSpeed = gatherRate * player.civilization.gatherSpeedBonus
+        // Gather resources (apply farm bonus for Franks)
+        let farmBonus: CGFloat = (tile.terrain == .farm) ? player.civilization.farmBonus : 1.0
+        let gatherSpeed = gatherRate * player.civilization.gatherSpeedBonus * farmBonus
         let amountToGather = Int(gatherSpeed * deltaTime * 10)
 
         if amountToGather > 0 {
@@ -141,6 +142,9 @@ class ResourceSystem {
 
         let dist = unit.gridPosition.distance(to: building.gridPosition)
         if dist > 2.5 {
+            if unit.path.isEmpty {
+                unit.path = gameScene?.pathfinder.findPath(from: unit.gridPosition, to: building.gridPosition) ?? []
+            }
             return
         }
 

@@ -6,6 +6,7 @@ class FogOfWar {
     let sightRange: Int = 8
     var fogNodes: [[SKSpriteNode?]]
     private var previouslyVisible: Set<Int> = Set<Int>()
+    private var activeFogPositions: Set<Int> = Set<Int>()
 
     init(map: GameMap) {
         self.map = map
@@ -67,10 +68,14 @@ class FogOfWar {
         for y in minY...maxY {
             for x in minX...maxX {
                 let tile = map.tiles[y][x]
+                let key = y * map.width + x
 
                 if tile.isVisible {
-                    fogNodes[y][x]?.removeFromParent()
-                    fogNodes[y][x] = nil
+                    if fogNodes[y][x] != nil {
+                        fogNodes[y][x]?.removeFromParent()
+                        fogNodes[y][x] = nil
+                        activeFogPositions.remove(key)
+                    }
                     tile.node?.alpha = 1.0
                 } else if tile.isExplored {
                     tile.node?.alpha = 0.5
@@ -81,6 +86,7 @@ class FogOfWar {
                         fogNode.zPosition = 50
                         map.mapNode.addChild(fogNode)
                         fogNodes[y][x] = fogNode
+                        activeFogPositions.insert(key)
                     }
                 } else {
                     tile.node?.alpha = 0.0
@@ -91,6 +97,7 @@ class FogOfWar {
                         fogNode.zPosition = 50
                         map.mapNode.addChild(fogNode)
                         fogNodes[y][x] = fogNode
+                        activeFogPositions.insert(key)
                     }
                 }
             }
@@ -104,21 +111,18 @@ class FogOfWar {
         let centerTileX = Int(cameraPosition.x / map.tileSize)
         let centerTileY = Int(cameraPosition.y / map.tileSize)
 
-        let minX = max(0, centerTileX - tilesX)
-        let maxX = min(map.width - 1, centerTileX + tilesX)
-        let minY = max(0, centerTileY - tilesY)
-        let maxY = min(map.height - 1, centerTileY + tilesY)
-
-        // Only iterate the border region, not the entire map
-        for y in 0..<map.height {
-            for x in 0..<map.width {
-                if x < minX || x > maxX || y < minY || y > maxY {
-                    if let node = fogNodes[y][x] {
-                        node.removeFromParent()
-                        fogNodes[y][x] = nil
-                    }
-                }
+        var toRemove: [Int] = []
+        for key in activeFogPositions {
+            let ty = key / map.width
+            let tx = key % map.width
+            if abs(tx - centerTileX) > tilesX || abs(ty - centerTileY) > tilesY {
+                fogNodes[ty][tx]?.removeFromParent()
+                fogNodes[ty][tx] = nil
+                toRemove.append(key)
             }
+        }
+        for key in toRemove {
+            activeFogPositions.remove(key)
         }
     }
 }

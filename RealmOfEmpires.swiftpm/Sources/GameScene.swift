@@ -136,7 +136,9 @@ class GameScene: SKScene {
             tc.isConstructed = true
             tc.hp = tc.maxHP
             tc.constructionProgress = 1.0
-            gameWorld.addChild(tc.node!)
+            if let node = tc.node {
+                gameWorld.addChild(node)
+            }
             spriteFactory.updateBuildingNode(tc)
         }
 
@@ -350,19 +352,20 @@ class GameScene: SKScene {
     }
 
     private func checkGameEnd() {
-        // Check if human player lost all buildings
-        if humanPlayer.buildings.isEmpty && humanPlayer.units.isEmpty {
-            gameState = .defeat
-            hud.showGameOver(victory: false)
-        }
-
-        // Check if all AI players are eliminated
+        // Check if all AI players are eliminated (victory takes priority)
         let aiEliminated = players.filter { !$0.isHuman }.allSatisfy {
             $0.buildings.isEmpty && $0.units.isEmpty
         }
         if aiEliminated && players.count > 1 {
             gameState = .victory
             hud.showGameOver(victory: true)
+            return
+        }
+
+        // Check if human player lost all buildings and units
+        if humanPlayer.buildings.isEmpty && humanPlayer.units.isEmpty {
+            gameState = .defeat
+            hud.showGameOver(victory: false)
         }
     }
 
@@ -666,7 +669,9 @@ class GameScene: SKScene {
         if let building = buildingSystem.placeBuilding(type: type, at: gridPos,
                                                          player: humanPlayer, map: gameMap,
                                                          spriteFactory: spriteFactory) {
-            gameWorld.addChild(building.node!)
+            if let node = building.node {
+                gameWorld.addChild(node)
+            }
             hud.showStatus("Building \(type.displayName)")
 
             // Auto-assign nearby idle villagers to build

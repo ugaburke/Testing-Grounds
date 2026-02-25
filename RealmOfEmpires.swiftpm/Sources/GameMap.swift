@@ -244,7 +244,7 @@ class GameMap {
     }
 
     func worldToGrid(_ point: CGPoint) -> GridPosition {
-        GridPosition(x: Int(point.x / tileSize), y: Int(point.y / tileSize))
+        GridPosition(x: Int(floor(point.x / tileSize)), y: Int(floor(point.y / tileSize)))
     }
 
     func isValid(_ pos: GridPosition) -> Bool {

@@ -726,8 +726,12 @@ class Unit {
     var node: SKNode?
     var isSelected: Bool = false
     var lastAttackTime: TimeInterval = 0
+    var rangeBonus: CGFloat = 1.0
+    var defenseBonus: CGFloat = 1.0
 
-    init(type: UnitType, ownerID: Int, position: GridPosition, hpBonus: CGFloat = 1.0, speedBonus: CGFloat = 1.0) {
+    init(type: UnitType, ownerID: Int, position: GridPosition,
+         hpBonus: CGFloat = 1.0, speedBonus: CGFloat = 1.0,
+         rangeBonus: CGFloat = 1.0, defenseBonus: CGFloat = 1.0) {
         self.id = Unit.nextID
         Unit.nextID += 1
         self.type = type
@@ -736,6 +740,8 @@ class Unit {
         self.position = CGPoint(x: 0, y: 0)
         self.maxHP = Int(CGFloat(type.maxHP) * hpBonus)
         self.hp = self.maxHP
+        self.rangeBonus = rangeBonus
+        self.defenseBonus = defenseBonus
     }
 
     var effectiveAttack: Int {
@@ -743,7 +749,11 @@ class Unit {
     }
 
     var effectiveDefense: Int {
-        type.defense
+        Int(CGFloat(type.defense) * defenseBonus)
+    }
+
+    var effectiveRange: CGFloat {
+        type.attackRange * rangeBonus
     }
 }
 

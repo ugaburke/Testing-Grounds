@@ -115,7 +115,7 @@ class UnitSystem {
                 let dist = unit.gridPosition.distance(to: enemyUnit.gridPosition)
                 if dist <= sightRange {
                     unit.state = .attacking(targetUnitID: enemyUnit.id)
-                    if dist > unit.type.attackRange {
+                    if dist > unit.effectiveRange {
                         unit.path = pathfinder.findPath(from: unit.gridPosition, to: enemyUnit.gridPosition)
                     }
                     return
@@ -130,7 +130,7 @@ class UnitSystem {
             for player in scene.players {
                 if let target = player.units.first(where: { $0.id == targetID }) {
                     let dist = unit.gridPosition.distance(to: target.gridPosition)
-                    if dist > unit.type.attackRange {
+                    if dist > unit.effectiveRange {
                         unit.path = pathfinder.findPath(from: unit.gridPosition, to: target.gridPosition)
                     }
                     return
@@ -145,7 +145,7 @@ class UnitSystem {
             for player in scene.players {
                 if let target = player.buildings.first(where: { $0.id == targetBuildingID }) {
                     let dist = unit.gridPosition.distance(to: target.gridPosition)
-                    if dist > unit.type.attackRange {
+                    if dist > unit.effectiveRange {
                         unit.path = pathfinder.findPath(from: unit.gridPosition, to: target.gridPosition)
                     }
                     return

@@ -77,7 +77,7 @@ class CombatSystem {
         let dist = unit.gridPosition.distance(to: target.gridPosition)
 
         // Check if in range
-        if dist <= unit.type.attackRange {
+        if dist <= unit.effectiveRange {
             unit.path = []
 
             // Attack with cooldown
@@ -138,7 +138,7 @@ class CombatSystem {
 
         let dist = unit.gridPosition.distance(to: target.gridPosition)
 
-        if dist <= unit.type.attackRange + 1.0 {
+        if dist <= unit.effectiveRange + 1.0 {
             unit.path = []
 
             if unit.attackCooldown <= 0 {

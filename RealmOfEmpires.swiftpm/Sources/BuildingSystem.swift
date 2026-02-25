@@ -109,8 +109,11 @@ class BuildingSystem {
         guard let pos = spawnPos else { return }
 
         let hpBonus: CGFloat = type.isCavalry ? player.civilization.cavalryHPBonus : 1.0
+        let rangeBonus: CGFloat = type.isRanged ? player.civilization.archerRangeBonus : 1.0
+        let defenseBonus: CGFloat = player.civilization.defenseBonus
         let unit = Unit(type: type, ownerID: player.id, position: pos,
-                        hpBonus: hpBonus, speedBonus: type.isCavalry ? player.civilization.cavalrySpeedBonus : 1.0)
+                        hpBonus: hpBonus, speedBonus: type.isCavalry ? player.civilization.cavalrySpeedBonus : 1.0,
+                        rangeBonus: rangeBonus, defenseBonus: defenseBonus)
         unit.gridPosition = pos
         unit.position = map.gridToWorld(pos)
 
@@ -121,6 +124,9 @@ class BuildingSystem {
         // Move to rally point if set
         if let rally = building.rallyPoint {
             unit.state = .moving(to: rally)
+            if let scene = gameScene {
+                unit.path = scene.pathfinder.findPath(from: pos, to: rally)
+            }
         }
 
         player.units.append(unit)
@@ -207,5 +213,10 @@ class BuildingSystem {
 
         building.node?.removeFromParent()
         player.buildings.removeAll { $0.id == building.id }
+
+        // Clear stale selection reference
+        if gameScene?.selectedBuilding?.id == building.id {
+            gameScene?.selectedBuilding = nil
+        }
     }
 }

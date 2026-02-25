@@ -307,7 +307,9 @@ class AIOpponent {
                     if let building = scene.buildingSystem.placeBuilding(
                         type: type, at: pos, player: player,
                         map: scene.gameMap, spriteFactory: scene.spriteFactory) {
-                        scene.gameWorld.addChild(building.node!)
+                        if let node = building.node {
+                            scene.gameWorld.addChild(node)
+                        }
 
                         // Send a villager to build
                         if let villager = player.units.first(where: { $0.type == .villager && isIdle($0) }) {
@@ -332,7 +334,9 @@ class AIOpponent {
                         if let building = scene.buildingSystem.placeBuilding(
                             type: type, at: pos, player: player,
                             map: scene.gameMap, spriteFactory: scene.spriteFactory) {
-                            scene.gameWorld.addChild(building.node!)
+                            if let node = building.node {
+                                scene.gameWorld.addChild(node)
+                            }
 
                             if let villager = player.units.first(where: { $0.type == .villager && isIdle($0) }) {
                                 scene.resourceSystem.sendVillagerToBuild(
