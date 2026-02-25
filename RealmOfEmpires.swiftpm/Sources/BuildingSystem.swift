@@ -31,11 +31,12 @@ class BuildingSystem {
             }
         }
 
-        // Update population cap
-        player.populationCap = player.buildings
-            .filter { $0.isConstructed }
-            .reduce(0) { $0 + $1.type.populationProvided }
-        player.populationCap = max(player.populationCap, 5)
+        // Update population cap — avoid filter+reduce allocation
+        var popCap = 0
+        for b in player.buildings where b.isConstructed {
+            popCap += b.type.populationProvided
+        }
+        player.populationCap = max(popCap, 5)
     }
 
     func placeBuilding(type: BuildingType, at gridPos: GridPosition, player: Player,
@@ -77,7 +78,7 @@ class BuildingSystem {
             }
         }
 
-        player.buildings.append(building)
+        player.addBuilding(building)
 
         // Create sprite
         let node = spriteFactory.createBuildingNode(building: building)
@@ -125,11 +126,11 @@ class BuildingSystem {
         if let rally = building.rallyPoint {
             unit.state = .moving(to: rally)
             if let scene = gameScene {
-                unit.path = scene.pathfinder.findPath(from: pos, to: rally)
+                unit.setPath(scene.pathfinder.findPath(from: pos, to: rally))
             }
         }
 
-        player.units.append(unit)
+        player.addUnit(unit)
 
         if let scene = gameScene {
             scene.gameWorld.addChild(node)
@@ -164,18 +165,18 @@ class BuildingSystem {
         let range = building.type.attackRange
         let damage = building.type.attackDamage
 
-        // Find nearest enemy unit in range
+        // Find nearest enemy unit in range — use distanceSquared to avoid sqrt
+        let rangeSq = Int(range * range)
         for player in scene.players {
             guard player.id != building.ownerID else { continue }
             for unit in player.units {
-                let dist = building.gridPosition.distance(to: unit.gridPosition)
-                if dist <= range {
+                let distSq = building.gridPosition.distanceSquared(to: unit.gridPosition)
+                if distSq <= rangeSq {
                     let currentTime = scene.gameTime
-                    let buildingKey = "building_attack_\(building.id)"
-                    let lastAttack = scene.lastBuildingAttackTimes[buildingKey] ?? 0
+                    let lastAttack = scene.lastBuildingAttackTimes[building.id] ?? 0
                     if currentTime - lastAttack >= 2.0 {
                         unit.hp -= damage
-                        scene.lastBuildingAttackTimes[buildingKey] = currentTime
+                        scene.lastBuildingAttackTimes[building.id] = currentTime
 
                         // Visual effect
                         let effect = scene.spriteFactory.createAttackEffect(
@@ -212,7 +213,7 @@ class BuildingSystem {
         }
 
         building.node?.removeFromParent()
-        player.buildings.removeAll { $0.id == building.id }
+        player.removeBuilding(id: building.id)
 
         // Clear stale selection reference
         if gameScene?.selectedBuilding?.id == building.id {

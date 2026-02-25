@@ -57,11 +57,11 @@ class CombatSystem {
     private func handleUnitAttack(unit: Unit, targetID: Int, player: Player,
                                    allPlayers: [Player], map: GameMap, pathfinder: Pathfinder,
                                    deltaTime: CGFloat) {
-        // Find target unit among all enemy players
+        // Find target unit — O(1) dictionary lookup per player
         var target: Unit?
         var targetPlayer: Player?
         for p in allPlayers where p.id != player.id {
-            if let t = p.units.first(where: { $0.id == targetID }) {
+            if let t = p.unit(byID: targetID) {
                 target = t
                 targetPlayer = p
                 break
@@ -70,7 +70,7 @@ class CombatSystem {
 
         guard let target = target, let _ = targetPlayer else {
             unit.state = .idle
-            unit.path = []
+            unit.clearPath()
             return
         }
 
@@ -78,7 +78,7 @@ class CombatSystem {
 
         // Check if in range
         if dist <= unit.effectiveRange {
-            unit.path = []
+            unit.clearPath()
 
             // Attack with cooldown
             if unit.attackCooldown <= 0 {
@@ -110,8 +110,8 @@ class CombatSystem {
             }
         } else {
             // Move towards target
-            if unit.path.isEmpty {
-                unit.path = pathfinder.findPath(from: unit.gridPosition, to: target.gridPosition)
+            if !unit.hasPathRemaining {
+                unit.setPath(pathfinder.findPath(from: unit.gridPosition, to: target.gridPosition))
             }
         }
     }
@@ -123,7 +123,7 @@ class CombatSystem {
         var targetPlayer: Player?
 
         for p in allPlayers where p.id != player.id {
-            if let b = p.buildings.first(where: { $0.id == targetBuildingID }) {
+            if let b = p.building(byID: targetBuildingID) {
                 target = b
                 targetPlayer = p
                 break
@@ -132,14 +132,14 @@ class CombatSystem {
 
         guard let target = target, let _ = targetPlayer else {
             unit.state = .idle
-            unit.path = []
+            unit.clearPath()
             return
         }
 
         let dist = unit.gridPosition.distance(to: target.gridPosition)
 
         if dist <= unit.effectiveRange + 1.0 {
-            unit.path = []
+            unit.clearPath()
 
             if unit.attackCooldown <= 0 {
                 let damage = max(1, unit.effectiveAttack)
@@ -154,8 +154,8 @@ class CombatSystem {
                 }
             }
         } else {
-            if unit.path.isEmpty {
-                unit.path = pathfinder.findPath(from: unit.gridPosition, to: target.gridPosition)
+            if !unit.hasPathRemaining {
+                unit.setPath(pathfinder.findPath(from: unit.gridPosition, to: target.gridPosition))
             }
         }
     }

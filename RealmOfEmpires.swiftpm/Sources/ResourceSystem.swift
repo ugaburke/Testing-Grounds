@@ -43,8 +43,8 @@ class ResourceSystem {
         let dist = unit.gridPosition.distance(to: tilePos)
         if dist > 1.5 {
             // Move to resource
-            if unit.path.isEmpty {
-                unit.path = pathfinder.findPath(from: unit.gridPosition, to: tilePos)
+            if !unit.hasPathRemaining {
+                unit.setPath(pathfinder.findPath(from: unit.gridPosition, to: tilePos))
             }
             return
         }
@@ -94,7 +94,7 @@ class ResourceSystem {
             if let dropOff = map.findNearestDropOff(for: resourceType, ownerID: player.id,
                                                      from: unit.gridPosition, buildings: player.buildings) {
                 unit.state = .returning(dropOff: dropOff, resourceType: resourceType, carried: unit.carriedAmount)
-                unit.path = pathfinder.findPath(from: unit.gridPosition, to: dropOff)
+                unit.setPath(pathfinder.findPath(from: unit.gridPosition, to: dropOff))
             }
         }
     }
@@ -103,8 +103,8 @@ class ResourceSystem {
                                   carried: Int, player: Player, map: GameMap, pathfinder: Pathfinder) {
         let dist = unit.gridPosition.distance(to: dropOff)
         if dist > 2.0 {
-            if unit.path.isEmpty {
-                unit.path = pathfinder.findPath(from: unit.gridPosition, to: dropOff)
+            if !unit.hasPathRemaining {
+                unit.setPath(pathfinder.findPath(from: unit.gridPosition, to: dropOff))
             }
             return
         }
@@ -123,14 +123,14 @@ class ResourceSystem {
         // Go back to gathering
         if let tile = map.findNearestResource(resourceType, from: unit.gridPosition) {
             unit.state = .gathering(resourceType: resourceType, tilePos: tile)
-            unit.path = pathfinder.findPath(from: unit.gridPosition, to: tile)
+            unit.setPath(pathfinder.findPath(from: unit.gridPosition, to: tile))
         } else {
             unit.state = .idle
         }
     }
 
     private func handleBuilding(unit: Unit, buildingID: Int, player: Player, deltaTime: CGFloat) {
-        guard let building = player.buildings.first(where: { $0.id == buildingID }) else {
+        guard let building = player.building(byID: buildingID) else {
             unit.state = .idle
             return
         }
@@ -142,8 +142,8 @@ class ResourceSystem {
 
         let dist = unit.gridPosition.distance(to: building.gridPosition)
         if dist > 2.5 {
-            if unit.path.isEmpty {
-                unit.path = gameScene?.pathfinder.findPath(from: unit.gridPosition, to: building.gridPosition) ?? []
+            if !unit.hasPathRemaining {
+                unit.setPath(gameScene?.pathfinder.findPath(from: unit.gridPosition, to: building.gridPosition) ?? [])
             }
             return
         }
@@ -167,13 +167,13 @@ class ResourceSystem {
 
         if let resourceType = tile.terrain.resourceType, tile.resourceRemaining > 0 {
             unit.state = .gathering(resourceType: resourceType, tilePos: tilePos)
-            unit.path = pathfinder.findPath(from: unit.gridPosition, to: tilePos)
+            unit.setPath(pathfinder.findPath(from: unit.gridPosition, to: tilePos))
         }
     }
 
     func sendVillagerToBuild(unit: Unit, building: Building, pathfinder: Pathfinder) {
         guard unit.type == .villager else { return }
         unit.state = .building(buildingID: building.id)
-        unit.path = pathfinder.findPath(from: unit.gridPosition, to: building.gridPosition)
+        unit.setPath(pathfinder.findPath(from: unit.gridPosition, to: building.gridPosition)
     }
 }

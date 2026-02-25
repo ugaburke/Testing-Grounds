@@ -27,13 +27,11 @@ class SpriteFactory {
         let body: SKShapeNode
 
         if unit.type.isCavalry {
-            // Horse-like shape for cavalry
             let path = CGMutablePath()
             path.addEllipse(in: CGRect(x: -bodySize * 0.5, y: -bodySize * 0.3,
                                         width: bodySize, height: bodySize * 0.6))
             body = SKShapeNode(path: path)
         } else if unit.type.isRanged {
-            // Triangle for ranged units
             let path = CGMutablePath()
             path.move(to: CGPoint(x: 0, y: bodySize * 0.4))
             path.addLine(to: CGPoint(x: -bodySize * 0.35, y: -bodySize * 0.3))
@@ -41,17 +39,14 @@ class SpriteFactory {
             path.closeSubpath()
             body = SKShapeNode(path: path)
         } else if unit.type == .villager {
-            // Circle for villagers
             body = SKShapeNode(circleOfRadius: bodySize * 0.35)
         } else {
-            // Square for melee infantry
             body = SKShapeNode(rectOf: CGSize(width: bodySize * 0.6, height: bodySize * 0.6))
         }
 
         body.fillColor = playerColor
         body.strokeColor = playerColor.lighter(by: 0.3)
         body.lineWidth = 1.5
-        body.name = "unitBody"
         container.addChild(body)
 
         // Unit type indicator
@@ -70,37 +65,34 @@ class SpriteFactory {
         hpBarBg.fillColor = .darkGray
         hpBarBg.strokeColor = .clear
         hpBarBg.position = CGPoint(x: 0, y: bodySize * 0.45)
-        hpBarBg.name = "hpBarBg"
         hpBarBg.zPosition = 2
         container.addChild(hpBarBg)
 
-        // HP bar fill
+        // HP bar fill — cache reference for fast updates
         let hpBar = SKShapeNode(rectOf: CGSize(width: hpBarWidth, height: 3))
         hpBar.fillColor = .green
         hpBar.strokeColor = .clear
         hpBar.position = CGPoint(x: 0, y: bodySize * 0.45)
-        hpBar.name = "hpBar"
         hpBar.zPosition = 3
         container.addChild(hpBar)
+        unit.hpBarNode = hpBar
 
-        // Selection ring (hidden by default)
+        // Selection ring — cache reference for fast updates
         let selectionRing = SKShapeNode(circleOfRadius: bodySize * 0.55)
         selectionRing.fillColor = .clear
         selectionRing.strokeColor = SKColor(red: 0.2, green: 1.0, blue: 0.2, alpha: 0.8)
         selectionRing.lineWidth = 2
-        selectionRing.name = "selectionRing"
         selectionRing.isHidden = true
         selectionRing.zPosition = -1
         container.addChild(selectionRing)
+        unit.selectionRingNode = selectionRing
 
         return container
     }
 
     func updateUnitNode(_ unit: Unit) {
-        guard let container = unit.node else { return }
-
-        // Update HP bar
-        if let hpBar = container.childNode(withName: "hpBar") as? SKShapeNode {
+        // Use cached references — avoids childNode(withName:) tree walk
+        if let hpBar = unit.hpBarNode {
             let ratio = CGFloat(unit.hp) / CGFloat(unit.maxHP)
             let barWidth = tileSize * 0.7 * ratio
             let path = CGPath(rect: CGRect(x: -tileSize * 0.35, y: -1.5, width: barWidth, height: 3), transform: nil)
@@ -114,8 +106,7 @@ class SpriteFactory {
             }
         }
 
-        // Update selection ring
-        if let ring = container.childNode(withName: "selectionRing") {
+        if let ring = unit.selectionRingNode {
             ring.isHidden = !unit.isSelected
         }
     }
@@ -132,13 +123,13 @@ class SpriteFactory {
         let w = CGFloat(building.type.size.width) * tileSize
         let h = CGFloat(building.type.size.height) * tileSize
 
-        // Building body
+        // Building body — cache reference
         let body = SKShapeNode(rectOf: CGSize(width: w - 2, height: h - 2))
         body.fillColor = building.isConstructed ? building.type.color : building.type.color.withAlphaComponent(0.5)
         body.strokeColor = playerColor
         body.lineWidth = 2
-        body.name = "buildingBody"
         container.addChild(body)
+        building.bodyNode = body
 
         // Building label
         let label = SKLabelNode(text: building.type.icon)
@@ -156,27 +147,27 @@ class SpriteFactory {
         hpBarBg.fillColor = .darkGray
         hpBarBg.strokeColor = .clear
         hpBarBg.position = CGPoint(x: 0, y: h * 0.5 + 4)
-        hpBarBg.name = "hpBarBg"
         hpBarBg.zPosition = 2
         container.addChild(hpBarBg)
 
+        // HP bar fill — cache reference
         let hpBar = SKShapeNode(rectOf: CGSize(width: hpBarWidth, height: 4))
         hpBar.fillColor = .green
         hpBar.strokeColor = .clear
         hpBar.position = CGPoint(x: 0, y: h * 0.5 + 4)
-        hpBar.name = "hpBar"
         hpBar.zPosition = 3
         container.addChild(hpBar)
+        building.hpBarNode = hpBar
 
-        // Construction progress bar
+        // Construction progress bar — cache reference
         if !building.isConstructed {
             let progressBar = SKShapeNode(rectOf: CGSize(width: 1, height: 4))
             progressBar.fillColor = .orange
             progressBar.strokeColor = .clear
             progressBar.position = CGPoint(x: -hpBarWidth / 2, y: h * 0.5 + 10)
-            progressBar.name = "progressBar"
             progressBar.zPosition = 3
             container.addChild(progressBar)
+            building.progressBarNode = progressBar
         }
 
         // Flag for player color
@@ -203,13 +194,13 @@ class SpriteFactory {
         let w = CGFloat(building.type.size.width) * tileSize
         let h = CGFloat(building.type.size.height) * tileSize
 
-        // Update body appearance
-        if let body = container.childNode(withName: "buildingBody") as? SKShapeNode {
+        // Update body appearance — use cached reference
+        if let body = building.bodyNode {
             body.fillColor = building.isConstructed ? building.type.color : building.type.color.withAlphaComponent(0.3 + 0.7 * building.constructionProgress)
         }
 
-        // Update HP bar
-        if let hpBar = container.childNode(withName: "hpBar") as? SKShapeNode {
+        // Update HP bar — use cached reference
+        if let hpBar = building.hpBarNode {
             let ratio = CGFloat(building.hp) / CGFloat(building.maxHP)
             let barWidth = w * 0.8 * ratio
             let path = CGPath(rect: CGRect(x: -w * 0.4, y: -2, width: barWidth, height: 4), transform: nil)
@@ -223,10 +214,11 @@ class SpriteFactory {
             }
         }
 
-        // Update construction progress
-        if let progressBar = container.childNode(withName: "progressBar") as? SKShapeNode {
+        // Update construction progress — use cached reference
+        if let progressBar = building.progressBarNode {
             if building.isConstructed {
                 progressBar.removeFromParent()
+                building.progressBarNode = nil
             } else {
                 let barWidth = w * 0.8 * building.constructionProgress
                 let path = CGPath(rect: CGRect(x: 0, y: -2, width: barWidth, height: 4), transform: nil)
@@ -234,7 +226,7 @@ class SpriteFactory {
             }
         }
 
-        // Training indicator
+        // Training indicator (infrequent, ok to use name lookup)
         if !building.trainingQueue.isEmpty {
             if container.childNode(withName: "trainingIndicator") == nil {
                 let indicator = SKShapeNode(circleOfRadius: 4)

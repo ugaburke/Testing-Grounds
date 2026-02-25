@@ -38,7 +38,7 @@ class GameScene: SKScene {
     var gameTime: TimeInterval = 0
     var lastUpdateTime: TimeInterval = 0
     var actionMode: ActionMode = .normal
-    var lastBuildingAttackTimes: [String: TimeInterval] = [:]
+    var lastBuildingAttackTimes: [Int: TimeInterval] = [:]
 
     // Selection
     var selectedBuilding: Building?
@@ -158,7 +158,7 @@ class GameScene: SKScene {
             node.position = unit.position
             unit.node = node
 
-            player.units.append(unit)
+            player.addUnit(unit)
             gameWorld.addChild(node)
         }
 
@@ -172,7 +172,7 @@ class GameScene: SKScene {
         scoutNode.position = scout.position
         scout.node = scoutNode
 
-        player.units.append(scout)
+        player.addUnit(scout)
         gameWorld.addChild(scoutNode)
     }
 
