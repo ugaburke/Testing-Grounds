@@ -205,7 +205,7 @@ class GameMap {
                     let tileNode = SKShapeNode(rectOf: CGSize(width: tileSize, height: tileSize))
                     tileNode.fillColor = tile.terrain.color
                     tileNode.strokeColor = SKColor.clear
-                    tileNode.lineWidth = CGFloat(0)
+                    tileNode.lineWidth = 0.0
                     tileNode.position = gridToWorld(GridPosition(x: x, y: y))
                     tileNode.zPosition = 0
 
