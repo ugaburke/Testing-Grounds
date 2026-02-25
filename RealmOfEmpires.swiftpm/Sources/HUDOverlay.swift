@@ -651,7 +651,7 @@ class HUDOverlay {
 
         // Close button
         let closeBtnX = menuW / 2 - 20
-        let closeBtnY = isCompact ? 82 : 110
+        let closeBtnY: CGFloat = isCompact ? 82 : 110
         let closeBtn = SKNode()
         closeBtn.position = CGPoint(x: closeBtnX, y: closeBtnY)
         closeBtn.name = "closeBuildMenu"
