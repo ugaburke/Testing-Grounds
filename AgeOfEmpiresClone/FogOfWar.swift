@@ -56,20 +56,31 @@ class FogOfWar {
         let minY = max(0, centerTileY - tilesY / 2)
         let maxY = min(map.height - 1, centerTileY + tilesY / 2)
 
+        let fadeDuration: TimeInterval = 0.3
+
         for y in minY...maxY {
             for x in minX...maxX {
                 let tile = map.tiles[y][x]
 
                 if tile.isVisible {
-                    // Fully visible - remove fog
-                    fogNodes[y][x]?.removeFromParent()
-                    fogNodes[y][x] = nil
+                    // Fully visible — fade out fog smoothly
+                    if let fogNode = fogNodes[y][x] {
+                        fogNode.run(SKAction.sequence([
+                            SKAction.fadeOut(withDuration: fadeDuration),
+                            SKAction.removeFromParent()
+                        ]))
+                        fogNodes[y][x] = nil
+                    }
 
-                    // Show tile and entities
-                    tile.node?.alpha = 1.0
+                    // Fade tile to full visibility
+                    if let tileNode = tile.node, tileNode.alpha < 1.0 {
+                        tileNode.run(SKAction.fadeAlpha(to: 1.0, duration: fadeDuration), withKey: "fogFade")
+                    }
                 } else if tile.isExplored {
                     // Explored but not visible - dim
-                    tile.node?.alpha = 0.5
+                    if let tileNode = tile.node, abs(tileNode.alpha - 0.5) > 0.05 {
+                        tileNode.run(SKAction.fadeAlpha(to: 0.5, duration: fadeDuration), withKey: "fogFade")
+                    }
 
                     if fogNodes[y][x] == nil {
                         let fogNode = SKShapeNode(rectOf: CGSize(width: map.tileSize, height: map.tileSize))
@@ -77,12 +88,16 @@ class FogOfWar {
                         fogNode.strokeColor = .clear
                         fogNode.position = map.gridToWorld(GridPosition(x: x, y: y))
                         fogNode.zPosition = 50
+                        fogNode.alpha = 0
                         map.mapNode.addChild(fogNode)
+                        fogNode.run(SKAction.fadeAlpha(to: 1.0, duration: fadeDuration))
                         fogNodes[y][x] = fogNode
                     }
                 } else {
                     // Unexplored - black
-                    tile.node?.alpha = 0.0
+                    if let tileNode = tile.node, tileNode.alpha > 0.05 {
+                        tileNode.run(SKAction.fadeAlpha(to: 0.0, duration: fadeDuration), withKey: "fogFade")
+                    }
 
                     if fogNodes[y][x] == nil {
                         let fogNode = SKShapeNode(rectOf: CGSize(width: map.tileSize, height: map.tileSize))

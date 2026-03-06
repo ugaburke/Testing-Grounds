@@ -4,9 +4,7 @@ import SpriteKit
 class FogOfWar {
     let map: GameMap
     let sightRange: Int = 8
-    var fogNodes: [[SKSpriteNode?]]
-    private var previouslyVisible: Set<Int> = Set<Int>()
-    private var activeFogPositions: Set<Int> = Set<Int>()
+    var fogNodes: [[SKShapeNode?]]
 
     init(map: GameMap) {
         self.map = map
@@ -14,13 +12,12 @@ class FogOfWar {
     }
 
     func update(player: Player) {
-        // Clear only previously visible tiles instead of all 50*50
-        for key in previouslyVisible {
-            let y = key / map.width
-            let x = key % map.width
-            map.tiles[y][x].isVisible = false
+        // Reset visibility
+        for y in 0..<map.height {
+            for x in 0..<map.width {
+                map.tiles[y][x].isVisible = false
+            }
         }
-        previouslyVisible.removeAll(keepingCapacity: true)
 
         // Reveal around units
         for unit in player.units {
@@ -35,20 +32,14 @@ class FogOfWar {
     }
 
     private func revealArea(around center: GridPosition, range: Int) {
-        let minY = max(0, center.y - range)
-        let maxY = min(map.height - 1, center.y + range)
-        let minX = max(0, center.x - range)
-        let maxX = min(map.width - 1, center.x + range)
-        let rangeSq = CGFloat(range * range)
-
-        for y in minY...maxY {
-            for x in minX...maxX {
-                let dx = CGFloat(x - center.x)
-                let dy = CGFloat(y - center.y)
-                if dx * dx + dy * dy <= rangeSq {
-                    map.tiles[y][x].isVisible = true
-                    map.tiles[y][x].isExplored = true
-                    previouslyVisible.insert(y * map.width + x)
+        for dy in -range...range {
+            for dx in -range...range {
+                let pos = GridPosition(x: center.x + dx, y: center.y + dy)
+                guard map.isValid(pos) else { continue }
+                let dist = center.distance(to: pos)
+                if dist <= CGFloat(range) {
+                    map.tiles[pos.y][pos.x].isVisible = true
+                    map.tiles[pos.y][pos.x].isExplored = true
                 }
             }
         }
@@ -65,39 +56,57 @@ class FogOfWar {
         let minY = max(0, centerTileY - tilesY / 2)
         let maxY = min(map.height - 1, centerTileY + tilesY / 2)
 
+        let fadeDuration: TimeInterval = 0.3
+
         for y in minY...maxY {
             for x in minX...maxX {
                 let tile = map.tiles[y][x]
-                let key = y * map.width + x
 
                 if tile.isVisible {
-                    if fogNodes[y][x] != nil {
-                        fogNodes[y][x]?.removeFromParent()
+                    // Fully visible — fade out fog smoothly
+                    if let fogNode = fogNodes[y][x] {
+                        fogNode.run(SKAction.sequence([
+                            SKAction.fadeOut(withDuration: fadeDuration),
+                            SKAction.removeFromParent()
+                        ]))
                         fogNodes[y][x] = nil
-                        activeFogPositions.remove(key)
                     }
-                    tile.node?.alpha = 1.0
+
+                    // Fade tile to full visibility
+                    if let tileNode = tile.node, tileNode.alpha < 1.0 {
+                        tileNode.run(SKAction.fadeAlpha(to: 1.0, duration: fadeDuration), withKey: "fogFade")
+                    }
                 } else if tile.isExplored {
-                    tile.node?.alpha = 0.5
+                    // Explored but not visible - dim
+                    if let tileNode = tile.node, abs(tileNode.alpha - 0.5) > 0.05 {
+                        tileNode.run(SKAction.fadeAlpha(to: 0.5, duration: fadeDuration), withKey: "fogFade")
+                    }
+
                     if fogNodes[y][x] == nil {
-                        let fogNode = SKSpriteNode(color: SKColor.black.withAlphaComponent(0.4),
-                                                    size: CGSize(width: map.tileSize, height: map.tileSize))
+                        let fogNode = SKShapeNode(rectOf: CGSize(width: map.tileSize, height: map.tileSize))
+                        fogNode.fillColor = SKColor.black.withAlphaComponent(0.4)
+                        fogNode.strokeColor = .clear
                         fogNode.position = map.gridToWorld(GridPosition(x: x, y: y))
                         fogNode.zPosition = 50
+                        fogNode.alpha = 0
                         map.mapNode.addChild(fogNode)
+                        fogNode.run(SKAction.fadeAlpha(to: 1.0, duration: fadeDuration))
                         fogNodes[y][x] = fogNode
-                        activeFogPositions.insert(key)
                     }
                 } else {
-                    tile.node?.alpha = 0.0
+                    // Unexplored - black
+                    if let tileNode = tile.node, tileNode.alpha > 0.05 {
+                        tileNode.run(SKAction.fadeAlpha(to: 0.0, duration: fadeDuration), withKey: "fogFade")
+                    }
+
                     if fogNodes[y][x] == nil {
-                        let fogNode = SKSpriteNode(color: SKColor.black.withAlphaComponent(0.85),
-                                                    size: CGSize(width: map.tileSize, height: map.tileSize))
+                        let fogNode = SKShapeNode(rectOf: CGSize(width: map.tileSize, height: map.tileSize))
+                        fogNode.fillColor = SKColor.black.withAlphaComponent(0.85)
+                        fogNode.strokeColor = .clear
                         fogNode.position = map.gridToWorld(GridPosition(x: x, y: y))
                         fogNode.zPosition = 50
                         map.mapNode.addChild(fogNode)
                         fogNodes[y][x] = fogNode
-                        activeFogPositions.insert(key)
                     }
                 }
             }
@@ -111,18 +120,13 @@ class FogOfWar {
         let centerTileX = Int(cameraPosition.x / map.tileSize)
         let centerTileY = Int(cameraPosition.y / map.tileSize)
 
-        var toRemove: [Int] = []
-        for key in activeFogPositions {
-            let ty = key / map.width
-            let tx = key % map.width
-            if abs(tx - centerTileX) > tilesX || abs(ty - centerTileY) > tilesY {
-                fogNodes[ty][tx]?.removeFromParent()
-                fogNodes[ty][tx] = nil
-                toRemove.append(key)
+        for y in 0..<map.height {
+            for x in 0..<map.width {
+                if abs(x - centerTileX) > tilesX || abs(y - centerTileY) > tilesY {
+                    fogNodes[y][x]?.removeFromParent()
+                    fogNodes[y][x] = nil
+                }
             }
-        }
-        for key in toRemove {
-            activeFogPositions.remove(key)
         }
     }
 }

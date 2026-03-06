@@ -51,6 +51,8 @@ class GameScene: SKScene {
     var isPanning = false
     var panVelocity = CGPoint.zero
     var touchStartTime: TimeInterval = 0
+    var lastTapTime: TimeInterval = 0
+    var lastTappedUnitType: UnitType?
 
     // Building placement
     var placementGhost: SKNode?
@@ -253,17 +255,24 @@ class GameScene: SKScene {
         // Update sprite visuals
         updateSpriteVisuals()
 
+        // Animate flags and idle fidget
+        animateFlagsAndIdle(time: CGFloat(gameTime))
+
+        // Terrain animations (every frame for visible tiles only)
+        gameMap.animateWaterTiles(time: CGFloat(gameTime), cameraPosition: cameraPosition, viewSize: size)
+
         // Tile rendering (throttled)
         tileRenderTimer += deltaTime
         if tileRenderTimer >= 0.5 {
             tileRenderTimer = 0
             renderTiles()
+            gameMap.addTerrainBlending(cameraPosition: cameraPosition, viewSize: size)
             fogOfWar.updateVisuals(cameraPosition: cameraPosition, viewSize: size)
         }
 
         // Minimap (throttled)
         minimapTimer += deltaTime
-        if minimapTimer >= 1.0 {
+        if minimapTimer >= 0.5 {
             minimapTimer = 0
             hud.updateMinimap(players: players, map: gameMap,
                               cameraPos: cameraPosition, viewSize: size)
@@ -289,9 +298,36 @@ class GameScene: SKScene {
         for player in players {
             for unit in player.units {
                 spriteFactory.updateUnitNode(unit)
+                spriteFactory.updateUnitFacing(unit, deltaTime: 1.0 / 60.0)
             }
             for building in player.buildings {
                 spriteFactory.updateBuildingNode(building)
+            }
+        }
+    }
+
+    private func animateFlagsAndIdle(time: CGFloat) {
+        // Flag waving on buildings
+        for player in players {
+            for building in player.buildings {
+                if let flag = building.node?.childNode(withName: "flag") {
+                    let phase = CGFloat(building.id * 17)
+                    flag.position.x = (flag.position.x == 0 ? CGFloat(building.type.size.width) * gameMap.tileSize * 0.35 + 3.5 : flag.position.x)
+                    let wave = sin(time * 2.5 + phase) * 1.5
+                    flag.zRotation = wave * 0.1
+                }
+            }
+
+            // Idle unit fidget
+            for unit in player.units {
+                if case .idle = unit.state {
+                    if let bodyNode = unit.bodyNode {
+                        let phase = CGFloat(unit.id * 31)
+                        let fidgetX = sin(time * 1.2 + phase) * 0.5
+                        let fidgetY = cos(time * 0.9 + phase * 1.3) * 0.3
+                        bodyNode.position = CGPoint(x: fidgetX, y: fidgetY)
+                    }
+                }
             }
         }
     }
@@ -341,7 +377,7 @@ class GameScene: SKScene {
         // Check if human player lost all buildings
         if humanPlayer.buildings.isEmpty && humanPlayer.units.isEmpty {
             gameState = .defeat
-            hud.showGameOver(victory: false)
+            hud.showGameOver(victory: false, player: humanPlayer)
         }
 
         // Check if all AI players are eliminated
@@ -350,7 +386,7 @@ class GameScene: SKScene {
         }
         if aiEliminated && players.count > 1 {
             gameState = .victory
-            hud.showGameOver(victory: true)
+            hud.showGameOver(victory: true, player: humanPlayer)
         }
     }
 
@@ -364,6 +400,13 @@ class GameScene: SKScene {
                                y: locationInHUD.y + size.height / 2)
 
         touchStartTime = gameTime
+
+        // Dismiss help overlay if showing
+        if let helpOverlay = hudCamera.childNode(withName: "helpOverlay") {
+            helpOverlay.removeFromParent()
+            gameState = .playing
+            return
+        }
 
         // Check HUD first
         if let action = hud.handleTouch(at: hudPoint) {
@@ -405,6 +448,11 @@ class GameScene: SKScene {
         }
 
         lastTouchPosition = location
+
+        // Update placement ghost
+        if case .placingBuilding(_) = actionMode {
+            updatePlacementGhost(at: location)
+        }
 
         // Box selection
         if !isPanning, let start = selectionStart {
@@ -466,6 +514,17 @@ class GameScene: SKScene {
         // Handle game over tap
         if gameState == .victory || gameState == .defeat {
             onExit?()
+            return
+        }
+
+        // Rally point mode
+        if case .settingRallyPoint(let building) = actionMode {
+            building.rallyPoint = gridPos
+            hud.showStatus("Rally point set")
+            actionMode = .normal
+            // Show rally point indicator
+            let indicator = spriteFactory.createMoveIndicator(at: gameMap.gridToWorld(gridPos))
+            gameWorld.addChild(indicator)
             return
         }
 
@@ -552,6 +611,23 @@ class GameScene: SKScene {
         }
 
         if let unit = tappedUnit {
+            // Double-tap detection: select all visible of same type
+            let now = gameTime
+            if now - lastTapTime < 0.4 && lastTappedUnitType == unit.type {
+                // Double tap — select all visible units of this type
+                for u in humanPlayer.units {
+                    if u.type == unit.type {
+                        u.isSelected = true
+                    }
+                }
+                selectedBuilding = nil
+                lastTapTime = 0
+                lastTappedUnitType = nil
+                return
+            }
+
+            lastTapTime = now
+            lastTappedUnitType = unit.type
             unitSystem.selectUnit(unit, player: humanPlayer)
             selectedBuilding = nil
             return
@@ -596,6 +672,24 @@ class GameScene: SKScene {
         case .exit:
             onExit?()
 
+        case .showHelp:
+            showHelpOverlay()
+
+        case .deselect:
+            // Cancel placement or deselect
+            if case .placingBuilding(_) = actionMode {
+                actionMode = .normal
+                placementGhost?.removeFromParent()
+                placementGhost = nil
+                hud.showStatus("")
+            } else if case .settingRallyPoint(_) = actionMode {
+                actionMode = .normal
+                hud.showStatus("")
+            } else {
+                unitSystem.deselectAll(player: humanPlayer)
+                selectedBuilding = nil
+            }
+
         case .ageUp:
             attemptAgeAdvance()
 
@@ -613,6 +707,8 @@ class GameScene: SKScene {
             actionMode = .placingBuilding(type)
             placementType = type
             hud.showStatus("Tap to place \(type.displayName)")
+            // Create placement ghost
+            createPlacementGhost(type: type)
 
         case .trainUnit(let type):
             if let building = selectedBuilding {
@@ -630,8 +726,10 @@ class GameScene: SKScene {
             }
 
         case .setRallyPoint:
-            hud.showStatus("Tap to set rally point")
-            actionMode = .normal // Will handle next tap as rally
+            if let building = selectedBuilding {
+                hud.showStatus("Tap to set rally point")
+                actionMode = .settingRallyPoint(building)
+            }
 
         case .minimapTap(let point):
             let worldPoint = hud.minimapToWorld(point: point, map: gameMap)
@@ -676,6 +774,73 @@ class GameScene: SKScene {
         placementGhost = nil
     }
 
+    private func createPlacementGhost(type: BuildingType) {
+        placementGhost?.removeFromParent()
+        let w = CGFloat(type.size.width) * gameMap.tileSize
+        let h = CGFloat(type.size.height) * gameMap.tileSize
+        let ghost = SKNode()
+        ghost.zPosition = 80
+
+        let body = SKShapeNode(rectOf: CGSize(width: w - 2, height: h - 2))
+        body.fillColor = type.color.withAlphaComponent(0.4)
+        body.strokeColor = SKColor.green.withAlphaComponent(0.8)
+        body.lineWidth = 2
+        body.name = "ghostBody"
+        ghost.addChild(body)
+
+        let label = SKLabelNode(text: type.icon)
+        label.fontSize = min(w, h) * 0.35
+        label.fontName = "Helvetica-Bold"
+        label.fontColor = SKColor.white.withAlphaComponent(0.6)
+        label.verticalAlignmentMode = .center
+        ghost.addChild(label)
+
+        // Grid cell indicators
+        for dy in 0..<type.size.height {
+            for dx in 0..<type.size.width {
+                let cell = SKShapeNode(rectOf: CGSize(width: gameMap.tileSize - 1, height: gameMap.tileSize - 1))
+                cell.fillColor = SKColor.green.withAlphaComponent(0.15)
+                cell.strokeColor = SKColor.green.withAlphaComponent(0.3)
+                cell.lineWidth = 0.5
+                cell.position = CGPoint(
+                    x: CGFloat(dx) * gameMap.tileSize - w / 2 + gameMap.tileSize / 2,
+                    y: CGFloat(dy) * gameMap.tileSize - h / 2 + gameMap.tileSize / 2
+                )
+                cell.name = "ghostCell_\(dx)_\(dy)"
+                ghost.addChild(cell)
+            }
+        }
+
+        ghost.position = cameraPosition
+        gameWorld.addChild(ghost)
+        placementGhost = ghost
+    }
+
+    private func updatePlacementGhost(at worldPos: CGPoint) {
+        guard let ghost = placementGhost, let type = placementType else { return }
+        let gridPos = gameMap.worldToGrid(worldPos)
+        let snappedPos = gameMap.gridToWorld(gridPos)
+        let offsetX = CGFloat(type.size.width - 1) * gameMap.tileSize / 2
+        let offsetY = CGFloat(type.size.height - 1) * gameMap.tileSize / 2
+        ghost.position = CGPoint(x: snappedPos.x + offsetX, y: snappedPos.y + offsetY)
+
+        // Update cell colors based on validity
+        let canPlace = gameMap.canPlaceBuilding(type: type, at: gridPos)
+        if let body = ghost.childNode(withName: "ghostBody") as? SKShapeNode {
+            body.strokeColor = canPlace ? SKColor.green.withAlphaComponent(0.8) : SKColor.red.withAlphaComponent(0.8)
+        }
+        for dy in 0..<type.size.height {
+            for dx in 0..<type.size.width {
+                if let cell = ghost.childNode(withName: "ghostCell_\(dx)_\(dy)") as? SKShapeNode {
+                    let tilePos = GridPosition(x: gridPos.x + dx, y: gridPos.y + dy)
+                    let valid = gameMap.isBuildable(tilePos)
+                    cell.fillColor = valid ? SKColor.green.withAlphaComponent(0.15) : SKColor.red.withAlphaComponent(0.25)
+                    cell.strokeColor = valid ? SKColor.green.withAlphaComponent(0.3) : SKColor.red.withAlphaComponent(0.5)
+                }
+            }
+        }
+    }
+
     private func attemptAgeAdvance() {
         guard !humanPlayer.isAdvancingAge else {
             hud.showStatus("Already advancing!")
@@ -701,5 +866,65 @@ class GameScene: SKScene {
     private func isUnitIdle(_ unit: Unit) -> Bool {
         if case .idle = unit.state { return true }
         return false
+    }
+
+    // MARK: - Help Overlay
+
+    private func showHelpOverlay() {
+        guard hudCamera.childNode(withName: "helpOverlay") == nil else {
+            hudCamera.childNode(withName: "helpOverlay")?.removeFromParent()
+            gameState = .playing
+            return
+        }
+
+        gameState = .paused
+
+        let overlay = SKNode()
+        overlay.name = "helpOverlay"
+        overlay.zPosition = 300
+
+        let bg = SKShapeNode(rectOf: size)
+        bg.fillColor = SKColor.black.withAlphaComponent(0.85)
+        bg.strokeColor = .clear
+        overlay.addChild(bg)
+
+        let title = SKLabelNode(text: "How to Play")
+        title.fontSize = 24
+        title.fontName = "Helvetica-Bold"
+        title.fontColor = SKColor(red: 0.85, green: 0.7, blue: 0.4, alpha: 1.0)
+        title.position = CGPoint(x: 0, y: size.height * 0.35)
+        overlay.addChild(title)
+
+        let tips = [
+            "Drag to pan the camera, pinch to zoom",
+            "Tap a unit to select, drag to box-select",
+            "Tap ground to move selected units",
+            "Select villagers > Build to construct buildings",
+            "Tap resources with villagers to gather",
+            "Tap unfinished buildings with villagers to help build",
+            "Select military buildings to train units",
+            "Double-tap a unit to select all of same type",
+            "ESC button cancels placement / deselects",
+            "Tap enemy units or buildings to attack",
+        ]
+
+        for (i, tip) in tips.enumerated() {
+            let label = SKLabelNode(text: tip)
+            label.fontSize = 13
+            label.fontName = "Helvetica"
+            label.fontColor = .white
+            label.position = CGPoint(x: 0, y: size.height * 0.25 - CGFloat(i) * 22)
+            overlay.addChild(label)
+        }
+
+        let closeLabel = SKLabelNode(text: "Tap anywhere to close")
+        closeLabel.fontSize = 14
+        closeLabel.fontName = "Helvetica-Bold"
+        closeLabel.fontColor = .yellow
+        closeLabel.position = CGPoint(x: 0, y: -size.height * 0.35)
+        closeLabel.name = "helpOverlay"
+        overlay.addChild(closeLabel)
+
+        hudCamera.addChild(overlay)
     }
 }

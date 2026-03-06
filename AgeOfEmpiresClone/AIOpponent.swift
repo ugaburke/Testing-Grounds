@@ -9,6 +9,8 @@ class AIOpponent {
     var strategy: AIStrategy = .economy
     var rushTimer: CGFloat = 0
     var hasAttacked = false
+    var defenseTimer: CGFloat = 0
+    let defenseInterval: CGFloat = 2.0
 
     enum AIStrategy {
         case economy
@@ -41,6 +43,52 @@ class AIOpponent {
         // Always try to maintain economy
         manageVillagers()
         advanceAgeIfPossible()
+
+        // Defense check (every 2 seconds)
+        defenseTimer += decisionInterval
+        if defenseTimer >= defenseInterval {
+            defenseTimer = 0
+            handleDefense()
+        }
+    }
+
+    private func handleDefense() {
+        guard let scene = gameScene else { return }
+
+        // Find damaged units or buildings under attack
+        var threatPositions: [GridPosition] = []
+
+        for unit in player.units where unit.hp < unit.maxHP {
+            threatPositions.append(unit.gridPosition)
+        }
+        for building in player.buildings where building.hp < building.maxHP && building.isConstructed {
+            threatPositions.append(building.gridPosition)
+        }
+
+        guard !threatPositions.isEmpty else { return }
+
+        // Send idle military units to the nearest threat
+        let idleMilitary = player.units.filter { $0.type != .villager && isIdle($0) }
+        guard !idleMilitary.isEmpty else { return }
+
+        // Pick the first threat
+        let threatPos = threatPositions[0]
+
+        for unit in idleMilitary {
+            let dist = unit.gridPosition.distance(to: threatPos)
+            if dist < 25 {
+                // Find nearest enemy near the threat
+                for enemy in scene.players where enemy.id != player.id {
+                    for enemyUnit in enemy.units {
+                        let eDist = enemyUnit.gridPosition.distance(to: threatPos)
+                        if eDist < 10 {
+                            scene.unitSystem.attackTarget(unit: unit, targetID: enemyUnit.id, pathfinder: scene.pathfinder)
+                            break
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private func updateStrategy() {

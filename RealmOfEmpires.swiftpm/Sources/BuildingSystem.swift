@@ -31,12 +31,11 @@ class BuildingSystem {
             }
         }
 
-        // Update population cap — avoid filter+reduce allocation
-        var popCap = 0
-        for b in player.buildings where b.isConstructed {
-            popCap += b.type.populationProvided
-        }
-        player.populationCap = max(popCap, 5)
+        // Update population cap
+        player.populationCap = player.buildings
+            .filter { $0.isConstructed }
+            .reduce(0) { $0 + $1.type.populationProvided }
+        player.populationCap = max(player.populationCap, 5)
     }
 
     func placeBuilding(type: BuildingType, at gridPos: GridPosition, player: Player,
@@ -71,14 +70,15 @@ class BuildingSystem {
                         map.tiles[tilePos.y][tilePos.x].resourceRemaining = TerrainType.farm.resourceAmount
                         if let node = map.tiles[tilePos.y][tilePos.x].node {
                             node.removeAllChildren()
-                            node.color = TerrainType.farm.color
+                            node.fillColor = TerrainType.farm.color
+                            node.strokeColor = TerrainType.farm.color.withAlphaComponent(0.7)
                         }
                     }
                 }
             }
         }
 
-        player.addBuilding(building)
+        player.buildings.append(building)
 
         // Create sprite
         let node = spriteFactory.createBuildingNode(building: building)
@@ -96,7 +96,8 @@ class BuildingSystem {
         guard building.type.trainableUnits.contains(type) else { return false }
         guard player.canAfford(type.cost) else { return false }
         guard player.currentAge.rawValue >= type.requiredAge.rawValue else { return false }
-        guard player.population + building.trainingQueue.count < player.populationCap else { return false }
+        let totalQueued = player.buildings.reduce(0) { $0 + $1.trainingQueue.count }
+        guard player.population + totalQueued < player.populationCap else { return false }
 
         player.spend(type.cost)
         building.trainingQueue.append(type)
@@ -110,11 +111,8 @@ class BuildingSystem {
         guard let pos = spawnPos else { return }
 
         let hpBonus: CGFloat = type.isCavalry ? player.civilization.cavalryHPBonus : 1.0
-        let rangeBonus: CGFloat = type.isRanged ? player.civilization.archerRangeBonus : 1.0
-        let defenseBonus: CGFloat = player.civilization.defenseBonus
         let unit = Unit(type: type, ownerID: player.id, position: pos,
-                        hpBonus: hpBonus, speedBonus: type.isCavalry ? player.civilization.cavalrySpeedBonus : 1.0,
-                        rangeBonus: rangeBonus, defenseBonus: defenseBonus)
+                        hpBonus: hpBonus, speedBonus: type.isCavalry ? player.civilization.cavalrySpeedBonus : 1.0)
         unit.gridPosition = pos
         unit.position = map.gridToWorld(pos)
 
@@ -125,12 +123,9 @@ class BuildingSystem {
         // Move to rally point if set
         if let rally = building.rallyPoint {
             unit.state = .moving(to: rally)
-            if let scene = gameScene {
-                unit.setPath(scene.pathfinder.findPath(from: pos, to: rally))
-            }
         }
 
-        player.addUnit(unit)
+        player.units.append(unit)
 
         if let scene = gameScene {
             scene.gameWorld.addChild(node)
@@ -165,18 +160,18 @@ class BuildingSystem {
         let range = building.type.attackRange
         let damage = building.type.attackDamage
 
-        // Find nearest enemy unit in range — use distanceSquared to avoid sqrt
-        let rangeSq = Int(range * range)
+        // Find nearest enemy unit in range
         for player in scene.players {
             guard player.id != building.ownerID else { continue }
             for unit in player.units {
-                let distSq = building.gridPosition.distanceSquared(to: unit.gridPosition)
-                if distSq <= rangeSq {
+                let dist = building.gridPosition.distance(to: unit.gridPosition)
+                if dist <= range {
                     let currentTime = scene.gameTime
-                    let lastAttack = scene.lastBuildingAttackTimes[building.id] ?? 0
+                    let buildingKey = "building_attack_\(building.id)"
+                    let lastAttack = scene.lastBuildingAttackTimes[buildingKey] ?? 0
                     if currentTime - lastAttack >= 2.0 {
                         unit.hp -= damage
-                        scene.lastBuildingAttackTimes[building.id] = currentTime
+                        scene.lastBuildingAttackTimes[buildingKey] = currentTime
 
                         // Visual effect
                         let effect = scene.spriteFactory.createAttackEffect(
@@ -205,7 +200,8 @@ class BuildingSystem {
                     if building.type == .farm {
                         map.tiles[tilePos.y][tilePos.x].terrain = .grass
                         if let node = map.tiles[tilePos.y][tilePos.x].node {
-                            node.color = TerrainType.grass.color
+                            node.fillColor = TerrainType.grass.color
+                            node.strokeColor = TerrainType.grass.color.withAlphaComponent(0.7)
                         }
                     }
                 }
@@ -213,11 +209,6 @@ class BuildingSystem {
         }
 
         building.node?.removeFromParent()
-        player.removeBuilding(id: building.id)
-
-        // Clear stale selection reference
-        if gameScene?.selectedBuilding?.id == building.id {
-            gameScene?.selectedBuilding = nil
-        }
+        player.buildings.removeAll { $0.id == building.id }
     }
 }

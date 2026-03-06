@@ -166,15 +166,15 @@ enum TerrainType: Int, CaseIterable {
 
     var color: SKColor {
         switch self {
-        case .grass: return SKColor(red: 0.32, green: 0.52, blue: 0.18, alpha: 1.0)
-        case .forest: return SKColor(red: 0.18, green: 0.38, blue: 0.12, alpha: 1.0)
-        case .water: return SKColor(red: 0.22, green: 0.45, blue: 0.72, alpha: 1.0)
-        case .stone: return SKColor(red: 0.5, green: 0.5, blue: 0.48, alpha: 1.0)
-        case .gold: return SKColor(red: 0.55, green: 0.48, blue: 0.25, alpha: 1.0)
-        case .sand: return SKColor(red: 0.72, green: 0.65, blue: 0.45, alpha: 1.0)
+        case .grass: return SKColor(red: 0.35, green: 0.55, blue: 0.2, alpha: 1.0)
+        case .forest: return SKColor(red: 0.15, green: 0.4, blue: 0.1, alpha: 1.0)
+        case .water: return SKColor(red: 0.2, green: 0.4, blue: 0.7, alpha: 1.0)
+        case .stone: return SKColor(red: 0.55, green: 0.55, blue: 0.55, alpha: 1.0)
+        case .gold: return SKColor(red: 0.8, green: 0.7, blue: 0.2, alpha: 1.0)
+        case .sand: return SKColor(red: 0.76, green: 0.7, blue: 0.5, alpha: 1.0)
         case .deepWater: return SKColor(red: 0.1, green: 0.25, blue: 0.55, alpha: 1.0)
-        case .berryBush: return SKColor(red: 0.3, green: 0.45, blue: 0.2, alpha: 1.0)
-        case .farm: return SKColor(red: 0.5, green: 0.45, blue: 0.2, alpha: 1.0)
+        case .berryBush: return SKColor(red: 0.5, green: 0.2, blue: 0.4, alpha: 1.0)
+        case .farm: return SKColor(red: 0.6, green: 0.5, blue: 0.2, alpha: 1.0)
         }
     }
 
@@ -217,7 +217,7 @@ class MapTile {
     var building: Building?
     var isExplored: Bool = false
     var isVisible: Bool = false
-    var node: SKSpriteNode?
+    var node: SKShapeNode?
 
     init(terrain: TerrainType, position: GridPosition) {
         self.terrain = terrain
@@ -238,21 +238,8 @@ struct GridPosition: Hashable, Equatable {
         return sqrt(dx * dx + dy * dy)
     }
 
-    func distanceSquared(to other: GridPosition) -> Int {
-        let dx = x - other.x
-        let dy = y - other.y
-        return dx * dx + dy * dy
-    }
-
     func manhattanDistance(to other: GridPosition) -> Int {
         abs(x - other.x) + abs(y - other.y)
-    }
-
-    // Octile distance — exact admissible heuristic for 8-directional movement
-    func octileDistance(to other: GridPosition) -> CGFloat {
-        let dx = CGFloat(abs(x - other.x))
-        let dy = CGFloat(abs(y - other.y))
-        return max(dx, dy) + (1.414 - 1.0) * min(dx, dy)
     }
 
     var neighbors: [GridPosition] {
@@ -266,19 +253,6 @@ struct GridPosition: Hashable, Equatable {
             GridPosition(x: x - 1, y: y + 1),
             GridPosition(x: x + 1, y: y + 1),
         ]
-    }
-
-    // Avoid allocation — call a closure for each neighbor
-    @inline(__always)
-    func forEachNeighbor(_ body: (GridPosition) -> Void) {
-        body(GridPosition(x: x - 1, y: y))
-        body(GridPosition(x: x + 1, y: y))
-        body(GridPosition(x: x, y: y - 1))
-        body(GridPosition(x: x, y: y + 1))
-        body(GridPosition(x: x - 1, y: y - 1))
-        body(GridPosition(x: x + 1, y: y - 1))
-        body(GridPosition(x: x - 1, y: y + 1))
-        body(GridPosition(x: x + 1, y: y + 1))
     }
 }
 
@@ -297,10 +271,6 @@ class Player {
     var researchedTechs: Set<TechType> = []
     var isHuman: Bool
 
-    // Fast lookup dictionaries — O(1) instead of O(n) linear scans
-    private var unitsByID: [Int: Unit] = [:]
-    private var buildingsByID: [Int: Building] = [:]
-
     var population: Int { units.count }
 
     init(id: Int, civilization: Civilization, isHuman: Bool) {
@@ -316,36 +286,6 @@ class Player {
 
     func spend(_ cost: Resources) {
         resources.subtract(cost)
-    }
-
-    // Unit management with index maintenance
-    func addUnit(_ unit: Unit) {
-        units.append(unit)
-        unitsByID[unit.id] = unit
-    }
-
-    func removeUnit(id: Int) {
-        units.removeAll { $0.id == id }
-        unitsByID.removeValue(forKey: id)
-    }
-
-    func unit(byID id: Int) -> Unit? {
-        unitsByID[id]
-    }
-
-    // Building management with index maintenance
-    func addBuilding(_ building: Building) {
-        buildings.append(building)
-        buildingsByID[building.id] = building
-    }
-
-    func removeBuilding(id: Int) {
-        buildings.removeAll { $0.id == id }
-        buildingsByID.removeValue(forKey: id)
-    }
-
-    func building(byID id: Int) -> Building? {
-        buildingsByID[id]
     }
 }
 
@@ -550,9 +490,6 @@ class Building {
     var trainingProgress: CGFloat = 0
     var rallyPoint: GridPosition?
     var node: SKNode?
-    var bodyNode: SKShapeNode?
-    var hpBarNode: SKShapeNode?
-    var progressBarNode: SKShapeNode?
 
     init(type: BuildingType, ownerID: Int, position: GridPosition, civilizationBonus: CGFloat = 1.0) {
         self.id = Building.nextID
@@ -783,21 +720,16 @@ class Unit {
     var maxHP: Int
     var state: UnitState = .idle
     var path: [GridPosition] = []
-    var pathIndex: Int = 0
     var carriedResource: ResourceType?
     var carriedAmount: Int = 0
     var attackCooldown: CGFloat = 0
     var node: SKNode?
-    var hpBarNode: SKShapeNode?
-    var selectionRingNode: SKNode?
+    var bodyNode: SKNode?
     var isSelected: Bool = false
     var lastAttackTime: TimeInterval = 0
-    var rangeBonus: CGFloat = 1.0
-    var defenseBonus: CGFloat = 1.0
+    var lastDirection: CGFloat = 0
 
-    init(type: UnitType, ownerID: Int, position: GridPosition,
-         hpBonus: CGFloat = 1.0, speedBonus: CGFloat = 1.0,
-         rangeBonus: CGFloat = 1.0, defenseBonus: CGFloat = 1.0) {
+    init(type: UnitType, ownerID: Int, position: GridPosition, hpBonus: CGFloat = 1.0, speedBonus: CGFloat = 1.0) {
         self.id = Unit.nextID
         Unit.nextID += 1
         self.type = type
@@ -806,8 +738,6 @@ class Unit {
         self.position = CGPoint(x: 0, y: 0)
         self.maxHP = Int(CGFloat(type.maxHP) * hpBonus)
         self.hp = self.maxHP
-        self.rangeBonus = rangeBonus
-        self.defenseBonus = defenseBonus
     }
 
     var effectiveAttack: Int {
@@ -815,34 +745,7 @@ class Unit {
     }
 
     var effectiveDefense: Int {
-        Int(CGFloat(type.defense) * defenseBonus)
-    }
-
-    var effectiveRange: CGFloat {
-        type.attackRange * rangeBonus
-    }
-
-    // O(1) path access — avoids O(n) removeFirst() shifts
-    var hasPathRemaining: Bool {
-        pathIndex < path.count
-    }
-
-    var nextPathPosition: GridPosition? {
-        pathIndex < path.count ? path[pathIndex] : nil
-    }
-
-    func advancePath() {
-        pathIndex += 1
-    }
-
-    func clearPath() {
-        path = []
-        pathIndex = 0
-    }
-
-    func setPath(_ newPath: [GridPosition]) {
-        path = newPath
-        pathIndex = 0
+        type.defense
     }
 }
 
@@ -861,4 +764,5 @@ enum ActionMode {
     case normal
     case placingBuilding(BuildingType)
     case attackMove
+    case settingRallyPoint(Building)
 }

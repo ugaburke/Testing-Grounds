@@ -94,14 +94,31 @@ class CombatSystem {
 
                 // Visual effect
                 if let scene = gameScene {
+                    // Damage number
+                    let dmgNum = scene.spriteFactory.createDamageNumber(at: target.position, damage: damage)
+                    scene.gameWorld.addChild(dmgNum)
+
                     if unit.type.isRanged {
-                        // Projectile animation
+                        // Projectile with trail
                         let projectile = scene.spriteFactory.createAttackEffect(at: unit.position, isRanged: true)
                         scene.gameWorld.addChild(projectile)
 
+                        // Trail dots during flight
+                        let trailAction = SKAction.repeat(SKAction.sequence([
+                            SKAction.run { [weak scene, weak projectile] in
+                                guard let scene = scene, let proj = projectile else { return }
+                                let trail = scene.spriteFactory.createProjectileTrail(at: proj.position)
+                                scene.gameWorld.addChild(trail)
+                            },
+                            SKAction.wait(forDuration: 0.05)
+                        ]), count: 4)
+
                         let moveToTarget = SKAction.move(to: target.position, duration: 0.2)
                         let remove = SKAction.removeFromParent()
-                        projectile.run(SKAction.sequence([moveToTarget, remove]))
+                        projectile.run(SKAction.sequence([
+                            SKAction.group([moveToTarget, trailAction]),
+                            remove
+                        ]))
                     } else {
                         let effect = scene.spriteFactory.createAttackEffect(at: target.position, isRanged: false)
                         scene.gameWorld.addChild(effect)
@@ -150,6 +167,8 @@ class CombatSystem {
                     if let buildingPos = target.node?.position {
                         let effect = scene.spriteFactory.createAttackEffect(at: buildingPos, isRanged: false)
                         scene.gameWorld.addChild(effect)
+                        let dmgNum = scene.spriteFactory.createDamageNumber(at: buildingPos, damage: damage)
+                        scene.gameWorld.addChild(dmgNum)
                     }
                 }
             }

@@ -7,9 +7,8 @@ class GameMap {
     let tileSize: CGFloat
     var tiles: [[MapTile]]
     let mapNode: SKNode
-    private var activeTilePositions: Set<Int> = Set<Int>()
 
-    init(width: Int = 50, height: Int = 50, tileSize: CGFloat = 32) {
+    init(width: Int = 80, height: Int = 80, tileSize: CGFloat = 32) {
         self.width = width
         self.height = height
         self.tileSize = tileSize
@@ -47,13 +46,13 @@ class GameMap {
     }
 
     private func generateWater(_ rng: inout SeededRNG) {
-        // Create 1-2 lakes
-        let lakeCount = Int.random(in: 1...2, using: &rng)
+        // Create 2-3 lakes
+        let lakeCount = Int.random(in: 2...3, using: &rng)
         for _ in 0..<lakeCount {
-            let cx = Int.random(in: 12..<(width - 12), using: &rng)
-            let cy = Int.random(in: 12..<(height - 12), using: &rng)
-            let radiusX = Int.random(in: 3...6, using: &rng)
-            let radiusY = Int.random(in: 2...5, using: &rng)
+            let cx = Int.random(in: 15..<(width - 15), using: &rng)
+            let cy = Int.random(in: 15..<(height - 15), using: &rng)
+            let radiusX = Int.random(in: 4...8, using: &rng)
+            let radiusY = Int.random(in: 3...6, using: &rng)
 
             for y in max(0, cy - radiusY)...min(height - 1, cy + radiusY) {
                 for x in max(0, cx - radiusX)...min(width - 1, cx + radiusX) {
@@ -85,7 +84,7 @@ class GameMap {
     }
 
     private func generateForests(_ rng: inout SeededRNG) {
-        let clumpCount = Int.random(in: 5...10, using: &rng)
+        let clumpCount = Int.random(in: 8...15, using: &rng)
         for _ in 0..<clumpCount {
             let cx = Int.random(in: 5..<(width - 5), using: &rng)
             let cy = Int.random(in: 5..<(height - 5), using: &rng)
@@ -107,7 +106,7 @@ class GameMap {
 
     private func generateResources(_ rng: inout SeededRNG) {
         // Gold deposits
-        let goldCount = Int.random(in: 3...5, using: &rng)
+        let goldCount = Int.random(in: 5...8, using: &rng)
         for _ in 0..<goldCount {
             let cx = Int.random(in: 5..<(width - 5), using: &rng)
             let cy = Int.random(in: 5..<(height - 5), using: &rng)
@@ -127,7 +126,7 @@ class GameMap {
         }
 
         // Stone deposits
-        let stoneCount = Int.random(in: 3...5, using: &rng)
+        let stoneCount = Int.random(in: 4...7, using: &rng)
         for _ in 0..<stoneCount {
             let cx = Int.random(in: 5..<(width - 5), using: &rng)
             let cy = Int.random(in: 5..<(height - 5), using: &rng)
@@ -147,7 +146,7 @@ class GameMap {
         }
 
         // Berry bushes
-        let berryCount = Int.random(in: 3...4, using: &rng)
+        let berryCount = Int.random(in: 4...6, using: &rng)
         for _ in 0..<berryCount {
             let cx = Int.random(in: 5..<(width - 5), using: &rng)
             let cy = Int.random(in: 5..<(height - 5), using: &rng)
@@ -202,154 +201,42 @@ class GameMap {
             for x in minX...maxX {
                 let tile = tiles[y][x]
                 if tile.node == nil {
-                    let tileNode = createTileSprite(tile: tile, x: x, y: y)
-                    tileNode.position = gridToWorld(GridPosition(x: x, y: y))
-                    tileNode.zPosition = 0
+                    let node = SKShapeNode(rectOf: CGSize(width: tileSize, height: tileSize))
+                    node.fillColor = tile.terrain.color
+                    node.strokeColor = tile.terrain.color.withAlphaComponent(0.7)
+                    node.lineWidth = 0.5
+                    node.position = gridToWorld(GridPosition(x: x, y: y))
+                    node.zPosition = 0
 
-                    mapNode.addChild(tileNode)
-                    tile.node = tileNode
-                    activeTilePositions.insert(y * width + x)
+                    // Add detail for resources
+                    if tile.terrain == .forest {
+                        let tree = SKShapeNode(circleOfRadius: tileSize * 0.3)
+                        tree.fillColor = SKColor(red: 0.1, green: 0.35, blue: 0.08, alpha: 1.0)
+                        tree.strokeColor = .clear
+                        tree.position = CGPoint(x: 0, y: tileSize * 0.1)
+                        node.addChild(tree)
+                    } else if tile.terrain == .gold {
+                        let nugget = SKShapeNode(rectOf: CGSize(width: tileSize * 0.4, height: tileSize * 0.3))
+                        nugget.fillColor = SKColor(red: 0.9, green: 0.8, blue: 0.1, alpha: 1.0)
+                        nugget.strokeColor = .clear
+                        node.addChild(nugget)
+                    } else if tile.terrain == .stone {
+                        let rock = SKShapeNode(circleOfRadius: tileSize * 0.25)
+                        rock.fillColor = SKColor(red: 0.65, green: 0.65, blue: 0.65, alpha: 1.0)
+                        rock.strokeColor = .clear
+                        node.addChild(rock)
+                    } else if tile.terrain == .berryBush {
+                        let bush = SKShapeNode(circleOfRadius: tileSize * 0.25)
+                        bush.fillColor = SKColor(red: 0.6, green: 0.15, blue: 0.3, alpha: 1.0)
+                        bush.strokeColor = .clear
+                        node.addChild(bush)
+                    }
+
+                    mapNode.addChild(node)
+                    tile.node = node
                 }
             }
         }
-    }
-
-    private func createTileSprite(tile: MapTile, x: Int, y: Int) -> SKSpriteNode {
-        let size = CGSize(width: tileSize, height: tileSize)
-        // Use deterministic hash for consistent tile variation
-        let hash = (x &* 73856093) ^ (y &* 19349663)
-
-        let baseColor = tile.terrain.color
-        // Subtle color variation per tile for natural look
-        let variation = CGFloat((hash & 0xFF)) / 255.0 * 0.08 - 0.04
-        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        baseColor.getRed(&r, green: &g, blue: &b, alpha: &a)
-        let variedColor = SKColor(
-            red: max(0, min(1, r + variation)),
-            green: max(0, min(1, g + variation * 0.8)),
-            blue: max(0, min(1, b + variation * 0.5)),
-            alpha: a
-        )
-
-        let tileNode = SKSpriteNode(color: variedColor, size: size)
-
-        // Add terrain decorations
-        switch tile.terrain {
-        case .grass:
-            // Occasional grass tufts
-            if hash % 5 == 0 {
-                let tuft = SKShapeNode(rectOf: CGSize(width: 2, height: 4))
-                tuft.fillColor = SKColor(red: 0.25, green: 0.5, blue: 0.15, alpha: 0.6)
-                tuft.strokeColor = .clear
-                tuft.position = CGPoint(x: CGFloat((hash >> 8) % 16) - 8, y: CGFloat((hash >> 12) % 16) - 8)
-                tileNode.addChild(tuft)
-            }
-
-        case .forest:
-            // Tree canopy circles
-            let treeR: CGFloat = tileSize * 0.3
-            let tree = SKShapeNode(circleOfRadius: treeR)
-            tree.fillColor = SKColor(red: 0.1 + variation, green: 0.35 + CGFloat(hash % 10) / 100.0, blue: 0.08, alpha: 1.0)
-            tree.strokeColor = SKColor(red: 0.05, green: 0.25, blue: 0.05, alpha: 0.8)
-            tree.lineWidth = 1.0
-            tree.position = CGPoint(x: CGFloat((hash >> 4) % 6) - 3, y: CGFloat((hash >> 8) % 6) - 3)
-            tree.zPosition = 1
-            tileNode.addChild(tree)
-            // Small trunk
-            let trunk = SKShapeNode(rectOf: CGSize(width: 3, height: 4))
-            trunk.fillColor = SKColor(red: 0.35, green: 0.22, blue: 0.1, alpha: 1.0)
-            trunk.strokeColor = .clear
-            trunk.position = CGPoint(x: tree.position.x, y: tree.position.y - treeR * 0.6)
-            tileNode.addChild(trunk)
-
-        case .water:
-            // Wave highlights
-            if hash % 3 == 0 {
-                let wave = SKShapeNode(rectOf: CGSize(width: 8, height: 1.5))
-                wave.fillColor = SKColor(red: 0.4, green: 0.6, blue: 0.85, alpha: 0.4)
-                wave.strokeColor = .clear
-                wave.position = CGPoint(x: CGFloat((hash >> 4) % 14) - 7, y: CGFloat((hash >> 8) % 14) - 7)
-                tileNode.addChild(wave)
-            }
-
-        case .deepWater:
-            if hash % 4 == 0 {
-                let wave = SKShapeNode(rectOf: CGSize(width: 10, height: 1.5))
-                wave.fillColor = SKColor(red: 0.2, green: 0.35, blue: 0.65, alpha: 0.3)
-                wave.strokeColor = .clear
-                wave.position = CGPoint(x: CGFloat((hash >> 4) % 14) - 7, y: CGFloat((hash >> 8) % 14) - 7)
-                tileNode.addChild(wave)
-            }
-
-        case .gold:
-            // Gold nugget sparkle
-            let nugget = SKShapeNode(rectOf: CGSize(width: 6, height: 5), cornerRadius: 2)
-            nugget.fillColor = SKColor(red: 0.9, green: 0.8, blue: 0.15, alpha: 1.0)
-            nugget.strokeColor = SKColor(red: 0.7, green: 0.55, blue: 0.1, alpha: 1.0)
-            nugget.lineWidth = 1
-            nugget.position = CGPoint(x: CGFloat((hash >> 4) % 8) - 4, y: CGFloat((hash >> 8) % 8) - 4)
-            nugget.zPosition = 1
-            tileNode.addChild(nugget)
-            // Sparkle dot
-            let sparkle = SKShapeNode(circleOfRadius: 1.5)
-            sparkle.fillColor = .white
-            sparkle.strokeColor = .clear
-            sparkle.position = CGPoint(x: nugget.position.x + 2, y: nugget.position.y + 2)
-            sparkle.zPosition = 2
-            sparkle.alpha = 0.7
-            tileNode.addChild(sparkle)
-
-        case .stone:
-            // Rock shapes
-            let rock = SKShapeNode(rectOf: CGSize(width: 8, height: 6), cornerRadius: 2)
-            rock.fillColor = SKColor(red: 0.6, green: 0.58, blue: 0.55, alpha: 1.0)
-            rock.strokeColor = SKColor(red: 0.4, green: 0.4, blue: 0.38, alpha: 0.8)
-            rock.lineWidth = 1
-            rock.position = CGPoint(x: CGFloat((hash >> 4) % 8) - 4, y: CGFloat((hash >> 8) % 8) - 4)
-            rock.zPosition = 1
-            tileNode.addChild(rock)
-
-        case .berryBush:
-            // Berry bush with berries
-            let bush = SKShapeNode(circleOfRadius: tileSize * 0.25)
-            bush.fillColor = SKColor(red: 0.2, green: 0.45, blue: 0.15, alpha: 1.0)
-            bush.strokeColor = SKColor(red: 0.15, green: 0.3, blue: 0.1, alpha: 0.8)
-            bush.lineWidth = 1
-            bush.zPosition = 1
-            tileNode.addChild(bush)
-            // Berries
-            for i in 0..<3 {
-                let berry = SKShapeNode(circleOfRadius: 2)
-                berry.fillColor = SKColor(red: 0.7, green: 0.1, blue: 0.2, alpha: 1.0)
-                berry.strokeColor = .clear
-                let angle = CGFloat(i) * 2.094 + CGFloat(hash % 10) * 0.1
-                berry.position = CGPoint(x: cos(angle) * 4, y: sin(angle) * 4)
-                berry.zPosition = 2
-                tileNode.addChild(berry)
-            }
-
-        case .sand:
-            // Sand speckles
-            if hash % 3 == 0 {
-                let dot = SKShapeNode(circleOfRadius: 1)
-                dot.fillColor = SKColor(red: 0.82, green: 0.75, blue: 0.55, alpha: 0.5)
-                dot.strokeColor = .clear
-                dot.position = CGPoint(x: CGFloat((hash >> 4) % 14) - 7, y: CGFloat((hash >> 8) % 14) - 7)
-                tileNode.addChild(dot)
-            }
-
-        case .farm:
-            // Farm rows pattern
-            for i in 0..<3 {
-                let row = SKShapeNode(rectOf: CGSize(width: tileSize * 0.7, height: 1.5))
-                row.fillColor = SKColor(red: 0.45, green: 0.38, blue: 0.12, alpha: 0.6)
-                row.strokeColor = .clear
-                row.position = CGPoint(x: 0, y: CGFloat(i - 1) * (tileSize * 0.25))
-                tileNode.addChild(row)
-            }
-        }
-
-        return tileNode
     }
 
     func removeFarTiles(cameraPosition: CGPoint, viewSize: CGSize) {
@@ -359,18 +246,126 @@ class GameMap {
         let centerTileX = Int(cameraPosition.x / tileSize)
         let centerTileY = Int(cameraPosition.y / tileSize)
 
-        var toRemove: [Int] = []
-        for key in activeTilePositions {
-            let ty = key / width
-            let tx = key % width
-            if abs(tx - centerTileX) > tilesX || abs(ty - centerTileY) > tilesY {
-                tiles[ty][tx].node?.removeFromParent()
-                tiles[ty][tx].node = nil
-                toRemove.append(key)
+        for y in 0..<height {
+            for x in 0..<width {
+                if abs(x - centerTileX) > tilesX || abs(y - centerTileY) > tilesY {
+                    if let node = tiles[y][x].node {
+                        node.removeFromParent()
+                        tiles[y][x].node = nil
+                    }
+                }
             }
         }
-        for key in toRemove {
-            activeTilePositions.remove(key)
+    }
+
+    // MARK: - Terrain Animations
+
+    func animateWaterTiles(time: CGFloat, cameraPosition: CGPoint, viewSize: CGSize) {
+        let tilesX = Int(viewSize.width / tileSize) + 4
+        let tilesY = Int(viewSize.height / tileSize) + 4
+        let centerTileX = Int(cameraPosition.x / tileSize)
+        let centerTileY = Int(cameraPosition.y / tileSize)
+        let minX = max(0, centerTileX - tilesX / 2)
+        let maxX = min(width - 1, centerTileX + tilesX / 2)
+        let minY = max(0, centerTileY - tilesY / 2)
+        let maxY = min(height - 1, centerTileY + tilesY / 2)
+
+        for y in minY...maxY {
+            for x in minX...maxX {
+                let tile = tiles[y][x]
+                guard let node = tile.node else { continue }
+
+                if tile.terrain == .water || tile.terrain == .deepWater {
+                    // Oscillate wave highlight
+                    let offset = CGFloat(x * 7 + y * 13)
+                    let wave = sin(time * 1.5 + offset) * 0.15
+                    let baseColor = tile.terrain.color
+                    var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+                    baseColor.getRed(&r, green: &g, blue: &b, alpha: &a)
+                    node.fillColor = SKColor(red: min(1, r + wave * 0.3),
+                                             green: min(1, g + wave * 0.2),
+                                             blue: min(1, b + wave),
+                                             alpha: a)
+
+                    // Move wave highlight child if exists
+                    if node.childNode(withName: "waveHighlight") == nil {
+                        let highlight = SKShapeNode(rectOf: CGSize(width: tileSize * 0.6, height: 2))
+                        highlight.fillColor = SKColor.white.withAlphaComponent(0.2)
+                        highlight.strokeColor = .clear
+                        highlight.name = "waveHighlight"
+                        highlight.zPosition = 0.1
+                        node.addChild(highlight)
+                    }
+                    if let highlight = node.childNode(withName: "waveHighlight") {
+                        let waveX = sin(time * 2.0 + offset) * tileSize * 0.2
+                        let waveY = cos(time * 1.3 + offset) * tileSize * 0.15
+                        highlight.position = CGPoint(x: waveX, y: waveY)
+                    }
+                } else if tile.terrain == .forest {
+                    // Tree swaying
+                    if let canopy = node.children.first {
+                        let phase = CGFloat(x * 17 + y * 23)
+                        let sway = sin(time * 0.7 + phase) * 1.5
+                        canopy.position.x = sway
+                    }
+                }
+            }
+        }
+    }
+
+    func addTerrainBlending(cameraPosition: CGPoint, viewSize: CGSize) {
+        let tilesX = Int(viewSize.width / tileSize) + 4
+        let tilesY = Int(viewSize.height / tileSize) + 4
+        let centerTileX = Int(cameraPosition.x / tileSize)
+        let centerTileY = Int(cameraPosition.y / tileSize)
+        let minX = max(0, centerTileX - tilesX / 2)
+        let maxX = min(width - 1, centerTileX + tilesX / 2)
+        let minY = max(0, centerTileY - tilesY / 2)
+        let maxY = min(height - 1, centerTileY + tilesY / 2)
+
+        let blendPairs: Set<String> = ["grass-sand", "grass-water", "sand-water", "grass-forest",
+                                         "sand-deepWater", "grass-deepWater"]
+
+        for y in minY...maxY {
+            for x in minX...maxX {
+                let tile = tiles[y][x]
+                guard let node = tile.node else { continue }
+                guard node.childNode(withName: "blend") == nil else { continue }
+
+                let terrain = tile.terrain
+                // Check each edge neighbor
+                let edgeNeighbors: [(dx: Int, dy: Int, offsetX: CGFloat, offsetY: CGFloat)] = [
+                    (1, 0, tileSize * 0.35, 0),
+                    (-1, 0, -tileSize * 0.35, 0),
+                    (0, 1, 0, tileSize * 0.35),
+                    (0, -1, 0, -tileSize * 0.35),
+                ]
+
+                for neighbor in edgeNeighbors {
+                    let nx = x + neighbor.dx
+                    let ny = y + neighbor.dy
+                    guard nx >= 0 && nx < width && ny >= 0 && ny < height else { continue }
+                    let neighborTerrain = tiles[ny][nx].terrain
+                    if neighborTerrain == terrain { continue }
+
+                    let key1 = "\(terrain)-\(neighborTerrain)"
+                    let key2 = "\(neighborTerrain)-\(terrain)"
+                    guard blendPairs.contains(key1) || blendPairs.contains(key2) else { continue }
+
+                    let isHorizontal = neighbor.dy == 0
+                    let blendSize = isHorizontal ?
+                        CGSize(width: tileSize * 0.3, height: tileSize) :
+                        CGSize(width: tileSize, height: tileSize * 0.3)
+
+                    let blend = SKShapeNode(rectOf: blendSize)
+                    blend.fillColor = neighborTerrain.color.withAlphaComponent(0.25)
+                    blend.strokeColor = .clear
+                    blend.position = CGPoint(x: neighbor.offsetX, y: neighbor.offsetY)
+                    blend.name = "blend"
+                    blend.zPosition = 0.05
+                    node.addChild(blend)
+                }
+            }
         }
     }
 
@@ -382,7 +377,7 @@ class GameMap {
     }
 
     func worldToGrid(_ point: CGPoint) -> GridPosition {
-        GridPosition(x: Int(floor(point.x / tileSize)), y: Int(floor(point.y / tileSize)))
+        GridPosition(x: Int(point.x / tileSize), y: Int(point.y / tileSize))
     }
 
     func isValid(_ pos: GridPosition) -> Bool {

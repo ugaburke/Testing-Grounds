@@ -96,7 +96,8 @@ class BuildingSystem {
         guard building.type.trainableUnits.contains(type) else { return false }
         guard player.canAfford(type.cost) else { return false }
         guard player.currentAge.rawValue >= type.requiredAge.rawValue else { return false }
-        guard player.population + building.trainingQueue.count < player.populationCap else { return false }
+        let totalQueued = player.buildings.reduce(0) { $0 + $1.trainingQueue.count }
+        guard player.population + totalQueued < player.populationCap else { return false }
 
         player.spend(type.cost)
         building.trainingQueue.append(type)

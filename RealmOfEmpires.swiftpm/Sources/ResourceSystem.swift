@@ -43,8 +43,8 @@ class ResourceSystem {
         let dist = unit.gridPosition.distance(to: tilePos)
         if dist > 1.5 {
             // Move to resource
-            if !unit.hasPathRemaining {
-                unit.setPath(pathfinder.findPath(from: unit.gridPosition, to: tilePos))
+            if unit.path.isEmpty {
+                unit.path = pathfinder.findPath(from: unit.gridPosition, to: tilePos)
             }
             return
         }
@@ -61,9 +61,8 @@ class ResourceSystem {
             return
         }
 
-        // Gather resources (apply farm bonus for Franks)
-        let farmBonus: CGFloat = (tile.terrain == .farm) ? player.civilization.farmBonus : 1.0
-        let gatherSpeed = gatherRate * player.civilization.gatherSpeedBonus * farmBonus
+        // Gather resources
+        let gatherSpeed = gatherRate * player.civilization.gatherSpeedBonus
         let amountToGather = Int(gatherSpeed * deltaTime * 10)
 
         if amountToGather > 0 {
@@ -84,7 +83,8 @@ class ResourceSystem {
                 tile.terrain = .grass
                 if let node = tile.node {
                     node.removeAllChildren()
-                    node.color = TerrainType.grass.color
+                    node.fillColor = TerrainType.grass.color
+                    node.strokeColor = TerrainType.grass.color.withAlphaComponent(0.7)
                 }
             }
         }
@@ -94,7 +94,7 @@ class ResourceSystem {
             if let dropOff = map.findNearestDropOff(for: resourceType, ownerID: player.id,
                                                      from: unit.gridPosition, buildings: player.buildings) {
                 unit.state = .returning(dropOff: dropOff, resourceType: resourceType, carried: unit.carriedAmount)
-                unit.setPath(pathfinder.findPath(from: unit.gridPosition, to: dropOff))
+                unit.path = pathfinder.findPath(from: unit.gridPosition, to: dropOff)
             }
         }
     }
@@ -103,8 +103,8 @@ class ResourceSystem {
                                   carried: Int, player: Player, map: GameMap, pathfinder: Pathfinder) {
         let dist = unit.gridPosition.distance(to: dropOff)
         if dist > 2.0 {
-            if !unit.hasPathRemaining {
-                unit.setPath(pathfinder.findPath(from: unit.gridPosition, to: dropOff))
+            if unit.path.isEmpty {
+                unit.path = pathfinder.findPath(from: unit.gridPosition, to: dropOff)
             }
             return
         }
@@ -117,20 +117,27 @@ class ResourceSystem {
         case .stone: player.resources.stone += carried
         }
 
+        // Deposit feedback: "+N" floating text
+        if let scene = gameScene {
+            let worldPos = map.gridToWorld(dropOff)
+            let feedback = scene.spriteFactory.createDepositFeedback(at: worldPos, amount: carried, resourceType: resourceType)
+            scene.gameWorld.addChild(feedback)
+        }
+
         unit.carriedAmount = 0
         unit.carriedResource = nil
 
         // Go back to gathering
         if let tile = map.findNearestResource(resourceType, from: unit.gridPosition) {
             unit.state = .gathering(resourceType: resourceType, tilePos: tile)
-            unit.setPath(pathfinder.findPath(from: unit.gridPosition, to: tile))
+            unit.path = pathfinder.findPath(from: unit.gridPosition, to: tile)
         } else {
             unit.state = .idle
         }
     }
 
     private func handleBuilding(unit: Unit, buildingID: Int, player: Player, deltaTime: CGFloat) {
-        guard let building = player.building(byID: buildingID) else {
+        guard let building = player.buildings.first(where: { $0.id == buildingID }) else {
             unit.state = .idle
             return
         }
@@ -142,9 +149,6 @@ class ResourceSystem {
 
         let dist = unit.gridPosition.distance(to: building.gridPosition)
         if dist > 2.5 {
-            if !unit.hasPathRemaining {
-                unit.setPath(gameScene?.pathfinder.findPath(from: unit.gridPosition, to: building.gridPosition) ?? [])
-            }
             return
         }
 
@@ -158,6 +162,30 @@ class ResourceSystem {
             building.isConstructed = true
             building.hp = building.maxHP
             unit.state = .idle
+
+            // Completion feedback: flash effect
+            if let node = building.node {
+                let flash = SKAction.sequence([
+                    SKAction.run { node.children.forEach { child in
+                        if let shape = child as? SKShapeNode, shape.name == "buildingBody" {
+                            shape.fillColor = .white
+                        }
+                    }},
+                    SKAction.wait(forDuration: 0.15),
+                    SKAction.run { [weak building] in
+                        guard let building = building else { return }
+                        if let shape = node.childNode(withName: "buildingBody") as? SKShapeNode {
+                            shape.fillColor = building.type.color
+                        }
+                    }
+                ])
+                node.run(flash)
+            }
+
+            // Status message for human player
+            if let scene = gameScene, building.ownerID == scene.humanPlayer.id {
+                scene.hud.showStatus("\(building.type.displayName) completed!")
+            }
         }
     }
 
@@ -167,13 +195,13 @@ class ResourceSystem {
 
         if let resourceType = tile.terrain.resourceType, tile.resourceRemaining > 0 {
             unit.state = .gathering(resourceType: resourceType, tilePos: tilePos)
-            unit.setPath(pathfinder.findPath(from: unit.gridPosition, to: tilePos))
+            unit.path = pathfinder.findPath(from: unit.gridPosition, to: tilePos)
         }
     }
 
     func sendVillagerToBuild(unit: Unit, building: Building, pathfinder: Pathfinder) {
         guard unit.type == .villager else { return }
         unit.state = .building(buildingID: building.id)
-        unit.setPath(pathfinder.findPath(from: unit.gridPosition, to: building.gridPosition))
+        unit.path = pathfinder.findPath(from: unit.gridPosition, to: building.gridPosition)
     }
 }

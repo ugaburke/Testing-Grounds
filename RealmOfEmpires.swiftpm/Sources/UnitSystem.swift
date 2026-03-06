@@ -8,7 +8,7 @@ class UnitSystem {
     func update(deltaTime: CGFloat, player: Player, map: GameMap, pathfinder: Pathfinder) {
         for unit in player.units {
             // Move along path
-            if unit.hasPathRemaining {
+            if !unit.path.isEmpty {
                 moveAlongPath(unit: unit, map: map, deltaTime: deltaTime, player: player)
             }
 
@@ -27,12 +27,17 @@ class UnitSystem {
     }
 
     private func moveAlongPath(unit: Unit, map: GameMap, deltaTime: CGFloat, player: Player) {
-        guard let nextPos = unit.nextPathPosition else { return }
+        guard let nextPos = unit.path.first else { return }
 
         let targetWorldPos = map.gridToWorld(nextPos)
         let dx = targetWorldPos.x - unit.position.x
         let dy = targetWorldPos.y - unit.position.y
         let dist = sqrt(dx * dx + dy * dy)
+
+        // Track facing direction
+        if dist > 0.5 {
+            unit.lastDirection = atan2(dy, dx)
+        }
 
         let speedMultiplier: CGFloat = unit.type.isCavalry ? player.civilization.cavalrySpeedBonus : 1.0
         let speed = unit.type.moveSpeed * speedMultiplier * map.tileSize * 2.0
@@ -40,7 +45,7 @@ class UnitSystem {
         if dist < 2.0 {
             unit.position = targetWorldPos
             unit.gridPosition = nextPos
-            unit.advancePath()
+            unit.path.removeFirst()
             unit.node?.position = unit.position
         } else {
             let moveX = (dx / dist) * speed * deltaTime
@@ -55,7 +60,7 @@ class UnitSystem {
     }
 
     func moveUnit(_ unit: Unit, to target: GridPosition, pathfinder: Pathfinder) {
-        unit.setPath(pathfinder.findPath(from: unit.gridPosition, to: target))
+        unit.path = pathfinder.findPath(from: unit.gridPosition, to: target)
         unit.state = .moving(to: target)
     }
 
@@ -108,17 +113,15 @@ class UnitSystem {
     private func autoAttackNearby(unit: Unit, player: Player, pathfinder: Pathfinder) {
         guard let scene = gameScene else { return }
 
-        // Use distanceSquared to avoid sqrt in hot loop
-        let sightRangeSq: Int = 36  // 6.0 * 6.0
+        let sightRange: CGFloat = 6.0
 
         for enemy in scene.players where enemy.id != player.id {
             for enemyUnit in enemy.units {
-                let distSq = unit.gridPosition.distanceSquared(to: enemyUnit.gridPosition)
-                if distSq <= sightRangeSq {
+                let dist = unit.gridPosition.distance(to: enemyUnit.gridPosition)
+                if dist <= sightRange {
                     unit.state = .attacking(targetUnitID: enemyUnit.id)
-                    let rangeSq = unit.effectiveRange * unit.effectiveRange
-                    if CGFloat(distSq) > rangeSq {
-                        unit.setPath(pathfinder.findPath(from: unit.gridPosition, to: enemyUnit.gridPosition))
+                    if dist > unit.type.attackRange {
+                        unit.path = pathfinder.findPath(from: unit.gridPosition, to: enemyUnit.gridPosition)
                     }
                     return
                 }
@@ -130,10 +133,10 @@ class UnitSystem {
         unit.state = .attacking(targetUnitID: targetID)
         if let scene = gameScene {
             for player in scene.players {
-                if let target = player.unit(byID: targetID) {
+                if let target = player.units.first(where: { $0.id == targetID }) {
                     let dist = unit.gridPosition.distance(to: target.gridPosition)
-                    if dist > unit.effectiveRange {
-                        unit.setPath(pathfinder.findPath(from: unit.gridPosition, to: target.gridPosition))
+                    if dist > unit.type.attackRange {
+                        unit.path = pathfinder.findPath(from: unit.gridPosition, to: target.gridPosition)
                     }
                     return
                 }
@@ -145,10 +148,10 @@ class UnitSystem {
         unit.state = .attackingBuilding(targetBuildingID: targetBuildingID)
         if let scene = gameScene {
             for player in scene.players {
-                if let target = player.building(byID: targetBuildingID) {
+                if let target = player.buildings.first(where: { $0.id == targetBuildingID }) {
                     let dist = unit.gridPosition.distance(to: target.gridPosition)
-                    if dist > unit.effectiveRange {
-                        unit.setPath(pathfinder.findPath(from: unit.gridPosition, to: target.gridPosition))
+                    if dist > unit.type.attackRange {
+                        unit.path = pathfinder.findPath(from: unit.gridPosition, to: target.gridPosition)
                     }
                     return
                 }
@@ -162,6 +165,6 @@ class UnitSystem {
             scene.gameWorld.addChild(effect)
         }
         unit.node?.removeFromParent()
-        player.removeUnit(id: unit.id)
+        player.units.removeAll { $0.id == unit.id }
     }
 }

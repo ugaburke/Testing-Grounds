@@ -34,6 +34,11 @@ class UnitSystem {
         let dy = targetWorldPos.y - unit.position.y
         let dist = sqrt(dx * dx + dy * dy)
 
+        // Track facing direction
+        if dist > 0.5 {
+            unit.lastDirection = atan2(dy, dx)
+        }
+
         let speedMultiplier: CGFloat = unit.type.isCavalry ? player.civilization.cavalrySpeedBonus : 1.0
         let speed = unit.type.moveSpeed * speedMultiplier * map.tileSize * 2.0
 

@@ -117,6 +117,13 @@ class ResourceSystem {
         case .stone: player.resources.stone += carried
         }
 
+        // Deposit feedback: "+N" floating text
+        if let scene = gameScene {
+            let worldPos = map.gridToWorld(dropOff)
+            let feedback = scene.spriteFactory.createDepositFeedback(at: worldPos, amount: carried, resourceType: resourceType)
+            scene.gameWorld.addChild(feedback)
+        }
+
         unit.carriedAmount = 0
         unit.carriedResource = nil
 
@@ -155,6 +162,30 @@ class ResourceSystem {
             building.isConstructed = true
             building.hp = building.maxHP
             unit.state = .idle
+
+            // Completion feedback: flash effect
+            if let node = building.node {
+                let flash = SKAction.sequence([
+                    SKAction.run { node.children.forEach { child in
+                        if let shape = child as? SKShapeNode, shape.name == "buildingBody" {
+                            shape.fillColor = .white
+                        }
+                    }},
+                    SKAction.wait(forDuration: 0.15),
+                    SKAction.run { [weak building] in
+                        guard let building = building else { return }
+                        if let shape = node.childNode(withName: "buildingBody") as? SKShapeNode {
+                            shape.fillColor = building.type.color
+                        }
+                    }
+                ])
+                node.run(flash)
+            }
+
+            // Status message for human player
+            if let scene = gameScene, building.ownerID == scene.humanPlayer.id {
+                scene.hud.showStatus("\(building.type.displayName) completed!")
+            }
         }
     }
 

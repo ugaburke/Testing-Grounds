@@ -57,11 +57,11 @@ class CombatSystem {
     private func handleUnitAttack(unit: Unit, targetID: Int, player: Player,
                                    allPlayers: [Player], map: GameMap, pathfinder: Pathfinder,
                                    deltaTime: CGFloat) {
-        // Find target unit — O(1) dictionary lookup per player
+        // Find target unit among all enemy players
         var target: Unit?
         var targetPlayer: Player?
         for p in allPlayers where p.id != player.id {
-            if let t = p.unit(byID: targetID) {
+            if let t = p.units.first(where: { $0.id == targetID }) {
                 target = t
                 targetPlayer = p
                 break
@@ -70,15 +70,15 @@ class CombatSystem {
 
         guard let target = target, let _ = targetPlayer else {
             unit.state = .idle
-            unit.clearPath()
+            unit.path = []
             return
         }
 
         let dist = unit.gridPosition.distance(to: target.gridPosition)
 
         // Check if in range
-        if dist <= unit.effectiveRange {
-            unit.clearPath()
+        if dist <= unit.type.attackRange {
+            unit.path = []
 
             // Attack with cooldown
             if unit.attackCooldown <= 0 {
@@ -94,14 +94,31 @@ class CombatSystem {
 
                 // Visual effect
                 if let scene = gameScene {
+                    // Damage number
+                    let dmgNum = scene.spriteFactory.createDamageNumber(at: target.position, damage: damage)
+                    scene.gameWorld.addChild(dmgNum)
+
                     if unit.type.isRanged {
-                        // Projectile animation
+                        // Projectile with trail
                         let projectile = scene.spriteFactory.createAttackEffect(at: unit.position, isRanged: true)
                         scene.gameWorld.addChild(projectile)
 
+                        // Trail dots during flight
+                        let trailAction = SKAction.repeat(SKAction.sequence([
+                            SKAction.run { [weak scene, weak projectile] in
+                                guard let scene = scene, let proj = projectile else { return }
+                                let trail = scene.spriteFactory.createProjectileTrail(at: proj.position)
+                                scene.gameWorld.addChild(trail)
+                            },
+                            SKAction.wait(forDuration: 0.05)
+                        ]), count: 4)
+
                         let moveToTarget = SKAction.move(to: target.position, duration: 0.2)
                         let remove = SKAction.removeFromParent()
-                        projectile.run(SKAction.sequence([moveToTarget, remove]))
+                        projectile.run(SKAction.sequence([
+                            SKAction.group([moveToTarget, trailAction]),
+                            remove
+                        ]))
                     } else {
                         let effect = scene.spriteFactory.createAttackEffect(at: target.position, isRanged: false)
                         scene.gameWorld.addChild(effect)
@@ -110,8 +127,8 @@ class CombatSystem {
             }
         } else {
             // Move towards target
-            if !unit.hasPathRemaining {
-                unit.setPath(pathfinder.findPath(from: unit.gridPosition, to: target.gridPosition))
+            if unit.path.isEmpty {
+                unit.path = pathfinder.findPath(from: unit.gridPosition, to: target.gridPosition)
             }
         }
     }
@@ -123,7 +140,7 @@ class CombatSystem {
         var targetPlayer: Player?
 
         for p in allPlayers where p.id != player.id {
-            if let b = p.building(byID: targetBuildingID) {
+            if let b = p.buildings.first(where: { $0.id == targetBuildingID }) {
                 target = b
                 targetPlayer = p
                 break
@@ -132,14 +149,14 @@ class CombatSystem {
 
         guard let target = target, let _ = targetPlayer else {
             unit.state = .idle
-            unit.clearPath()
+            unit.path = []
             return
         }
 
         let dist = unit.gridPosition.distance(to: target.gridPosition)
 
-        if dist <= unit.effectiveRange + 1.0 {
-            unit.clearPath()
+        if dist <= unit.type.attackRange + 1.0 {
+            unit.path = []
 
             if unit.attackCooldown <= 0 {
                 let damage = max(1, unit.effectiveAttack)
@@ -150,12 +167,14 @@ class CombatSystem {
                     if let buildingPos = target.node?.position {
                         let effect = scene.spriteFactory.createAttackEffect(at: buildingPos, isRanged: false)
                         scene.gameWorld.addChild(effect)
+                        let dmgNum = scene.spriteFactory.createDamageNumber(at: buildingPos, damage: damage)
+                        scene.gameWorld.addChild(dmgNum)
                     }
                 }
             }
         } else {
-            if !unit.hasPathRemaining {
-                unit.setPath(pathfinder.findPath(from: unit.gridPosition, to: target.gridPosition))
+            if unit.path.isEmpty {
+                unit.path = pathfinder.findPath(from: unit.gridPosition, to: target.gridPosition)
             }
         }
     }

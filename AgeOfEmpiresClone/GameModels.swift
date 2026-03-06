@@ -724,8 +724,10 @@ class Unit {
     var carriedAmount: Int = 0
     var attackCooldown: CGFloat = 0
     var node: SKNode?
+    var bodyNode: SKNode?
     var isSelected: Bool = false
     var lastAttackTime: TimeInterval = 0
+    var lastDirection: CGFloat = 0
 
     init(type: UnitType, ownerID: Int, position: GridPosition, hpBonus: CGFloat = 1.0, speedBonus: CGFloat = 1.0) {
         self.id = Unit.nextID
@@ -762,4 +764,5 @@ enum ActionMode {
     case normal
     case placingBuilding(BuildingType)
     case attackMove
+    case settingRallyPoint(Building)
 }

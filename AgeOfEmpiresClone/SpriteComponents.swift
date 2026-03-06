@@ -9,8 +9,39 @@ class SpriteFactory {
         SKColor(red: 0.8, green: 0.7, blue: 0.2, alpha: 1.0),  // Player 4: Yellow
     ]
 
+    private var shadowTexture: SKTexture?
+
     init(tileSize: CGFloat) {
         self.tileSize = tileSize
+        self.shadowTexture = createGradientShadowTexture()
+    }
+
+    // MARK: - Cached Shadow Texture
+
+    private func createGradientShadowTexture() -> SKTexture {
+        let size = Int(tileSize)
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let context = CGContext(data: nil, width: size, height: size,
+                                bitsPerComponent: 8, bytesPerRow: size * 4,
+                                space: colorSpace, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        let center = CGFloat(size) / 2.0
+        let radius = CGFloat(size) / 2.0
+        for y in 0..<size {
+            for x in 0..<size {
+                let dx = CGFloat(x) - center
+                let dy = CGFloat(y) - center
+                let dist = sqrt(dx * dx + dy * dy) / radius
+                let alpha = max(0, 1.0 - dist) * 0.3
+                let ptr = context.data!.assumingMemoryBound(to: UInt8.self)
+                let offset = (y * size + x) * 4
+                ptr[offset] = 0
+                ptr[offset + 1] = 0
+                ptr[offset + 2] = 0
+                ptr[offset + 3] = UInt8(alpha * 255)
+            }
+        }
+        let cgImage = context.makeImage()!
+        return SKTexture(cgImage: cgImage)
     }
 
     // MARK: - Unit Sprites
@@ -21,69 +52,19 @@ class SpriteFactory {
         container.zPosition = 10
 
         let playerColor = SpriteFactory.playerColors[unit.ownerID % SpriteFactory.playerColors.count]
-
-        // Unit body
         let bodySize = tileSize * 0.7
-        let body: SKShapeNode
 
-        if unit.type.isCavalry {
-            // Horse-like shape for cavalry
-            let path = CGMutablePath()
-            path.addEllipse(in: CGRect(x: -bodySize * 0.5, y: -bodySize * 0.3,
-                                        width: bodySize, height: bodySize * 0.6))
-            body = SKShapeNode(path: path)
-        } else if unit.type.isRanged {
-            // Triangle for ranged units
-            let path = CGMutablePath()
-            path.move(to: CGPoint(x: 0, y: bodySize * 0.4))
-            path.addLine(to: CGPoint(x: -bodySize * 0.35, y: -bodySize * 0.3))
-            path.addLine(to: CGPoint(x: bodySize * 0.35, y: -bodySize * 0.3))
-            path.closeSubpath()
-            body = SKShapeNode(path: path)
-        } else if unit.type == .villager {
-            // Circle for villagers
-            body = SKShapeNode(circleOfRadius: bodySize * 0.35)
-        } else {
-            // Square for melee infantry
-            body = SKShapeNode(rectOf: CGSize(width: bodySize * 0.6, height: bodySize * 0.6))
+        // Shadow (gradient)
+        if let shadowTex = shadowTexture {
+            let shadow = SKSpriteNode(texture: shadowTex)
+            shadow.size = CGSize(width: bodySize * 0.8, height: bodySize * 0.4)
+            shadow.position = CGPoint(x: 0, y: -bodySize * 0.25)
+            shadow.zPosition = -2
+            shadow.name = "shadow"
+            container.addChild(shadow)
         }
 
-        body.fillColor = playerColor
-        body.strokeColor = playerColor.lighter(by: 0.3)
-        body.lineWidth = 1.5
-        body.name = "unitBody"
-        container.addChild(body)
-
-        // Unit type indicator
-        let label = SKLabelNode(text: unit.type.icon)
-        label.fontSize = tileSize * 0.3
-        label.fontName = "Helvetica-Bold"
-        label.fontColor = .white
-        label.verticalAlignmentMode = .center
-        label.horizontalAlignmentMode = .center
-        label.zPosition = 1
-        container.addChild(label)
-
-        // HP bar background
-        let hpBarWidth = tileSize * 0.7
-        let hpBarBg = SKShapeNode(rectOf: CGSize(width: hpBarWidth, height: 3))
-        hpBarBg.fillColor = .darkGray
-        hpBarBg.strokeColor = .clear
-        hpBarBg.position = CGPoint(x: 0, y: bodySize * 0.45)
-        hpBarBg.name = "hpBarBg"
-        hpBarBg.zPosition = 2
-        container.addChild(hpBarBg)
-
-        // HP bar fill
-        let hpBar = SKShapeNode(rectOf: CGSize(width: hpBarWidth, height: 3))
-        hpBar.fillColor = .green
-        hpBar.strokeColor = .clear
-        hpBar.position = CGPoint(x: 0, y: bodySize * 0.45)
-        hpBar.name = "hpBar"
-        hpBar.zPosition = 3
-        container.addChild(hpBar)
-
-        // Selection ring (hidden by default)
+        // Selection ring (hidden by default) — non-rotating
         let selectionRing = SKShapeNode(circleOfRadius: bodySize * 0.55)
         selectionRing.fillColor = .clear
         selectionRing.strokeColor = SKColor(red: 0.2, green: 1.0, blue: 0.2, alpha: 0.8)
@@ -92,6 +73,101 @@ class SpriteFactory {
         selectionRing.isHidden = true
         selectionRing.zPosition = -1
         container.addChild(selectionRing)
+
+        // Body container (rotates to face movement direction)
+        let bodyContainer = SKNode()
+        bodyContainer.name = "bodyContainer"
+        bodyContainer.zPosition = 1
+        container.addChild(bodyContainer)
+        unit.bodyNode = bodyContainer
+
+        // Unit body shape
+        let body: SKShapeNode
+        if unit.type.isCavalry {
+            let path = CGMutablePath()
+            path.addEllipse(in: CGRect(x: -bodySize * 0.5, y: -bodySize * 0.3,
+                                        width: bodySize, height: bodySize * 0.6))
+            body = SKShapeNode(path: path)
+            // Mane detail
+            let mane = SKShapeNode(rectOf: CGSize(width: bodySize * 0.15, height: bodySize * 0.35))
+            mane.fillColor = playerColor.darker(by: 0.15)
+            mane.strokeColor = .clear
+            mane.position = CGPoint(x: bodySize * 0.2, y: bodySize * 0.1)
+            bodyContainer.addChild(mane)
+        } else if unit.type.isRanged {
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: 0, y: bodySize * 0.4))
+            path.addLine(to: CGPoint(x: -bodySize * 0.35, y: -bodySize * 0.3))
+            path.addLine(to: CGPoint(x: bodySize * 0.35, y: -bodySize * 0.3))
+            path.closeSubpath()
+            body = SKShapeNode(path: path)
+            // Bowstring/arrow detail
+            let bowString = SKShapeNode(rectOf: CGSize(width: 1, height: bodySize * 0.5))
+            bowString.fillColor = SKColor.white.withAlphaComponent(0.6)
+            bowString.strokeColor = .clear
+            bowString.position = CGPoint(x: 0, y: bodySize * 0.05)
+            bodyContainer.addChild(bowString)
+        } else if unit.type == .villager {
+            body = SKShapeNode(circleOfRadius: bodySize * 0.35)
+        } else {
+            // Melee infantry
+            body = SKShapeNode(rectOf: CGSize(width: bodySize * 0.6, height: bodySize * 0.6))
+            // Sword detail
+            let sword = SKShapeNode(rectOf: CGSize(width: 2, height: bodySize * 0.4))
+            sword.fillColor = SKColor(red: 0.8, green: 0.8, blue: 0.85, alpha: 0.8)
+            sword.strokeColor = .clear
+            sword.position = CGPoint(x: bodySize * 0.2, y: bodySize * 0.05)
+            sword.zRotation = -0.3
+            bodyContainer.addChild(sword)
+            // Horizontal armor line
+            let armor = SKShapeNode(rectOf: CGSize(width: bodySize * 0.4, height: 1.5))
+            armor.fillColor = playerColor.darker(by: 0.1)
+            armor.strokeColor = .clear
+            bodyContainer.addChild(armor)
+        }
+
+        body.fillColor = playerColor
+        body.strokeColor = playerColor.lighter(by: 0.3)
+        body.lineWidth = 1.5
+        body.name = "unitBody"
+        bodyContainer.addChild(body)
+
+        // Unit type indicator label
+        let label = SKLabelNode(text: unit.type.icon)
+        label.fontSize = tileSize * 0.3
+        label.fontName = "Helvetica-Bold"
+        label.fontColor = .white
+        label.verticalAlignmentMode = .center
+        label.horizontalAlignmentMode = .center
+        label.zPosition = 2
+        bodyContainer.addChild(label)
+
+        // HP bar background — non-rotating, stays on container
+        let hpBarWidth = tileSize * 0.7
+        let hpBarBg = SKShapeNode(rectOf: CGSize(width: hpBarWidth, height: 3))
+        hpBarBg.fillColor = .darkGray
+        hpBarBg.strokeColor = .clear
+        hpBarBg.position = CGPoint(x: 0, y: bodySize * 0.45)
+        hpBarBg.name = "hpBarBg"
+        hpBarBg.zPosition = 12
+        container.addChild(hpBarBg)
+
+        let hpBar = SKShapeNode(rectOf: CGSize(width: hpBarWidth, height: 3))
+        hpBar.fillColor = .green
+        hpBar.strokeColor = .clear
+        hpBar.position = CGPoint(x: 0, y: bodySize * 0.45)
+        hpBar.name = "hpBar"
+        hpBar.zPosition = 13
+        container.addChild(hpBar)
+
+        // State indicator (emoji above unit for villagers)
+        let stateLabel = SKLabelNode(text: "")
+        stateLabel.fontSize = tileSize * 0.35
+        stateLabel.verticalAlignmentMode = .center
+        stateLabel.position = CGPoint(x: 0, y: bodySize * 0.65)
+        stateLabel.name = "stateIndicator"
+        stateLabel.zPosition = 14
+        container.addChild(stateLabel)
 
         return container
     }
@@ -115,9 +191,55 @@ class SpriteFactory {
         }
 
         // Update selection ring
-        if let ring = container.childNode(withName: "selectionRing") {
+        if let ring = container.childNode(withName: "selectionRing") as? SKShapeNode {
             ring.isHidden = !unit.isSelected
+            if unit.isSelected && ring.action(forKey: "pulse") == nil {
+                let pulse = SKAction.sequence([
+                    SKAction.scale(to: 1.1, duration: 0.4),
+                    SKAction.scale(to: 1.0, duration: 0.4)
+                ])
+                ring.run(SKAction.repeatForever(pulse), withKey: "pulse")
+            } else if !unit.isSelected {
+                ring.removeAction(forKey: "pulse")
+                ring.setScale(1.0)
+            }
         }
+
+        // Update state indicator for villagers
+        if unit.type == .villager, let stateLabel = container.childNode(withName: "stateIndicator") as? SKLabelNode {
+            switch unit.state {
+            case .gathering(let rt, _):
+                switch rt {
+                case .food: stateLabel.text = "\u{1F34E}"
+                case .wood: stateLabel.text = "\u{1FAB5}"
+                case .gold: stateLabel.text = "\u{1FA99}"
+                case .stone: stateLabel.text = "\u{1FAA8}"
+                }
+            case .building(_): stateLabel.text = "\u{1F528}"
+            case .returning(_, _, _): stateLabel.text = "\u{1F4E6}"
+            default: stateLabel.text = ""
+            }
+        } else if let stateLabel = container.childNode(withName: "stateIndicator") as? SKLabelNode {
+            stateLabel.text = ""
+        }
+    }
+
+    // MARK: - Unit Facing
+
+    func updateUnitFacing(_ unit: Unit, deltaTime: CGFloat) {
+        guard let bodyNode = unit.bodyNode else { return }
+        guard !unit.path.isEmpty else { return }
+
+        // Calculate direction from movement
+        let targetAngle = unit.lastDirection
+        let currentAngle = bodyNode.zRotation
+
+        // Smooth rotation lerp
+        var diff = targetAngle - currentAngle
+        // Normalize to -pi...pi
+        while diff > .pi { diff -= .pi * 2 }
+        while diff < -.pi { diff += .pi * 2 }
+        bodyNode.zRotation += diff * 0.15
     }
 
     // MARK: - Building Sprites
@@ -128,7 +250,6 @@ class SpriteFactory {
         container.zPosition = 5
 
         let playerColor = SpriteFactory.playerColors[building.ownerID % SpriteFactory.playerColors.count]
-
         let w = CGFloat(building.type.size.width) * tileSize
         let h = CGFloat(building.type.size.height) * tileSize
 
@@ -140,9 +261,12 @@ class SpriteFactory {
         body.name = "buildingBody"
         container.addChild(body)
 
+        // Architectural detail per building type
+        addBuildingDetail(to: container, type: building.type, w: w, h: h, playerColor: playerColor)
+
         // Building label
         let label = SKLabelNode(text: building.type.icon)
-        label.fontSize = min(w, h) * 0.35
+        label.fontSize = min(w, h) * 0.3
         label.fontName = "Helvetica-Bold"
         label.fontColor = .white
         label.verticalAlignmentMode = .center
@@ -168,7 +292,7 @@ class SpriteFactory {
         hpBar.zPosition = 3
         container.addChild(hpBar)
 
-        // Construction progress bar
+        // Construction scaffolding + progress bar
         if !building.isConstructed {
             let progressBar = SKShapeNode(rectOf: CGSize(width: 1, height: 4))
             progressBar.fillColor = .orange
@@ -177,24 +301,163 @@ class SpriteFactory {
             progressBar.name = "progressBar"
             progressBar.zPosition = 3
             container.addChild(progressBar)
+
+            // Scaffolding lines
+            let scaffolding = SKNode()
+            scaffolding.name = "scaffolding"
+            scaffolding.zPosition = 1.5
+            for i in 0..<3 {
+                let line = SKShapeNode(rectOf: CGSize(width: w * 0.8, height: 1))
+                line.fillColor = SKColor(red: 0.6, green: 0.4, blue: 0.2, alpha: 0.6)
+                line.strokeColor = .clear
+                line.position = CGPoint(x: 0, y: -h * 0.3 + CGFloat(i) * h * 0.3)
+                scaffolding.addChild(line)
+            }
+            // Pulsing opacity on scaffolding
+            let pulse = SKAction.sequence([
+                SKAction.fadeAlpha(to: 0.3, duration: 0.8),
+                SKAction.fadeAlpha(to: 0.8, duration: 0.8)
+            ])
+            scaffolding.run(SKAction.repeatForever(pulse))
+            container.addChild(scaffolding)
         }
 
         // Flag for player color
-        let flagPole = SKShapeNode(rectOf: CGSize(width: 1, height: 12))
+        let flagPole = SKShapeNode(rectOf: CGSize(width: 1, height: 14))
         flagPole.fillColor = .gray
         flagPole.strokeColor = .clear
         flagPole.position = CGPoint(x: w * 0.35, y: h * 0.3)
         flagPole.zPosition = 2
+        flagPole.name = "flagPole"
         container.addChild(flagPole)
 
-        let flag = SKShapeNode(rectOf: CGSize(width: 6, height: 4))
+        let flag = SKShapeNode(rectOf: CGSize(width: 7, height: 5))
         flag.fillColor = playerColor
         flag.strokeColor = .clear
-        flag.position = CGPoint(x: w * 0.35 + 3, y: h * 0.3 + 6)
+        flag.position = CGPoint(x: w * 0.35 + 3.5, y: h * 0.3 + 7)
         flag.zPosition = 2
+        flag.name = "flag"
         container.addChild(flag)
 
         return container
+    }
+
+    private func addBuildingDetail(to container: SKNode, type: BuildingType, w: CGFloat, h: CGFloat, playerColor: SKColor) {
+        let detailZ: CGFloat = 1.2
+
+        switch type {
+        case .townCenter:
+            // Door
+            let door = SKShapeNode(rectOf: CGSize(width: w * 0.15, height: h * 0.25))
+            door.fillColor = SKColor(red: 0.3, green: 0.2, blue: 0.1, alpha: 1.0)
+            door.strokeColor = .clear
+            door.position = CGPoint(x: 0, y: -h * 0.25)
+            door.zPosition = detailZ
+            container.addChild(door)
+            // Windows
+            for xOff in [-w * 0.25, w * 0.25] {
+                let window = SKShapeNode(rectOf: CGSize(width: w * 0.08, height: h * 0.08))
+                window.fillColor = SKColor(red: 0.6, green: 0.7, blue: 0.9, alpha: 0.8)
+                window.strokeColor = SKColor.white.withAlphaComponent(0.5)
+                window.lineWidth = 0.5
+                window.position = CGPoint(x: xOff, y: h * 0.1)
+                window.zPosition = detailZ
+                container.addChild(window)
+            }
+
+        case .house:
+            // Small door
+            let door = SKShapeNode(rectOf: CGSize(width: w * 0.12, height: h * 0.2))
+            door.fillColor = SKColor(red: 0.35, green: 0.25, blue: 0.12, alpha: 1.0)
+            door.strokeColor = .clear
+            door.position = CGPoint(x: -w * 0.15, y: -h * 0.28)
+            door.zPosition = detailZ
+            container.addChild(door)
+            // Window
+            let window = SKShapeNode(rectOf: CGSize(width: w * 0.1, height: w * 0.1))
+            window.fillColor = SKColor(red: 0.6, green: 0.7, blue: 0.9, alpha: 0.7)
+            window.strokeColor = SKColor.white.withAlphaComponent(0.4)
+            window.lineWidth = 0.5
+            window.position = CGPoint(x: w * 0.15, y: h * 0.05)
+            window.zPosition = detailZ
+            container.addChild(window)
+
+        case .barracks, .archeryRange, .stable:
+            // Double door
+            for xOff in [-w * 0.06, w * 0.06] as [CGFloat] {
+                let door = SKShapeNode(rectOf: CGSize(width: w * 0.1, height: h * 0.22))
+                door.fillColor = SKColor(red: 0.3, green: 0.2, blue: 0.1, alpha: 1.0)
+                door.strokeColor = .clear
+                door.position = CGPoint(x: xOff, y: -h * 0.26)
+                door.zPosition = detailZ
+                container.addChild(door)
+            }
+            // Emblem
+            if type == .barracks {
+                let emblem = SKShapeNode(rectOf: CGSize(width: 3, height: 8))
+                emblem.fillColor = .white
+                emblem.strokeColor = .clear
+                emblem.position = CGPoint(x: 0, y: h * 0.1)
+                emblem.zPosition = detailZ
+                container.addChild(emblem)
+                let crossbar = SKShapeNode(rectOf: CGSize(width: 6, height: 2))
+                crossbar.fillColor = .white
+                crossbar.strokeColor = .clear
+                crossbar.position = CGPoint(x: 0, y: h * 0.13)
+                crossbar.zPosition = detailZ
+                container.addChild(crossbar)
+            }
+
+        case .castle:
+            // Gate
+            let gate = SKShapeNode(rectOf: CGSize(width: w * 0.18, height: h * 0.22))
+            gate.fillColor = SKColor(red: 0.25, green: 0.2, blue: 0.15, alpha: 1.0)
+            gate.strokeColor = .clear
+            gate.position = CGPoint(x: 0, y: -h * 0.28)
+            gate.zPosition = detailZ
+            container.addChild(gate)
+            // Corner turrets with merlons
+            for (xOff, yOff) in [(-w * 0.35, h * 0.35), (w * 0.35, h * 0.35),
+                                  (-w * 0.35, -h * 0.35), (w * 0.35, -h * 0.35)] {
+                let turret = SKShapeNode(circleOfRadius: w * 0.08)
+                turret.fillColor = type.color.darker(by: 0.1)
+                turret.strokeColor = playerColor
+                turret.lineWidth = 1
+                turret.position = CGPoint(x: xOff, y: yOff)
+                turret.zPosition = detailZ
+                container.addChild(turret)
+            }
+
+        case .tower:
+            // Arrow slits
+            for yOff in [-h * 0.1, h * 0.1] as [CGFloat] {
+                let slit = SKShapeNode(rectOf: CGSize(width: 2, height: h * 0.15))
+                slit.fillColor = SKColor.black.withAlphaComponent(0.6)
+                slit.strokeColor = .clear
+                slit.position = CGPoint(x: 0, y: yOff)
+                slit.zPosition = detailZ
+                container.addChild(slit)
+            }
+
+        case .blacksmith:
+            // Anvil shape
+            let anvil = SKShapeNode(rectOf: CGSize(width: w * 0.2, height: h * 0.12))
+            anvil.fillColor = SKColor(red: 0.3, green: 0.3, blue: 0.35, alpha: 1.0)
+            anvil.strokeColor = .clear
+            anvil.position = CGPoint(x: 0, y: -h * 0.1)
+            anvil.zPosition = detailZ
+            container.addChild(anvil)
+            // Chimney
+            let chimney = SKShapeNode(rectOf: CGSize(width: w * 0.08, height: h * 0.2))
+            chimney.fillColor = type.color.darker(by: 0.15)
+            chimney.strokeColor = .clear
+            chimney.position = CGPoint(x: w * 0.3, y: h * 0.3)
+            chimney.zPosition = detailZ
+            container.addChild(chimney)
+
+        default:
+            break
+        }
     }
 
     func updateBuildingNode(_ building: Building) {
@@ -227,6 +490,7 @@ class SpriteFactory {
         if let progressBar = container.childNode(withName: "progressBar") as? SKShapeNode {
             if building.isConstructed {
                 progressBar.removeFromParent()
+                container.childNode(withName: "scaffolding")?.removeFromParent()
             } else {
                 let barWidth = w * 0.8 * building.constructionProgress
                 let path = CGPath(rect: CGRect(x: 0, y: -2, width: barWidth, height: 4), transform: nil)
@@ -260,30 +524,128 @@ class SpriteFactory {
 
     func createAttackEffect(at position: CGPoint, isRanged: Bool) -> SKNode {
         if isRanged {
-            let projectile = SKShapeNode(circleOfRadius: 2)
+            let projectile = SKShapeNode(circleOfRadius: 2.5)
             projectile.fillColor = .yellow
             projectile.strokeColor = .orange
+            projectile.lineWidth = 1
             projectile.position = position
             projectile.zPosition = 15
+            projectile.name = "projectile"
             return projectile
         } else {
-            let slash = SKShapeNode(rectOf: CGSize(width: 8, height: 2))
-            slash.fillColor = .white
-            slash.strokeColor = .clear
-            slash.position = position
-            slash.zPosition = 15
-            slash.zRotation = CGFloat.random(in: 0...(.pi * 2))
+            // Enhanced melee effect: multiple slashes + hit splatter
+            let container = SKNode()
+            container.position = position
+            container.zPosition = 15
 
-            let fadeOut = SKAction.sequence([
-                SKAction.group([
-                    SKAction.fadeOut(withDuration: 0.3),
-                    SKAction.scale(to: 2.0, duration: 0.3)
-                ]),
+            // Multiple slash lines
+            for i in 0..<3 {
+                let slash = SKShapeNode(rectOf: CGSize(width: 10, height: 2))
+                slash.fillColor = .white
+                slash.strokeColor = .clear
+                slash.zRotation = CGFloat.random(in: 0...(.pi * 2))
+                slash.alpha = 0.9
+
+                let fadeOut = SKAction.sequence([
+                    SKAction.wait(forDuration: TimeInterval(i) * 0.05),
+                    SKAction.group([
+                        SKAction.fadeOut(withDuration: 0.25),
+                        SKAction.scale(to: 2.0, duration: 0.25)
+                    ]),
+                    SKAction.removeFromParent()
+                ])
+                slash.run(fadeOut)
+                container.addChild(slash)
+            }
+
+            // Hit splatter particles
+            for _ in 0..<4 {
+                let dot = SKShapeNode(circleOfRadius: 1.5)
+                dot.fillColor = [SKColor.red, SKColor.orange].randomElement()!
+                dot.strokeColor = .clear
+                let dx = CGFloat.random(in: -8...8)
+                let dy = CGFloat.random(in: -8...8)
+                let splat = SKAction.sequence([
+                    SKAction.group([
+                        SKAction.moveBy(x: dx, y: dy, duration: 0.2),
+                        SKAction.fadeOut(withDuration: 0.2)
+                    ]),
+                    SKAction.removeFromParent()
+                ])
+                dot.run(splat)
+                container.addChild(dot)
+            }
+
+            let cleanup = SKAction.sequence([
+                SKAction.wait(forDuration: 0.4),
                 SKAction.removeFromParent()
             ])
-            slash.run(fadeOut)
-            return slash
+            container.run(cleanup)
+            return container
         }
+    }
+
+    func createDamageNumber(at position: CGPoint, damage: Int) -> SKNode {
+        let label = SKLabelNode(text: "-\(damage)")
+        label.fontSize = 14
+        label.fontName = "Helvetica-Bold"
+        label.fontColor = .red
+        label.position = position
+        label.zPosition = 25
+        label.verticalAlignmentMode = .center
+
+        let floatUp = SKAction.sequence([
+            SKAction.group([
+                SKAction.moveBy(x: CGFloat.random(in: -5...5), y: 20, duration: 0.6),
+                SKAction.fadeOut(withDuration: 0.6)
+            ]),
+            SKAction.removeFromParent()
+        ])
+        label.run(floatUp)
+        return label
+    }
+
+    func createDepositFeedback(at position: CGPoint, amount: Int, resourceType: ResourceType) -> SKNode {
+        let color: SKColor
+        switch resourceType {
+        case .food: color = SKColor(red: 0.9, green: 0.3, blue: 0.3, alpha: 1.0)
+        case .wood: color = SKColor(red: 0.6, green: 0.4, blue: 0.2, alpha: 1.0)
+        case .gold: color = SKColor(red: 0.9, green: 0.8, blue: 0.2, alpha: 1.0)
+        case .stone: color = SKColor(red: 0.7, green: 0.7, blue: 0.7, alpha: 1.0)
+        }
+
+        let label = SKLabelNode(text: "+\(amount)")
+        label.fontSize = 12
+        label.fontName = "Helvetica-Bold"
+        label.fontColor = color
+        label.position = position
+        label.zPosition = 25
+        label.verticalAlignmentMode = .center
+
+        let floatUp = SKAction.sequence([
+            SKAction.group([
+                SKAction.moveBy(x: 0, y: 18, duration: 0.5),
+                SKAction.fadeOut(withDuration: 0.5)
+            ]),
+            SKAction.removeFromParent()
+        ])
+        label.run(floatUp)
+        return label
+    }
+
+    func createProjectileTrail(at position: CGPoint) -> SKNode {
+        let dot = SKShapeNode(circleOfRadius: 1)
+        dot.fillColor = SKColor.yellow.withAlphaComponent(0.6)
+        dot.strokeColor = .clear
+        dot.position = position
+        dot.zPosition = 14
+
+        let fade = SKAction.sequence([
+            SKAction.fadeOut(withDuration: 0.3),
+            SKAction.removeFromParent()
+        ])
+        dot.run(fade)
+        return dot
     }
 
     func createGatherEffect(at position: CGPoint, resourceType: ResourceType) -> SKNode {
@@ -309,25 +671,56 @@ class SpriteFactory {
         return particle
     }
 
+    func createMoveIndicator(at position: CGPoint) -> SKNode {
+        let ring = SKShapeNode(circleOfRadius: tileSize * 0.4)
+        ring.fillColor = .clear
+        ring.strokeColor = SKColor.green.withAlphaComponent(0.8)
+        ring.lineWidth = 2
+        ring.position = position
+        ring.zPosition = 15
+        ring.setScale(1.5)
+
+        let anim = SKAction.sequence([
+            SKAction.group([
+                SKAction.scale(to: 0.5, duration: 0.4),
+                SKAction.fadeOut(withDuration: 0.4)
+            ]),
+            SKAction.removeFromParent()
+        ])
+        ring.run(anim)
+        return ring
+    }
+
     func createDeathEffect(at position: CGPoint) -> SKNode {
         let container = SKNode()
         container.position = position
         container.zPosition = 20
 
-        for _ in 0..<6 {
-            let particle = SKShapeNode(circleOfRadius: 2)
-            particle.fillColor = .orange
-            particle.strokeColor = .red
+        // White flash
+        let flash = SKShapeNode(circleOfRadius: tileSize * 0.4)
+        flash.fillColor = SKColor.white.withAlphaComponent(0.8)
+        flash.strokeColor = .clear
+        flash.run(SKAction.sequence([
+            SKAction.fadeOut(withDuration: 0.15),
+            SKAction.removeFromParent()
+        ]))
+        container.addChild(flash)
+
+        // 12 particles
+        for _ in 0..<12 {
+            let particle = SKShapeNode(circleOfRadius: CGFloat.random(in: 1.5...3))
+            particle.fillColor = [SKColor.orange, SKColor.red, SKColor.yellow].randomElement()!
+            particle.strokeColor = .clear
             particle.position = .zero
 
-            let dx = CGFloat.random(in: -15...15)
-            let dy = CGFloat.random(in: -15...15)
+            let dx = CGFloat.random(in: -18...18)
+            let dy = CGFloat.random(in: -18...18)
 
             let anim = SKAction.sequence([
                 SKAction.group([
-                    SKAction.moveBy(x: dx, y: dy, duration: 0.4),
-                    SKAction.fadeOut(withDuration: 0.4),
-                    SKAction.scale(to: 0.1, duration: 0.4)
+                    SKAction.moveBy(x: dx, y: dy, duration: 0.45),
+                    SKAction.fadeOut(withDuration: 0.45),
+                    SKAction.scale(to: 0.1, duration: 0.45)
                 ]),
                 SKAction.removeFromParent()
             ])
@@ -335,8 +728,20 @@ class SpriteFactory {
             container.addChild(particle)
         }
 
+        // Scorch mark on ground (persists 3s)
+        let scorch = SKShapeNode(circleOfRadius: tileSize * 0.35)
+        scorch.fillColor = SKColor(red: 0.15, green: 0.1, blue: 0.05, alpha: 0.5)
+        scorch.strokeColor = .clear
+        scorch.zPosition = -1
+        scorch.run(SKAction.sequence([
+            SKAction.wait(forDuration: 3.0),
+            SKAction.fadeOut(withDuration: 0.5),
+            SKAction.removeFromParent()
+        ]))
+        container.addChild(scorch)
+
         let cleanup = SKAction.sequence([
-            SKAction.wait(forDuration: 0.5),
+            SKAction.wait(forDuration: 3.6),
             SKAction.removeFromParent()
         ])
         container.run(cleanup)
