@@ -166,15 +166,15 @@ enum TerrainType: Int, CaseIterable {
 
     var color: SKColor {
         switch self {
-        case .grass: return SKColor(red: 0.35, green: 0.55, blue: 0.2, alpha: 1.0)
-        case .forest: return SKColor(red: 0.15, green: 0.4, blue: 0.1, alpha: 1.0)
-        case .water: return SKColor(red: 0.2, green: 0.4, blue: 0.7, alpha: 1.0)
-        case .stone: return SKColor(red: 0.55, green: 0.55, blue: 0.55, alpha: 1.0)
-        case .gold: return SKColor(red: 0.8, green: 0.7, blue: 0.2, alpha: 1.0)
-        case .sand: return SKColor(red: 0.76, green: 0.7, blue: 0.5, alpha: 1.0)
+        case .grass: return SKColor(red: 0.32, green: 0.52, blue: 0.18, alpha: 1.0)
+        case .forest: return SKColor(red: 0.18, green: 0.38, blue: 0.12, alpha: 1.0)
+        case .water: return SKColor(red: 0.22, green: 0.45, blue: 0.72, alpha: 1.0)
+        case .stone: return SKColor(red: 0.5, green: 0.5, blue: 0.48, alpha: 1.0)
+        case .gold: return SKColor(red: 0.55, green: 0.48, blue: 0.25, alpha: 1.0)
+        case .sand: return SKColor(red: 0.72, green: 0.65, blue: 0.45, alpha: 1.0)
         case .deepWater: return SKColor(red: 0.1, green: 0.25, blue: 0.55, alpha: 1.0)
-        case .berryBush: return SKColor(red: 0.5, green: 0.2, blue: 0.4, alpha: 1.0)
-        case .farm: return SKColor(red: 0.6, green: 0.5, blue: 0.2, alpha: 1.0)
+        case .berryBush: return SKColor(red: 0.3, green: 0.45, blue: 0.2, alpha: 1.0)
+        case .farm: return SKColor(red: 0.5, green: 0.45, blue: 0.2, alpha: 1.0)
         }
     }
 

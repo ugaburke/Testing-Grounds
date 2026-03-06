@@ -50,6 +50,12 @@ class HUDOverlay {
     private var pauseButton: SKNode!
     private var exitButton: SKNode!
     private var ageUpButton: SKNode!
+    private var deselectButton: SKNode!
+    private var helpButton: SKNode!
+
+    // Help overlay
+    private var helpOverlayNode: SKNode!
+    private var isHelpShowing = false
 
     init(viewSize: CGSize) {
         self.viewSize = viewSize
@@ -71,82 +77,80 @@ class HUDOverlay {
         setupBuildMenu()
         setupStatusLabel()
         setupGameButtons()
+        setupDeselectButton()
+        setupHelpOverlay()
     }
 
     // MARK: - Setup
 
     private func setupResourceBar() {
-        let barHeight: CGFloat = isCompact ? 28 : 36
-        let bar = SKShapeNode(rectOf: CGSize(width: viewSize.width, height: barHeight))
-        bar.fillColor = SKColor(red: 0.1, green: 0.08, blue: 0.05, alpha: 0.9)
-        bar.strokeColor = SKColor(red: 0.4, green: 0.3, blue: 0.15, alpha: 1.0)
-        bar.lineWidth = 1
+        let barHeight: CGFloat = isCompact ? 30 : 38
+        let bar = SKShapeNode(rectOf: CGSize(width: viewSize.width, height: barHeight), cornerRadius: 0)
+        bar.fillColor = SKColor(red: 0.08, green: 0.06, blue: 0.03, alpha: 0.92)
+        bar.strokeColor = .clear
         bar.position = CGPoint(x: viewSize.width / 2, y: viewSize.height - barHeight / 2)
         hudNode.addChild(bar)
 
-        let startX: CGFloat = isCompact ? 20 : 30
-        let spacing: CGFloat = isCompact ? 80 : 140
-        let iconRadius: CGFloat = isCompact ? 7 : 10
-        let fontSize: CGFloat = isCompact ? 10 : 14
-        let iconFontSize: CGFloat = isCompact ? 8 : 11
+        // Gold trim line at bottom of bar
+        let trimLine = SKShapeNode(rectOf: CGSize(width: viewSize.width, height: 1.5))
+        trimLine.fillColor = SKColor(red: 0.5, green: 0.4, blue: 0.2, alpha: 0.7)
+        trimLine.strokeColor = .clear
+        trimLine.position = CGPoint(x: viewSize.width / 2, y: viewSize.height - barHeight)
+        hudNode.addChild(trimLine)
+
+        let startX: CGFloat = isCompact ? 16 : 25
+        let spacing: CGFloat = isCompact ? 78 : 130
+        let emojiSize: CGFloat = isCompact ? 12 : 16
+        let fontSize: CGFloat = isCompact ? 11 : 15
         let y = viewSize.height - barHeight / 2
 
         // Food
-        let foodIcon = createResourceIcon(color: .red, symbol: "F", x: startX, y: y, radius: iconRadius, fontSize: iconFontSize)
+        let foodIcon = createResourceEmojiIcon(emoji: "\u{1F34E}", x: startX, y: y, size: emojiSize)
         hudNode.addChild(foodIcon)
-        foodLabel = createLabel(x: startX + iconRadius + 8, y: y, fontSize: fontSize)
+        foodLabel = createLabel(x: startX + emojiSize + 4, y: y, fontSize: fontSize)
         hudNode.addChild(foodLabel)
 
         // Wood
-        let woodIcon = createResourceIcon(color: .brown, symbol: "W", x: startX + spacing, y: y, radius: iconRadius, fontSize: iconFontSize)
+        let woodIcon = createResourceEmojiIcon(emoji: "\u{1FAB5}", x: startX + spacing, y: y, size: emojiSize)
         hudNode.addChild(woodIcon)
-        woodLabel = createLabel(x: startX + spacing + iconRadius + 8, y: y, fontSize: fontSize)
+        woodLabel = createLabel(x: startX + spacing + emojiSize + 4, y: y, fontSize: fontSize)
         hudNode.addChild(woodLabel)
 
         // Gold
-        let goldIcon = createResourceIcon(color: .yellow, symbol: "G", x: startX + spacing * 2, y: y, radius: iconRadius, fontSize: iconFontSize)
+        let goldIcon = createResourceEmojiIcon(emoji: "\u{1FA99}", x: startX + spacing * 2, y: y, size: emojiSize)
         hudNode.addChild(goldIcon)
-        goldLabel = createLabel(x: startX + spacing * 2 + iconRadius + 8, y: y, fontSize: fontSize)
+        goldLabel = createLabel(x: startX + spacing * 2 + emojiSize + 4, y: y, fontSize: fontSize)
         hudNode.addChild(goldLabel)
 
         // Stone
-        let stoneIcon = createResourceIcon(color: .gray, symbol: "S", x: startX + spacing * 3, y: y, radius: iconRadius, fontSize: iconFontSize)
+        let stoneIcon = createResourceEmojiIcon(emoji: "\u{1FAA8}", x: startX + spacing * 3, y: y, size: emojiSize)
         hudNode.addChild(stoneIcon)
-        stoneLabel = createLabel(x: startX + spacing * 3 + iconRadius + 8, y: y, fontSize: fontSize)
+        stoneLabel = createLabel(x: startX + spacing * 3 + emojiSize + 4, y: y, fontSize: fontSize)
         hudNode.addChild(stoneLabel)
 
         // Population
-        let popIcon = createResourceIcon(color: .cyan, symbol: "P", x: startX + spacing * 4, y: y, radius: iconRadius, fontSize: iconFontSize)
+        let popIcon = createResourceEmojiIcon(emoji: "\u{1F465}", x: startX + spacing * 4, y: y, size: emojiSize)
         hudNode.addChild(popIcon)
-        popLabel = createLabel(x: startX + spacing * 4 + iconRadius + 8, y: y, fontSize: fontSize)
+        popLabel = createLabel(x: startX + spacing * 4 + emojiSize + 4, y: y, fontSize: fontSize)
         hudNode.addChild(popLabel)
 
-        // Age
-        ageLabel = SKLabelNode(text: "Dark Age")
-        ageLabel.fontSize = isCompact ? 10 : 14
+        // Age display with crown
+        ageLabel = SKLabelNode(text: "\u{1F451} Dark Age")
+        ageLabel.fontSize = isCompact ? 11 : 14
         ageLabel.fontName = "Helvetica-Bold"
-        ageLabel.fontColor = SKColor(red: 0.85, green: 0.7, blue: 0.4, alpha: 1.0)
+        ageLabel.fontColor = SKColor(red: 0.9, green: 0.75, blue: 0.4, alpha: 1.0)
         ageLabel.position = CGPoint(x: viewSize.width - (isCompact ? 80 : 120), y: y - 5)
         ageLabel.horizontalAlignmentMode = .center
         hudNode.addChild(ageLabel)
     }
 
-    private func createResourceIcon(color: SKColor, symbol: String, x: CGFloat, y: CGFloat,
-                                     radius: CGFloat = 10, fontSize: CGFloat = 11) -> SKNode {
-        let bg = SKShapeNode(circleOfRadius: radius)
-        bg.fillColor = color.withAlphaComponent(0.7)
-        bg.strokeColor = color
-        bg.lineWidth = 1
-        bg.position = CGPoint(x: x, y: y)
-
-        let label = SKLabelNode(text: symbol)
-        label.fontSize = fontSize
-        label.fontName = "Helvetica-Bold"
-        label.fontColor = .white
+    private func createResourceEmojiIcon(emoji: String, x: CGFloat, y: CGFloat, size: CGFloat) -> SKNode {
+        let label = SKLabelNode(text: emoji)
+        label.fontSize = size
         label.verticalAlignmentMode = .center
-        bg.addChild(label)
-
-        return bg
+        label.horizontalAlignmentMode = .center
+        label.position = CGPoint(x: x, y: y)
+        return label
     }
 
     private func createLabel(x: CGFloat, y: CGFloat, fontSize: CGFloat = 14) -> SKLabelNode {
@@ -162,9 +166,9 @@ class HUDOverlay {
 
     private func setupMinimap() {
         let padding: CGFloat = isCompact ? 6 : 10
-        minimapNode = SKShapeNode(rectOf: CGSize(width: minimapSize, height: minimapSize))
-        minimapNode.fillColor = SKColor(red: 0.05, green: 0.05, blue: 0.05, alpha: 0.85)
-        minimapNode.strokeColor = SKColor(red: 0.4, green: 0.3, blue: 0.15, alpha: 1.0)
+        minimapNode = SKShapeNode(rectOf: CGSize(width: minimapSize, height: minimapSize), cornerRadius: 4)
+        minimapNode.fillColor = SKColor(red: 0.08, green: 0.12, blue: 0.05, alpha: 0.9)
+        minimapNode.strokeColor = SKColor(red: 0.5, green: 0.4, blue: 0.2, alpha: 1.0)
         minimapNode.lineWidth = 2
         minimapNode.position = CGPoint(x: padding + minimapSize / 2, y: padding + minimapSize / 2)
         hudNode.addChild(minimapNode)
@@ -186,9 +190,9 @@ class HUDOverlay {
         actionPanel.position = CGPoint(x: viewSize.width - actionPanelWidth / 2 - padding,
                                         y: padding + actionPanelHeight / 2)
 
-        let bg = SKShapeNode(rectOf: CGSize(width: actionPanelWidth, height: actionPanelHeight))
-        bg.fillColor = SKColor(red: 0.1, green: 0.08, blue: 0.05, alpha: 0.9)
-        bg.strokeColor = SKColor(red: 0.4, green: 0.3, blue: 0.15, alpha: 1.0)
+        let bg = SKShapeNode(rectOf: CGSize(width: actionPanelWidth, height: actionPanelHeight), cornerRadius: 6)
+        bg.fillColor = SKColor(red: 0.08, green: 0.06, blue: 0.03, alpha: 0.92)
+        bg.strokeColor = SKColor(red: 0.5, green: 0.4, blue: 0.2, alpha: 0.8)
         bg.lineWidth = 2
         bg.name = "actionPanelBg"
         actionPanel.addChild(bg)
@@ -206,9 +210,9 @@ class HUDOverlay {
         infoPanel.position = CGPoint(x: minimapRightEdge + infoPanelWidth / 2,
                                       y: padding + infoPanelHeight / 2)
 
-        let bg = SKShapeNode(rectOf: CGSize(width: infoPanelWidth, height: infoPanelHeight))
-        bg.fillColor = SKColor(red: 0.1, green: 0.08, blue: 0.05, alpha: 0.9)
-        bg.strokeColor = SKColor(red: 0.4, green: 0.3, blue: 0.15, alpha: 1.0)
+        let bg = SKShapeNode(rectOf: CGSize(width: infoPanelWidth, height: infoPanelHeight), cornerRadius: 6)
+        bg.fillColor = SKColor(red: 0.08, green: 0.06, blue: 0.03, alpha: 0.92)
+        bg.strokeColor = SKColor(red: 0.5, green: 0.4, blue: 0.2, alpha: 0.8)
         bg.lineWidth = 2
         infoPanel.addChild(bg)
 
@@ -281,11 +285,22 @@ class HUDOverlay {
     }
 
     private func setupStatusLabel() {
+        // Status background pill
+        let statusBg = SKShapeNode(rectOf: CGSize(width: isCompact ? 250 : 350, height: isCompact ? 22 : 28), cornerRadius: isCompact ? 11 : 14)
+        statusBg.fillColor = SKColor.black.withAlphaComponent(0.65)
+        statusBg.strokeColor = SKColor(red: 0.5, green: 0.4, blue: 0.2, alpha: 0.5)
+        statusBg.lineWidth = 1
+        statusBg.position = CGPoint(x: viewSize.width / 2, y: viewSize.height - (isCompact ? 46 : 62))
+        statusBg.zPosition = 119
+        statusBg.alpha = 0
+        statusBg.name = "statusBg"
+        hudNode.addChild(statusBg)
+
         statusLabel = SKLabelNode(text: "")
-        statusLabel.fontSize = isCompact ? 14 : 18
+        statusLabel.fontSize = isCompact ? 13 : 16
         statusLabel.fontName = "Helvetica-Bold"
-        statusLabel.fontColor = .yellow
-        statusLabel.position = CGPoint(x: viewSize.width / 2, y: viewSize.height - (isCompact ? 45 : 60))
+        statusLabel.fontColor = SKColor(red: 1.0, green: 0.9, blue: 0.5, alpha: 1.0)
+        statusLabel.position = CGPoint(x: viewSize.width / 2, y: viewSize.height - (isCompact ? 50 : 67))
         statusLabel.horizontalAlignmentMode = .center
         statusLabel.zPosition = 120
         hudNode.addChild(statusLabel)
@@ -306,6 +321,179 @@ class HUDOverlay {
         // Age up button
         ageUpButton = createHUDButton(text: "AGE UP", x: viewSize.width - (isCompact ? 150 : 200), y: btnY, name: "ageUpBtn", width: isCompact ? 50 : 60)
         hudNode.addChild(ageUpButton)
+    }
+
+    private func setupDeselectButton() {
+        // Floating deselect button - shown when units/buildings are selected
+        let btnSize: CGFloat = isCompact ? 36 : 44
+        deselectButton = SKNode()
+        deselectButton.name = "deselectBtn"
+        deselectButton.position = CGPoint(x: viewSize.width - btnSize / 2 - (isCompact ? 8 : 12),
+                                           y: viewSize.height / 2)
+        deselectButton.isHidden = true
+        deselectButton.zPosition = 105
+
+        let bg = SKShapeNode(circleOfRadius: btnSize / 2)
+        bg.fillColor = SKColor(red: 0.6, green: 0.15, blue: 0.1, alpha: 0.85)
+        bg.strokeColor = SKColor(red: 0.9, green: 0.7, blue: 0.4, alpha: 0.9)
+        bg.lineWidth = 2
+        bg.name = "deselectBtn"
+        deselectButton.addChild(bg)
+
+        let xLabel = SKLabelNode(text: "\u{2716}")
+        xLabel.fontSize = isCompact ? 16 : 20
+        xLabel.fontName = "Helvetica-Bold"
+        xLabel.fontColor = .white
+        xLabel.verticalAlignmentMode = .center
+        xLabel.name = "deselectBtn"
+        deselectButton.addChild(xLabel)
+
+        let hint = SKLabelNode(text: "Deselect")
+        hint.fontSize = isCompact ? 7 : 9
+        hint.fontName = "Helvetica"
+        hint.fontColor = .lightGray
+        hint.verticalAlignmentMode = .top
+        hint.position = CGPoint(x: 0, y: -btnSize / 2 - 2)
+        hint.name = "deselectBtn"
+        deselectButton.addChild(hint)
+
+        hudNode.addChild(deselectButton)
+    }
+
+    private func setupHelpOverlay() {
+        // Help/? button in top bar
+        let barHeight: CGFloat = isCompact ? 28 : 36
+        let btnY = viewSize.height - barHeight
+        helpButton = createHUDButton(text: "?", x: viewSize.width - 75, y: btnY, name: "helpBtn")
+        hudNode.addChild(helpButton)
+
+        // Help overlay (initially hidden)
+        helpOverlayNode = SKNode()
+        helpOverlayNode.isHidden = true
+        helpOverlayNode.zPosition = 200
+
+        let overlayBg = SKShapeNode(rectOf: CGSize(width: viewSize.width, height: viewSize.height))
+        overlayBg.fillColor = SKColor.black.withAlphaComponent(0.8)
+        overlayBg.strokeColor = .clear
+        overlayBg.position = CGPoint(x: viewSize.width / 2, y: viewSize.height / 2)
+        overlayBg.name = "closeHelp"
+        helpOverlayNode.addChild(overlayBg)
+
+        let panelW: CGFloat = isCompact ? viewSize.width * 0.85 : min(500, viewSize.width * 0.7)
+        let panelH: CGFloat = isCompact ? viewSize.height * 0.85 : min(420, viewSize.height * 0.7)
+        let panel = SKShapeNode(rectOf: CGSize(width: panelW, height: panelH), cornerRadius: 12)
+        panel.fillColor = SKColor(red: 0.12, green: 0.1, blue: 0.07, alpha: 0.97)
+        panel.strokeColor = SKColor(red: 0.6, green: 0.5, blue: 0.25, alpha: 1.0)
+        panel.lineWidth = 2
+        panel.position = CGPoint(x: viewSize.width / 2, y: viewSize.height / 2)
+        panel.name = "closeHelp"
+        helpOverlayNode.addChild(panel)
+
+        let titleFontSize: CGFloat = isCompact ? 16 : 22
+        let bodyFontSize: CGFloat = isCompact ? 9 : 12
+        let sectionFontSize: CGFloat = isCompact ? 11 : 14
+        let lineSpacing: CGFloat = isCompact ? 14 : 18
+        let sectionSpacing: CGFloat = isCompact ? 20 : 26
+        let centerX = viewSize.width / 2
+        var yPos = viewSize.height / 2 + panelH / 2 - (isCompact ? 25 : 35)
+
+        // Title
+        let title = SKLabelNode(text: "How to Play - Realm of Empires")
+        title.fontSize = titleFontSize
+        title.fontName = "Helvetica-Bold"
+        title.fontColor = SKColor(red: 0.9, green: 0.75, blue: 0.35, alpha: 1.0)
+        title.position = CGPoint(x: centerX, y: yPos)
+        title.horizontalAlignmentMode = .center
+        helpOverlayNode.addChild(title)
+        yPos -= sectionSpacing
+
+        let helpLines: [(String, String, Bool)] = [
+            ("CONTROLS", "", true),
+            ("\u{1F446} Tap unit/building", "Select it", false),
+            ("\u{1F446} Tap empty ground", "Deselect all (or use \u{2716} button)", false),
+            ("\u{1F446} Tap ground with units selected", "Move units there", false),
+            ("\u{270B} Drag", "Pan camera", false),
+            ("\u{1F91C} Pinch", "Zoom in/out", false),
+            ("\u{25A1} Drag from empty space", "Box-select multiple units", false),
+            ("", "", false),
+            ("GAMEPLAY", "", true),
+            ("\u{1F477} Villagers", "Gather resources (tap resource tile), build structures", false),
+            ("\u{2694}\u{FE0F} Military units", "Tap enemy to attack, auto-attack nearby foes", false),
+            ("\u{1F3D7}\u{FE0F} Building", "Select villager \u{2192} Build btn \u{2192} pick building \u{2192} tap to place", false),
+            ("\u{1F393} Age Up", "Spend resources to unlock new buildings & units", false),
+            ("\u{1F3C1} Win condition", "Destroy all enemy buildings and units", false),
+            ("", "", false),
+            ("RESOURCES", "", true),
+            ("\u{1F34E} Food", "From berries, farms  \u{1F333} Wood: From forests", false),
+            ("\u{1FA99} Gold", "From gold deposits  \u{1FAA8} Stone: From stone quarries", false),
+        ]
+
+        for (left, right, isSection) in helpLines {
+            if left.isEmpty {
+                yPos -= lineSpacing * 0.3
+                continue
+            }
+            if isSection {
+                let sectionLabel = SKLabelNode(text: left)
+                sectionLabel.fontSize = sectionFontSize
+                sectionLabel.fontName = "Helvetica-Bold"
+                sectionLabel.fontColor = SKColor(red: 0.85, green: 0.7, blue: 0.4, alpha: 1.0)
+                sectionLabel.position = CGPoint(x: centerX - panelW * 0.4, y: yPos)
+                sectionLabel.horizontalAlignmentMode = .left
+                helpOverlayNode.addChild(sectionLabel)
+                // Underline
+                let line = SKShapeNode(rectOf: CGSize(width: panelW * 0.8, height: 1))
+                line.fillColor = SKColor(red: 0.5, green: 0.4, blue: 0.2, alpha: 0.5)
+                line.strokeColor = .clear
+                line.position = CGPoint(x: centerX, y: yPos - 4)
+                helpOverlayNode.addChild(line)
+            } else {
+                let leftLabel = SKLabelNode(text: left)
+                leftLabel.fontSize = bodyFontSize
+                leftLabel.fontName = "Helvetica-Bold"
+                leftLabel.fontColor = .white
+                leftLabel.position = CGPoint(x: centerX - panelW * 0.4, y: yPos)
+                leftLabel.horizontalAlignmentMode = .left
+                helpOverlayNode.addChild(leftLabel)
+
+                let rightLabel = SKLabelNode(text: right)
+                rightLabel.fontSize = bodyFontSize
+                rightLabel.fontName = "Helvetica"
+                rightLabel.fontColor = SKColor(red: 0.75, green: 0.75, blue: 0.7, alpha: 1.0)
+                rightLabel.position = CGPoint(x: centerX + panelW * 0.05, y: yPos)
+                rightLabel.horizontalAlignmentMode = .left
+                helpOverlayNode.addChild(rightLabel)
+            }
+            yPos -= lineSpacing
+        }
+
+        // Close hint
+        let closeHint = SKLabelNode(text: "Tap anywhere to close")
+        closeHint.fontSize = isCompact ? 10 : 13
+        closeHint.fontName = "Helvetica"
+        closeHint.fontColor = SKColor.gray
+        closeHint.position = CGPoint(x: centerX, y: viewSize.height / 2 - panelH / 2 + (isCompact ? 10 : 16))
+        closeHint.horizontalAlignmentMode = .center
+        closeHint.name = "closeHelp"
+        helpOverlayNode.addChild(closeHint)
+
+        hudNode.addChild(helpOverlayNode)
+    }
+
+    func showHelp() {
+        isHelpShowing = true
+        helpOverlayNode.isHidden = false
+    }
+
+    func hideHelp() {
+        isHelpShowing = false
+        helpOverlayNode.isHidden = true
+    }
+
+    var isHelpVisible: Bool { isHelpShowing }
+
+    func updateDeselectButton(hasSelection: Bool) {
+        deselectButton.isHidden = !hasSelection
     }
 
     private func createHUDButton(text: String, x: CGFloat, y: CGFloat, name: String, width: CGFloat = 26) -> SKNode {
@@ -341,13 +529,13 @@ class HUDOverlay {
         goldLabel.text = "\(player.resources.gold)"
         stoneLabel.text = "\(player.resources.stone)"
         popLabel.text = "\(player.population)/\(player.populationCap)"
-        ageLabel.text = player.currentAge.displayName
+        ageLabel.text = "\u{1F451} \(player.currentAge.displayName)"
 
         if player.isAdvancingAge {
             ageLabel.fontColor = .cyan
-            ageLabel.text = "Advancing..."
+            ageLabel.text = "\u{231B} Advancing..."
         } else {
-            ageLabel.fontColor = SKColor(red: 0.85, green: 0.7, blue: 0.4, alpha: 1.0)
+            ageLabel.fontColor = SKColor(red: 0.9, green: 0.75, blue: 0.4, alpha: 1.0)
         }
 
         // Update selection info
@@ -735,6 +923,18 @@ class HUDOverlay {
             SKAction.wait(forDuration: TimeInterval(duration)),
             SKAction.fadeOut(withDuration: 0.5)
         ]))
+
+        // Animate status background
+        if let bg = hudNode.childNode(withName: "statusBg") {
+            bg.removeAllActions()
+            bg.alpha = message.isEmpty ? 0 : 1.0
+            if !message.isEmpty {
+                bg.run(SKAction.sequence([
+                    SKAction.wait(forDuration: TimeInterval(duration)),
+                    SKAction.fadeOut(withDuration: 0.5)
+                ]))
+            }
+        }
     }
 
     func showGameOver(victory: Bool) {
@@ -769,6 +969,12 @@ class HUDOverlay {
     // MARK: - Touch Handling
 
     func handleTouch(at point: CGPoint) -> HUDAction? {
+        // Handle help overlay first
+        if isHelpShowing {
+            hideHelp()
+            return .closeHelp
+        }
+
         let nodes = hudNode.nodes(at: point)
 
         for node in nodes {
@@ -777,6 +983,8 @@ class HUDOverlay {
             if name == "pauseBtn" { return .pause }
             if name == "exitBtn" { return .exit }
             if name == "ageUpBtn" { return .ageUp }
+            if name == "helpBtn" { return .showHelp }
+            if name == "deselectBtn" { return .deselect }
             if name == "btn_build" { return .openBuildMenu }
             if name == "btn_rally" { return .setRallyPoint }
             if name == "closeBuildMenu" { return .closeBuildMenu }
@@ -825,6 +1033,16 @@ class HUDOverlay {
         if point.x > minimapRightEdge && point.x < minimapRightEdge + infoPanelWidth + padding * 2 && point.y < actionPanelHeight + padding * 2 { return true }
         // Build menu
         if isBuildMenuOpen { return true }
+        // Help overlay
+        if isHelpShowing { return true }
+        // Deselect button (right side, middle)
+        if !deselectButton.isHidden {
+            let btnSize: CGFloat = isCompact ? 36 : 44
+            let btnX = viewSize.width - btnSize / 2 - (isCompact ? 8 : 12)
+            let btnY = viewSize.height / 2
+            let dist = sqrt(pow(point.x - btnX, 2) + pow(point.y - btnY, 2))
+            if dist < btnSize / 2 + 5 { return true }
+        }
         return false
     }
 
@@ -870,4 +1088,7 @@ enum HUDAction {
     case trainUnit(UnitType)
     case setRallyPoint
     case minimapTap(CGPoint)
+    case deselect
+    case showHelp
+    case closeHelp
 }

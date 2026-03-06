@@ -202,7 +202,7 @@ class GameMap {
             for x in minX...maxX {
                 let tile = tiles[y][x]
                 if tile.node == nil {
-                    let tileNode = SKSpriteNode(color: tile.terrain.color, size: CGSize(width: tileSize, height: tileSize))
+                    let tileNode = createTileSprite(tile: tile, x: x, y: y)
                     tileNode.position = gridToWorld(GridPosition(x: x, y: y))
                     tileNode.zPosition = 0
 
@@ -212,6 +212,144 @@ class GameMap {
                 }
             }
         }
+    }
+
+    private func createTileSprite(tile: MapTile, x: Int, y: Int) -> SKSpriteNode {
+        let size = CGSize(width: tileSize, height: tileSize)
+        // Use deterministic hash for consistent tile variation
+        let hash = (x &* 73856093) ^ (y &* 19349663)
+
+        let baseColor = tile.terrain.color
+        // Subtle color variation per tile for natural look
+        let variation = CGFloat((hash & 0xFF)) / 255.0 * 0.08 - 0.04
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        baseColor.getRed(&r, green: &g, blue: &b, alpha: &a)
+        let variedColor = SKColor(
+            red: max(0, min(1, r + variation)),
+            green: max(0, min(1, g + variation * 0.8)),
+            blue: max(0, min(1, b + variation * 0.5)),
+            alpha: a
+        )
+
+        let tileNode = SKSpriteNode(color: variedColor, size: size)
+
+        // Add terrain decorations
+        switch tile.terrain {
+        case .grass:
+            // Occasional grass tufts
+            if hash % 5 == 0 {
+                let tuft = SKShapeNode(rectOf: CGSize(width: 2, height: 4))
+                tuft.fillColor = SKColor(red: 0.25, green: 0.5, blue: 0.15, alpha: 0.6)
+                tuft.strokeColor = .clear
+                tuft.position = CGPoint(x: CGFloat((hash >> 8) % 16) - 8, y: CGFloat((hash >> 12) % 16) - 8)
+                tileNode.addChild(tuft)
+            }
+
+        case .forest:
+            // Tree canopy circles
+            let treeR: CGFloat = tileSize * 0.3
+            let tree = SKShapeNode(circleOfRadius: treeR)
+            tree.fillColor = SKColor(red: 0.1 + variation, green: 0.35 + CGFloat(hash % 10) / 100.0, blue: 0.08, alpha: 1.0)
+            tree.strokeColor = SKColor(red: 0.05, green: 0.25, blue: 0.05, alpha: 0.8)
+            tree.lineWidth = 1.0
+            tree.position = CGPoint(x: CGFloat((hash >> 4) % 6) - 3, y: CGFloat((hash >> 8) % 6) - 3)
+            tree.zPosition = 1
+            tileNode.addChild(tree)
+            // Small trunk
+            let trunk = SKShapeNode(rectOf: CGSize(width: 3, height: 4))
+            trunk.fillColor = SKColor(red: 0.35, green: 0.22, blue: 0.1, alpha: 1.0)
+            trunk.strokeColor = .clear
+            trunk.position = CGPoint(x: tree.position.x, y: tree.position.y - treeR * 0.6)
+            tileNode.addChild(trunk)
+
+        case .water:
+            // Wave highlights
+            if hash % 3 == 0 {
+                let wave = SKShapeNode(rectOf: CGSize(width: 8, height: 1.5))
+                wave.fillColor = SKColor(red: 0.4, green: 0.6, blue: 0.85, alpha: 0.4)
+                wave.strokeColor = .clear
+                wave.position = CGPoint(x: CGFloat((hash >> 4) % 14) - 7, y: CGFloat((hash >> 8) % 14) - 7)
+                tileNode.addChild(wave)
+            }
+
+        case .deepWater:
+            if hash % 4 == 0 {
+                let wave = SKShapeNode(rectOf: CGSize(width: 10, height: 1.5))
+                wave.fillColor = SKColor(red: 0.2, green: 0.35, blue: 0.65, alpha: 0.3)
+                wave.strokeColor = .clear
+                wave.position = CGPoint(x: CGFloat((hash >> 4) % 14) - 7, y: CGFloat((hash >> 8) % 14) - 7)
+                tileNode.addChild(wave)
+            }
+
+        case .gold:
+            // Gold nugget sparkle
+            let nugget = SKShapeNode(rectOf: CGSize(width: 6, height: 5), cornerRadius: 2)
+            nugget.fillColor = SKColor(red: 0.9, green: 0.8, blue: 0.15, alpha: 1.0)
+            nugget.strokeColor = SKColor(red: 0.7, green: 0.55, blue: 0.1, alpha: 1.0)
+            nugget.lineWidth = 1
+            nugget.position = CGPoint(x: CGFloat((hash >> 4) % 8) - 4, y: CGFloat((hash >> 8) % 8) - 4)
+            nugget.zPosition = 1
+            tileNode.addChild(nugget)
+            // Sparkle dot
+            let sparkle = SKShapeNode(circleOfRadius: 1.5)
+            sparkle.fillColor = .white
+            sparkle.strokeColor = .clear
+            sparkle.position = CGPoint(x: nugget.position.x + 2, y: nugget.position.y + 2)
+            sparkle.zPosition = 2
+            sparkle.alpha = 0.7
+            tileNode.addChild(sparkle)
+
+        case .stone:
+            // Rock shapes
+            let rock = SKShapeNode(rectOf: CGSize(width: 8, height: 6), cornerRadius: 2)
+            rock.fillColor = SKColor(red: 0.6, green: 0.58, blue: 0.55, alpha: 1.0)
+            rock.strokeColor = SKColor(red: 0.4, green: 0.4, blue: 0.38, alpha: 0.8)
+            rock.lineWidth = 1
+            rock.position = CGPoint(x: CGFloat((hash >> 4) % 8) - 4, y: CGFloat((hash >> 8) % 8) - 4)
+            rock.zPosition = 1
+            tileNode.addChild(rock)
+
+        case .berryBush:
+            // Berry bush with berries
+            let bush = SKShapeNode(circleOfRadius: tileSize * 0.25)
+            bush.fillColor = SKColor(red: 0.2, green: 0.45, blue: 0.15, alpha: 1.0)
+            bush.strokeColor = SKColor(red: 0.15, green: 0.3, blue: 0.1, alpha: 0.8)
+            bush.lineWidth = 1
+            bush.zPosition = 1
+            tileNode.addChild(bush)
+            // Berries
+            for i in 0..<3 {
+                let berry = SKShapeNode(circleOfRadius: 2)
+                berry.fillColor = SKColor(red: 0.7, green: 0.1, blue: 0.2, alpha: 1.0)
+                berry.strokeColor = .clear
+                let angle = CGFloat(i) * 2.094 + CGFloat(hash % 10) * 0.1
+                berry.position = CGPoint(x: cos(angle) * 4, y: sin(angle) * 4)
+                berry.zPosition = 2
+                tileNode.addChild(berry)
+            }
+
+        case .sand:
+            // Sand speckles
+            if hash % 3 == 0 {
+                let dot = SKShapeNode(circleOfRadius: 1)
+                dot.fillColor = SKColor(red: 0.82, green: 0.75, blue: 0.55, alpha: 0.5)
+                dot.strokeColor = .clear
+                dot.position = CGPoint(x: CGFloat((hash >> 4) % 14) - 7, y: CGFloat((hash >> 8) % 14) - 7)
+                tileNode.addChild(dot)
+            }
+
+        case .farm:
+            // Farm rows pattern
+            for i in 0..<3 {
+                let row = SKShapeNode(rectOf: CGSize(width: tileSize * 0.7, height: 1.5))
+                row.fillColor = SKColor(red: 0.45, green: 0.38, blue: 0.12, alpha: 0.6)
+                row.strokeColor = .clear
+                row.position = CGPoint(x: 0, y: CGFloat(i - 1) * (tileSize * 0.25))
+                tileNode.addChild(row)
+            }
+        }
+
+        return tileNode
     }
 
     func removeFarTiles(cameraPosition: CGPoint, viewSize: CGSize) {

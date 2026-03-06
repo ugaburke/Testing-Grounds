@@ -83,6 +83,35 @@ class GameScene: SKScene {
         // Initial render
         renderTiles()
         isReady = true
+
+        // Show brief welcome tooltip
+        showWelcomeTips()
+    }
+
+    private func showWelcomeTips() {
+        let tipBg = SKShapeNode(rectOf: CGSize(width: size.width * 0.6, height: size.height * 0.12), cornerRadius: 10)
+        tipBg.fillColor = SKColor.black.withAlphaComponent(0.75)
+        tipBg.strokeColor = SKColor(red: 0.6, green: 0.5, blue: 0.25, alpha: 0.8)
+        tipBg.lineWidth = 1.5
+        tipBg.position = CGPoint(x: 0, y: size.height * 0.3)
+        tipBg.zPosition = 150
+
+        let tipText = SKLabelNode(text: "Tap ? for help  |  Tap units to select  |  Drag to pan  |  Pinch to zoom")
+        tipText.fontSize = size.height < 500 ? 11 : 14
+        tipText.fontName = "Helvetica"
+        tipText.fontColor = SKColor(red: 0.9, green: 0.85, blue: 0.7, alpha: 1.0)
+        tipText.verticalAlignmentMode = .center
+        tipText.horizontalAlignmentMode = .center
+        tipBg.addChild(tipText)
+
+        hudCamera.addChild(tipBg)
+
+        let fadeAway = SKAction.sequence([
+            SKAction.wait(forDuration: 5.0),
+            SKAction.fadeOut(withDuration: 1.5),
+            SKAction.removeFromParent()
+        ])
+        tipBg.run(fadeAway)
     }
 
     private func setupGameWorld() {
@@ -288,6 +317,10 @@ class GameScene: SKScene {
         if let building = selectedBuilding {
             hud.showBuildingInfo(building: building, player: humanPlayer)
         }
+
+        // Show/hide deselect button
+        let hasSelection = !unitSystem.selectedUnits(for: humanPlayer).isEmpty || selectedBuilding != nil
+        hud.updateDeselectButton(hasSelection: hasSelection)
 
         // Apply panning momentum
         applyPanMomentum(deltaTime: deltaTime)
@@ -550,6 +583,7 @@ class GameScene: SKScene {
 
             // Move selected units
             unitSystem.moveUnits(selectedUnits, to: gridPos, pathfinder: pathfinder)
+            showMoveIndicator(at: gameMap.gridToWorld(gridPos))
             return
         }
 
@@ -653,6 +687,25 @@ class GameScene: SKScene {
             cameraPosition = worldPoint
             updateCamera()
             renderTiles()
+
+        case .deselect:
+            unitSystem.deselectAll(player: humanPlayer)
+            selectedBuilding = nil
+            actionMode = .normal
+            placementGhost?.removeFromParent()
+            placementGhost = nil
+
+        case .showHelp:
+            hud.showHelp()
+            if gameState == .playing {
+                gameState = .paused
+            }
+
+        case .closeHelp:
+            hud.hideHelp()
+            if gameState == .paused {
+                gameState = .playing
+            }
         }
     }
 
@@ -718,5 +771,25 @@ class GameScene: SKScene {
     private func isUnitIdle(_ unit: Unit) -> Bool {
         if case .idle = unit.state { return true }
         return false
+    }
+
+    private func showMoveIndicator(at position: CGPoint) {
+        let ring = SKShapeNode(circleOfRadius: gameMap.tileSize * 0.4)
+        ring.fillColor = .clear
+        ring.strokeColor = SKColor(red: 0.2, green: 0.9, blue: 0.2, alpha: 0.8)
+        ring.lineWidth = 2
+        ring.position = position
+        ring.zPosition = 15
+        ring.setScale(0.5)
+        gameWorld.addChild(ring)
+
+        let anim = SKAction.sequence([
+            SKAction.group([
+                SKAction.scale(to: 1.5, duration: 0.4),
+                SKAction.fadeOut(withDuration: 0.4)
+            ]),
+            SKAction.removeFromParent()
+        ])
+        ring.run(anim)
     }
 }
