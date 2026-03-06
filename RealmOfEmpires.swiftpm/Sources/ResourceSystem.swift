@@ -174,6 +174,6 @@ class ResourceSystem {
     func sendVillagerToBuild(unit: Unit, building: Building, pathfinder: Pathfinder) {
         guard unit.type == .villager else { return }
         unit.state = .building(buildingID: building.id)
-        unit.setPath(pathfinder.findPath(from: unit.gridPosition, to: building.gridPosition)
+        unit.setPath(pathfinder.findPath(from: unit.gridPosition, to: building.gridPosition))
     }
 }
