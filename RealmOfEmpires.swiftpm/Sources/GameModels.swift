@@ -559,7 +559,7 @@ enum UnitType: CaseIterable {
         case .crossbowman: return Resources(food: 0, wood: 25, gold: 45)
         case .skirmisher: return Resources(food: 25, wood: 35)
         case .scout: return Resources(food: 80)
-        case .knight: return Resources(food: 60, gold: 75)
+        case .knight: return Resources(food: 60, gold: 90)
         case .lightCavalry: return Resources(food: 80)
         case .uniqueUnit: return Resources(food: 60, gold: 60)
         }
@@ -568,14 +568,14 @@ enum UnitType: CaseIterable {
     var maxHP: Int {
         switch self {
         case .villager: return 25
-        case .militia: return 40
-        case .manAtArms: return 50
-        case .spearman: return 45
-        case .archer: return 30
-        case .crossbowman: return 35
-        case .skirmisher: return 30
+        case .militia: return 45
+        case .manAtArms: return 55
+        case .spearman: return 50
+        case .archer: return 35
+        case .crossbowman: return 40
+        case .skirmisher: return 35
         case .scout: return 60
-        case .knight: return 100
+        case .knight: return 85
         case .lightCavalry: return 60
         case .uniqueUnit: return 80
         }
@@ -584,12 +584,12 @@ enum UnitType: CaseIterable {
     var attack: Int {
         switch self {
         case .villager: return 3
-        case .militia: return 4
-        case .manAtArms: return 6
-        case .spearman: return 3
-        case .archer: return 4
-        case .crossbowman: return 5
-        case .skirmisher: return 2
+        case .militia: return 5
+        case .manAtArms: return 7
+        case .spearman: return 4
+        case .archer: return 5
+        case .crossbowman: return 6
+        case .skirmisher: return 4
         case .scout: return 5
         case .knight: return 10
         case .lightCavalry: return 7
@@ -604,10 +604,10 @@ enum UnitType: CaseIterable {
         case .manAtArms: return 2
         case .spearman: return 2
         case .archer: return 0
-        case .crossbowman: return 0
+        case .crossbowman: return 1
         case .skirmisher: return 1
         case .scout: return 1
-        case .knight: return 4
+        case .knight: return 3
         case .lightCavalry: return 2
         case .uniqueUnit: return 3
         }
@@ -628,7 +628,7 @@ enum UnitType: CaseIterable {
 
     var attackRange: CGFloat {
         switch self {
-        case .archer: return 4.0
+        case .archer: return 5.0
         case .crossbowman: return 5.0
         case .skirmisher: return 4.0
         default: return 1.2
@@ -673,8 +673,22 @@ enum UnitType: CaseIterable {
 
     var bonusVsCavalry: Int {
         switch self {
-        case .spearman: return 15
+        case .spearman: return 8
         default: return 0
+        }
+    }
+
+    var bonusVsRanged: Int {
+        switch self {
+        case .skirmisher: return 5
+        default: return 0
+        }
+    }
+
+    var isInfantry: Bool {
+        switch self {
+        case .militia, .manAtArms, .spearman: return true
+        default: return false
         }
     }
 
@@ -728,6 +742,7 @@ class Unit {
     var isSelected: Bool = false
     var lastAttackTime: TimeInterval = 0
     var lastDirection: CGFloat = 0
+    weak var ownerPlayer: Player?
 
     init(type: UnitType, ownerID: Int, position: GridPosition, hpBonus: CGFloat = 1.0, speedBonus: CGFloat = 1.0) {
         self.id = Unit.nextID
@@ -741,11 +756,53 @@ class Unit {
     }
 
     var effectiveAttack: Int {
-        type.attack
+        var atk = type.attack
+        guard let techs = ownerPlayer?.researchedTechs else { return atk }
+
+        if type.isInfantry || type.isCavalry {
+            // Melee attack upgrades
+            if techs.contains(.forging) { atk += 1 }
+            if techs.contains(.ironCasting) { atk += 1 }
+        }
+        if type.isRanged {
+            // Ranged attack upgrades
+            if techs.contains(.fletching) { atk += 1 }
+            if techs.contains(.bodkinArrow) { atk += 1 }
+        }
+        return atk
     }
 
     var effectiveDefense: Int {
-        type.defense
+        var def = type.defense
+        guard let techs = ownerPlayer?.researchedTechs else { return def }
+
+        if type.isInfantry {
+            if techs.contains(.scaleMailArmor) { def += 1 }
+            if techs.contains(.chainMailArmor) { def += 1 }
+        }
+        if type.isCavalry {
+            if techs.contains(.scaleBardingArmor) { def += 1 }
+            if techs.contains(.chainBardingArmor) { def += 1 }
+        }
+        if type.isRanged {
+            if techs.contains(.paddedArcherArmor) { def += 1 }
+            if techs.contains(.leatherArcherArmor) { def += 1 }
+        }
+        if type == .villager && techs.contains(.loom) {
+            def += 1
+        }
+        return def
+    }
+
+    func bonusDamage(against target: Unit) -> Int {
+        var bonus = 0
+        if target.type.isCavalry {
+            bonus += type.bonusVsCavalry
+        }
+        if target.type.isRanged {
+            bonus += type.bonusVsRanged
+        }
+        return bonus
     }
 }
 

@@ -3,8 +3,36 @@ import SpriteKit
 
 class ResourceSystem {
     weak var gameScene: GameScene?
-    let gatherRate: CGFloat = 0.4   // base gather rate per second
-    let carryCapacity: Int = 10
+    let gatherRate: CGFloat = 0.6   // base gather rate per second
+    let baseCarryCapacity: Int = 15
+
+    func effectiveCarryCapacity(for player: Player) -> Int {
+        var cap = baseCarryCapacity
+        if player.researchedTechs.contains(.wheelbarrow) { cap += 5 }
+        if player.researchedTechs.contains(.handCart) { cap += 5 }
+        return cap
+    }
+
+    func effectiveGatherSpeed(for player: Player, resourceType: ResourceType) -> CGFloat {
+        var speed = gatherRate * player.civilization.gatherSpeedBonus
+        // Wheelbarrow & Hand Cart: +10% gather speed each
+        if player.researchedTechs.contains(.wheelbarrow) { speed *= 1.1 }
+        if player.researchedTechs.contains(.handCart) { speed *= 1.1 }
+        // Resource-specific techs
+        switch resourceType {
+        case .wood:
+            if player.researchedTechs.contains(.doubleBitAxe) { speed *= 1.2 }
+            if player.researchedTechs.contains(.bowSaw) { speed *= 1.2 }
+        case .food:
+            if player.researchedTechs.contains(.horseCollar) { speed *= 1.25 }
+            if player.researchedTechs.contains(.heavyPlow) { speed *= 1.25 }
+        case .gold:
+            if player.researchedTechs.contains(.goldMining) { speed *= 1.15 }
+        case .stone:
+            if player.researchedTechs.contains(.stoneMining) { speed *= 1.15 }
+        }
+        return speed
+    }
 
     func update(deltaTime: CGFloat, player: Player, map: GameMap, pathfinder: Pathfinder) {
         for unit in player.units {
@@ -62,7 +90,8 @@ class ResourceSystem {
         }
 
         // Gather resources
-        let gatherSpeed = gatherRate * player.civilization.gatherSpeedBonus
+        let gatherSpeed = effectiveGatherSpeed(for: player, resourceType: resourceType)
+        let carryCapacity = effectiveCarryCapacity(for: player)
         let amountToGather = Int(gatherSpeed * deltaTime * 10)
 
         if amountToGather > 0 {
@@ -90,7 +119,7 @@ class ResourceSystem {
         }
 
         // Return when full
-        if unit.carriedAmount >= carryCapacity {
+        if unit.carriedAmount >= carryCapacity || (amountToGather > 0 && tile.resourceRemaining <= 0 && unit.carriedAmount > 0) {
             if let dropOff = map.findNearestDropOff(for: resourceType, ownerID: player.id,
                                                      from: unit.gridPosition, buildings: player.buildings) {
                 unit.state = .returning(dropOff: dropOff, resourceType: resourceType, carried: unit.carriedAmount)

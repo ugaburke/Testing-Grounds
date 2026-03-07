@@ -202,8 +202,14 @@ class GameMap {
                 let tile = tiles[y][x]
                 if tile.node == nil {
                     let node = SKShapeNode(rectOf: CGSize(width: tileSize, height: tileSize))
-                    node.fillColor = tile.terrain.color
-                    node.strokeColor = tile.terrain.color.withAlphaComponent(0.7)
+                    var fillColor = tile.terrain.color
+                    // Subtle grass variation on ~1/4 of grass tiles
+                    if tile.terrain == .grass && (x * 7 + y * 13) % 4 == 0 {
+                        let variation = CGFloat((x * 31 + y * 47) % 100) / 1000.0 - 0.05
+                        fillColor = fillColor.lighter(by: variation)
+                    }
+                    node.fillColor = fillColor
+                    node.strokeColor = fillColor  // No grid lines
                     node.lineWidth = 0.5
                     node.position = gridToWorld(GridPosition(x: x, y: y))
                     node.zPosition = 0
@@ -289,17 +295,32 @@ class GameMap {
 
                     // Move wave highlight child if exists
                     if node.childNode(withName: "waveHighlight") == nil {
-                        let highlight = SKShapeNode(rectOf: CGSize(width: tileSize * 0.6, height: 2))
+                        let highlight = SKShapeNode(rectOf: CGSize(width: tileSize * 0.4, height: 2))
                         highlight.fillColor = SKColor.white.withAlphaComponent(0.2)
                         highlight.strokeColor = .clear
                         highlight.name = "waveHighlight"
                         highlight.zPosition = 0.1
                         node.addChild(highlight)
+
+                        // Second wave offset by half phase
+                        let highlight2 = SKShapeNode(rectOf: CGSize(width: tileSize * 0.3, height: 1.5))
+                        highlight2.fillColor = SKColor.white.withAlphaComponent(0.15)
+                        highlight2.strokeColor = .clear
+                        highlight2.name = "waveHighlight2"
+                        highlight2.zPosition = 0.1
+                        node.addChild(highlight2)
                     }
                     if let highlight = node.childNode(withName: "waveHighlight") {
                         let waveX = sin(time * 2.0 + offset) * tileSize * 0.2
                         let waveY = cos(time * 1.3 + offset) * tileSize * 0.15
                         highlight.position = CGPoint(x: waveX, y: waveY)
+                        let alpha = 0.1 + 0.25 * (0.5 + 0.5 * sin(time * 1.5 + offset))
+                        (highlight as? SKShapeNode)?.fillColor = SKColor.white.withAlphaComponent(alpha)
+                    }
+                    if let highlight2 = node.childNode(withName: "waveHighlight2") {
+                        let waveX2 = sin(time * 2.0 + offset + .pi) * tileSize * 0.15
+                        let waveY2 = cos(time * 1.3 + offset + .pi) * tileSize * 0.1
+                        highlight2.position = CGPoint(x: waveX2, y: waveY2)
                     }
                 } else if tile.terrain == .forest {
                     // Tree swaying

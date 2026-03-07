@@ -52,7 +52,7 @@ class SpriteFactory {
         container.zPosition = 10
 
         let playerColor = SpriteFactory.playerColors[unit.ownerID % SpriteFactory.playerColors.count]
-        let bodySize = tileSize * 0.7
+        let bodySize = tileSize * 0.85
 
         // Shadow (gradient)
         if let shadowTex = shadowTexture {
@@ -95,10 +95,12 @@ class SpriteFactory {
             mane.position = CGPoint(x: bodySize * 0.2, y: bodySize * 0.1)
             bodyContainer.addChild(mane)
         } else if unit.type.isRanged {
+            // Diamond shape for ranged units
             let path = CGMutablePath()
             path.move(to: CGPoint(x: 0, y: bodySize * 0.4))
-            path.addLine(to: CGPoint(x: -bodySize * 0.35, y: -bodySize * 0.3))
-            path.addLine(to: CGPoint(x: bodySize * 0.35, y: -bodySize * 0.3))
+            path.addLine(to: CGPoint(x: -bodySize * 0.35, y: 0))
+            path.addLine(to: CGPoint(x: 0, y: -bodySize * 0.4))
+            path.addLine(to: CGPoint(x: bodySize * 0.35, y: 0))
             path.closeSubpath()
             body = SKShapeNode(path: path)
             // Bowstring/arrow detail
@@ -110,8 +112,12 @@ class SpriteFactory {
         } else if unit.type == .villager {
             body = SKShapeNode(circleOfRadius: bodySize * 0.35)
         } else {
-            // Melee infantry
-            body = SKShapeNode(rectOf: CGSize(width: bodySize * 0.6, height: bodySize * 0.6))
+            // Melee infantry — rounded shield shape
+            let path = CGMutablePath()
+            path.addRoundedRect(in: CGRect(x: -bodySize * 0.32, y: -bodySize * 0.32,
+                                            width: bodySize * 0.64, height: bodySize * 0.64),
+                                cornerWidth: bodySize * 0.12, cornerHeight: bodySize * 0.12)
+            body = SKShapeNode(path: path)
             // Sword detail
             let sword = SKShapeNode(rectOf: CGSize(width: 2, height: bodySize * 0.4))
             sword.fillColor = SKColor(red: 0.8, green: 0.8, blue: 0.85, alpha: 0.8)
@@ -260,6 +266,29 @@ class SpriteFactory {
         body.lineWidth = 2
         body.name = "buildingBody"
         container.addChild(body)
+
+        // Dark foundation band at building base
+        let foundation = SKShapeNode(rectOf: CGSize(width: w, height: h * 0.12))
+        foundation.fillColor = SKColor(red: 0.15, green: 0.12, blue: 0.08, alpha: 0.6)
+        foundation.strokeColor = .clear
+        foundation.position = CGPoint(x: 0, y: -h * 0.44)
+        foundation.zPosition = 0.5
+        container.addChild(foundation)
+
+        // Roof triangle on TC and Castle
+        if building.type == .townCenter || building.type == .castle {
+            let roofPath = CGMutablePath()
+            roofPath.move(to: CGPoint(x: -w * 0.45, y: h * 0.4))
+            roofPath.addLine(to: CGPoint(x: 0, y: h * 0.6))
+            roofPath.addLine(to: CGPoint(x: w * 0.45, y: h * 0.4))
+            roofPath.closeSubpath()
+            let roof = SKShapeNode(path: roofPath)
+            roof.fillColor = SKColor(red: 0.5, green: 0.25, blue: 0.1, alpha: 0.8)
+            roof.strokeColor = playerColor.withAlphaComponent(0.5)
+            roof.lineWidth = 1
+            roof.zPosition = 1.1
+            container.addChild(roof)
+        }
 
         // Architectural detail per building type
         addBuildingDetail(to: container, type: building.type, w: w, h: h, playerColor: playerColor)
@@ -586,23 +615,37 @@ class SpriteFactory {
     }
 
     func createDamageNumber(at position: CGPoint, damage: Int) -> SKNode {
+        let container = SKNode()
+        container.position = position
+        container.zPosition = 25
+
+        // Dark shadow label for readability
+        let shadow = SKLabelNode(text: "-\(damage)")
+        shadow.fontSize = 18
+        shadow.fontName = "Helvetica-Bold"
+        shadow.fontColor = SKColor.black.withAlphaComponent(0.7)
+        shadow.verticalAlignmentMode = .center
+        shadow.horizontalAlignmentMode = .center
+        shadow.position = CGPoint(x: 1, y: -1)
+        container.addChild(shadow)
+
         let label = SKLabelNode(text: "-\(damage)")
-        label.fontSize = 14
+        label.fontSize = 18
         label.fontName = "Helvetica-Bold"
         label.fontColor = .red
-        label.position = position
-        label.zPosition = 25
         label.verticalAlignmentMode = .center
+        label.horizontalAlignmentMode = .center
+        container.addChild(label)
 
         let floatUp = SKAction.sequence([
             SKAction.group([
-                SKAction.moveBy(x: CGFloat.random(in: -5...5), y: 20, duration: 0.6),
-                SKAction.fadeOut(withDuration: 0.6)
+                SKAction.moveBy(x: CGFloat.random(in: -5...5), y: 30, duration: 1.0),
+                SKAction.fadeOut(withDuration: 1.0)
             ]),
             SKAction.removeFromParent()
         ])
-        label.run(floatUp)
-        return label
+        container.run(floatUp)
+        return container
     }
 
     func createDepositFeedback(at position: CGPoint, amount: Int, resourceType: ResourceType) -> SKNode {
@@ -696,31 +739,31 @@ class SpriteFactory {
         container.position = position
         container.zPosition = 20
 
-        // White flash
-        let flash = SKShapeNode(circleOfRadius: tileSize * 0.4)
+        // Larger white flash
+        let flash = SKShapeNode(circleOfRadius: tileSize * 0.6)
         flash.fillColor = SKColor.white.withAlphaComponent(0.8)
         flash.strokeColor = .clear
         flash.run(SKAction.sequence([
-            SKAction.fadeOut(withDuration: 0.15),
+            SKAction.fadeOut(withDuration: 0.3),
             SKAction.removeFromParent()
         ]))
         container.addChild(flash)
 
-        // 12 particles
-        for _ in 0..<12 {
-            let particle = SKShapeNode(circleOfRadius: CGFloat.random(in: 1.5...3))
+        // 16 particles with wider spread
+        for _ in 0..<16 {
+            let particle = SKShapeNode(circleOfRadius: CGFloat.random(in: 1.5...3.5))
             particle.fillColor = [SKColor.orange, SKColor.red, SKColor.yellow].randomElement()!
             particle.strokeColor = .clear
             particle.position = .zero
 
-            let dx = CGFloat.random(in: -18...18)
-            let dy = CGFloat.random(in: -18...18)
+            let dx = CGFloat.random(in: -25...25)
+            let dy = CGFloat.random(in: -25...25)
 
             let anim = SKAction.sequence([
                 SKAction.group([
-                    SKAction.moveBy(x: dx, y: dy, duration: 0.45),
-                    SKAction.fadeOut(withDuration: 0.45),
-                    SKAction.scale(to: 0.1, duration: 0.45)
+                    SKAction.moveBy(x: dx, y: dy, duration: 0.7),
+                    SKAction.fadeOut(withDuration: 0.7),
+                    SKAction.scale(to: 0.1, duration: 0.7)
                 ]),
                 SKAction.removeFromParent()
             ])
@@ -741,7 +784,7 @@ class SpriteFactory {
         container.addChild(scorch)
 
         let cleanup = SKAction.sequence([
-            SKAction.wait(forDuration: 3.6),
+            SKAction.wait(forDuration: 3.8),
             SKAction.removeFromParent()
         ])
         container.run(cleanup)

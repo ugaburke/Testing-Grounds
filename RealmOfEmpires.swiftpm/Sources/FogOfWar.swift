@@ -78,13 +78,13 @@ class FogOfWar {
                     }
                 } else if tile.isExplored {
                     // Explored but not visible - dim
-                    if let tileNode = tile.node, abs(tileNode.alpha - 0.5) > 0.05 {
-                        tileNode.run(SKAction.fadeAlpha(to: 0.5, duration: fadeDuration), withKey: "fogFade")
+                    if let tileNode = tile.node, abs(tileNode.alpha - 0.65) > 0.05 {
+                        tileNode.run(SKAction.fadeAlpha(to: 0.65, duration: fadeDuration), withKey: "fogFade")
                     }
 
                     if fogNodes[y][x] == nil {
                         let fogNode = SKShapeNode(rectOf: CGSize(width: map.tileSize, height: map.tileSize))
-                        fogNode.fillColor = SKColor.black.withAlphaComponent(0.4)
+                        fogNode.fillColor = SKColor.black.withAlphaComponent(0.25)
                         fogNode.strokeColor = .clear
                         fogNode.position = map.gridToWorld(GridPosition(x: x, y: y))
                         fogNode.zPosition = 50
@@ -101,7 +101,7 @@ class FogOfWar {
 
                     if fogNodes[y][x] == nil {
                         let fogNode = SKShapeNode(rectOf: CGSize(width: map.tileSize, height: map.tileSize))
-                        fogNode.fillColor = SKColor.black.withAlphaComponent(0.85)
+                        fogNode.fillColor = SKColor.black.withAlphaComponent(0.75)
                         fogNode.strokeColor = .clear
                         fogNode.position = map.gridToWorld(GridPosition(x: x, y: y))
                         fogNode.zPosition = 50

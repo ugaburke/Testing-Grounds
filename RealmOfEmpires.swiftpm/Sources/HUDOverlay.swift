@@ -13,6 +13,17 @@ class HUDOverlay {
     private var popLabel: SKLabelNode!
     private var ageLabel: SKLabelNode!
 
+    // Income rate labels
+    private var foodIncomeLabel: SKLabelNode!
+    private var woodIncomeLabel: SKLabelNode!
+    private var goldIncomeLabel: SKLabelNode!
+    private var stoneIncomeLabel: SKLabelNode!
+    private var previousResources: Resources = Resources()
+    private var incomeUpdateTimer: CGFloat = 0
+
+    // Villager allocation label
+    private var villagerAllocLabel: SKLabelNode!
+
     // Minimap
     private var minimapNode: SKShapeNode!
     private var minimapSize: CGFloat = 150
@@ -39,12 +50,22 @@ class HUDOverlay {
 
     // Game status
     private var statusLabel: SKLabelNode!
+    private var statusBg: SKShapeNode!
+
+    // Mode indicator
+    private var modeIndicatorLabel: SKLabelNode!
+    private var modeIndicatorBg: SKShapeNode!
 
     // Buttons
     private var pauseButton: SKNode!
     private var exitButton: SKNode!
     private var ageUpButton: SKNode!
     private var deselectButton: SKNode!
+    private var speedButton: SKNode!
+
+    // Exit confirmation
+    private var exitConfirmNode: SKNode?
+    private var isShowingExitConfirm = false
 
     init(viewSize: CGSize) {
         self.viewSize = viewSize
@@ -59,6 +80,8 @@ class HUDOverlay {
         setupBuildMenu()
         setupStatusLabel()
         setupGameButtons()
+        setupModeIndicator()
+        setupVillagerAlloc()
     }
 
     // MARK: - Setup
@@ -73,31 +96,39 @@ class HUDOverlay {
         hudNode.addChild(bar)
 
         let startX: CGFloat = 30
-        let spacing: CGFloat = 140
+        let spacing: CGFloat = 120
 
         // Food
         let foodIcon = createResourceIcon(color: .red, symbol: "F", x: startX, y: viewSize.height - barHeight / 2)
         hudNode.addChild(foodIcon)
         foodLabel = createLabel(x: startX + 22, y: viewSize.height - barHeight / 2)
         hudNode.addChild(foodLabel)
+        foodIncomeLabel = createIncomeLabel(x: startX + 70, y: viewSize.height - barHeight / 2)
+        hudNode.addChild(foodIncomeLabel)
 
         // Wood
         let woodIcon = createResourceIcon(color: .brown, symbol: "W", x: startX + spacing, y: viewSize.height - barHeight / 2)
         hudNode.addChild(woodIcon)
         woodLabel = createLabel(x: startX + spacing + 22, y: viewSize.height - barHeight / 2)
         hudNode.addChild(woodLabel)
+        woodIncomeLabel = createIncomeLabel(x: startX + spacing + 70, y: viewSize.height - barHeight / 2)
+        hudNode.addChild(woodIncomeLabel)
 
         // Gold
         let goldIcon = createResourceIcon(color: .yellow, symbol: "G", x: startX + spacing * 2, y: viewSize.height - barHeight / 2)
         hudNode.addChild(goldIcon)
         goldLabel = createLabel(x: startX + spacing * 2 + 22, y: viewSize.height - barHeight / 2)
         hudNode.addChild(goldLabel)
+        goldIncomeLabel = createIncomeLabel(x: startX + spacing * 2 + 70, y: viewSize.height - barHeight / 2)
+        hudNode.addChild(goldIncomeLabel)
 
         // Stone
         let stoneIcon = createResourceIcon(color: .gray, symbol: "S", x: startX + spacing * 3, y: viewSize.height - barHeight / 2)
         hudNode.addChild(stoneIcon)
         stoneLabel = createLabel(x: startX + spacing * 3 + 22, y: viewSize.height - barHeight / 2)
         hudNode.addChild(stoneLabel)
+        stoneIncomeLabel = createIncomeLabel(x: startX + spacing * 3 + 70, y: viewSize.height - barHeight / 2)
+        hudNode.addChild(stoneIncomeLabel)
 
         // Population
         let popIcon = createResourceIcon(color: .cyan, symbol: "P", x: startX + spacing * 4, y: viewSize.height - barHeight / 2)
@@ -110,7 +141,7 @@ class HUDOverlay {
         ageLabel.fontSize = 14
         ageLabel.fontName = "Helvetica-Bold"
         ageLabel.fontColor = SKColor(red: 0.85, green: 0.7, blue: 0.4, alpha: 1.0)
-        ageLabel.position = CGPoint(x: viewSize.width - 120, y: viewSize.height - barHeight / 2 - 5)
+        ageLabel.position = CGPoint(x: viewSize.width - 150, y: viewSize.height - barHeight / 2 - 5)
         ageLabel.horizontalAlignmentMode = .center
         hudNode.addChild(ageLabel)
     }
@@ -137,6 +168,17 @@ class HUDOverlay {
         label.fontSize = 14
         label.fontName = "Helvetica-Bold"
         label.fontColor = .white
+        label.horizontalAlignmentMode = .left
+        label.verticalAlignmentMode = .center
+        label.position = CGPoint(x: x, y: y)
+        return label
+    }
+
+    private func createIncomeLabel(x: CGFloat, y: CGFloat) -> SKLabelNode {
+        let label = SKLabelNode(text: "")
+        label.fontSize = 10
+        label.fontName = "Helvetica"
+        label.fontColor = SKColor(red: 0.4, green: 0.8, blue: 0.4, alpha: 0.8)
         label.horizontalAlignmentMode = .left
         label.verticalAlignmentMode = .center
         label.position = CGPoint(x: x, y: y)
@@ -211,7 +253,7 @@ class HUDOverlay {
         infoPanel.addChild(infoNameLabel)
 
         infoHPLabel = SKLabelNode(text: "")
-        infoHPLabel.fontSize = 12
+        infoHPLabel.fontSize = 11
         infoHPLabel.fontName = "Helvetica"
         infoHPLabel.fontColor = .lightGray
         infoHPLabel.position = CGPoint(x: 10, y: 10)
@@ -227,7 +269,7 @@ class HUDOverlay {
         infoPanel.addChild(queueLabel)
 
         selectionCountLabel = SKLabelNode(text: "")
-        selectionCountLabel.fontSize = 12
+        selectionCountLabel.fontSize = 11
         selectionCountLabel.fontName = "Helvetica"
         selectionCountLabel.fontColor = .yellow
         selectionCountLabel.position = CGPoint(x: -panelWidth / 2 + 10, y: -40)
@@ -262,44 +304,93 @@ class HUDOverlay {
     }
 
     private func setupStatusLabel() {
+        // Background for status messages
+        statusBg = SKShapeNode(rectOf: CGSize(width: 300, height: 28), cornerRadius: 6)
+        statusBg.fillColor = SKColor.black.withAlphaComponent(0.6)
+        statusBg.strokeColor = .clear
+        statusBg.position = CGPoint(x: viewSize.width / 2, y: viewSize.height - 62)
+        statusBg.zPosition = 119
+        statusBg.alpha = 0
+        hudNode.addChild(statusBg)
+
         statusLabel = SKLabelNode(text: "")
         statusLabel.fontSize = 18
         statusLabel.fontName = "Helvetica-Bold"
         statusLabel.fontColor = .yellow
-        statusLabel.position = CGPoint(x: viewSize.width / 2, y: viewSize.height - 60)
+        statusLabel.position = CGPoint(x: viewSize.width / 2, y: viewSize.height - 62)
         statusLabel.horizontalAlignmentMode = .center
+        statusLabel.verticalAlignmentMode = .center
         statusLabel.zPosition = 120
         hudNode.addChild(statusLabel)
     }
 
     private func setupGameButtons() {
+        let btnY = viewSize.height - 36
+
+        // Speed button
+        speedButton = createHUDButton(text: "1x", x: viewSize.width - 300, y: btnY, name: "speedBtn", width: 44)
+        hudNode.addChild(speedButton)
+
+        // Age up button
+        ageUpButton = createHUDButton(text: "AGE UP", x: viewSize.width - 240, y: btnY, name: "ageUpBtn", width: 80)
+        hudNode.addChild(ageUpButton)
+
+        // Cancel button
+        deselectButton = createHUDButton(text: "Cancel", x: viewSize.width - 160, y: btnY, name: "deselectBtn", width: 52)
+        hudNode.addChild(deselectButton)
+
+        // Help button
+        let helpBtn = createHUDButton(text: "?", x: viewSize.width - 110, y: btnY, name: "helpBtn", width: 44)
+        hudNode.addChild(helpBtn)
+
         // Pause button
-        pauseButton = createHUDButton(text: "||", x: viewSize.width - 55, y: viewSize.height - 36, name: "pauseBtn")
+        pauseButton = createHUDButton(text: "Pause", x: viewSize.width - 60, y: btnY, name: "pauseBtn", width: 52)
         hudNode.addChild(pauseButton)
 
         // Exit button
-        exitButton = createHUDButton(text: "X", x: viewSize.width - 15, y: viewSize.height - 36, name: "exitBtn")
+        exitButton = createHUDButton(text: "Quit", x: viewSize.width - 15, y: btnY, name: "exitBtn", width: 44)
         hudNode.addChild(exitButton)
-
-        // Age up button
-        ageUpButton = createHUDButton(text: "AGE UP", x: viewSize.width - 200, y: viewSize.height - 36, name: "ageUpBtn", width: 64)
-        hudNode.addChild(ageUpButton)
-
-        // Help button
-        let helpBtn = createHUDButton(text: "?", x: viewSize.width - 95, y: viewSize.height - 36, name: "helpBtn")
-        hudNode.addChild(helpBtn)
-
-        // Deselect/Cancel button
-        deselectButton = createHUDButton(text: "ESC", x: viewSize.width - 135, y: viewSize.height - 36, name: "deselectBtn", width: 36)
-        hudNode.addChild(deselectButton)
     }
 
-    private func createHUDButton(text: String, x: CGFloat, y: CGFloat, name: String, width: CGFloat = 34) -> SKNode {
+    private func setupModeIndicator() {
+        modeIndicatorBg = SKShapeNode(rectOf: CGSize(width: 200, height: 28), cornerRadius: 6)
+        modeIndicatorBg.fillColor = SKColor.black.withAlphaComponent(0.7)
+        modeIndicatorBg.strokeColor = .clear
+        modeIndicatorBg.position = CGPoint(x: viewSize.width / 2, y: viewSize.height - 90)
+        modeIndicatorBg.zPosition = 119
+        modeIndicatorBg.isHidden = true
+        hudNode.addChild(modeIndicatorBg)
+
+        modeIndicatorLabel = SKLabelNode(text: "")
+        modeIndicatorLabel.fontSize = 16
+        modeIndicatorLabel.fontName = "Helvetica-Bold"
+        modeIndicatorLabel.fontColor = .orange
+        modeIndicatorLabel.position = CGPoint(x: viewSize.width / 2, y: viewSize.height - 90)
+        modeIndicatorLabel.horizontalAlignmentMode = .center
+        modeIndicatorLabel.verticalAlignmentMode = .center
+        modeIndicatorLabel.zPosition = 120
+        modeIndicatorLabel.isHidden = true
+        hudNode.addChild(modeIndicatorLabel)
+    }
+
+    private func setupVillagerAlloc() {
+        villagerAllocLabel = SKLabelNode(text: "")
+        villagerAllocLabel.fontSize = 11
+        villagerAllocLabel.fontName = "Helvetica"
+        villagerAllocLabel.fontColor = SKColor(red: 0.8, green: 0.8, blue: 0.6, alpha: 0.9)
+        villagerAllocLabel.position = CGPoint(x: viewSize.width / 2, y: viewSize.height - 50)
+        villagerAllocLabel.horizontalAlignmentMode = .center
+        villagerAllocLabel.verticalAlignmentMode = .center
+        villagerAllocLabel.zPosition = 101
+        hudNode.addChild(villagerAllocLabel)
+    }
+
+    private func createHUDButton(text: String, x: CGFloat, y: CGFloat, name: String, width: CGFloat = 44) -> SKNode {
         let container = SKNode()
         container.position = CGPoint(x: x, y: y)
         container.name = name
 
-        let bg = SKShapeNode(rectOf: CGSize(width: width, height: 26), cornerRadius: 4)
+        let bg = SKShapeNode(rectOf: CGSize(width: width, height: 34), cornerRadius: 5)
         bg.fillColor = SKColor(red: 0.3, green: 0.2, blue: 0.1, alpha: 0.9)
         bg.strokeColor = SKColor(red: 0.6, green: 0.5, blue: 0.3, alpha: 1.0)
         bg.lineWidth = 1
@@ -307,7 +398,7 @@ class HUDOverlay {
         container.addChild(bg)
 
         let label = SKLabelNode(text: text)
-        label.fontSize = 12
+        label.fontSize = 14
         label.fontName = "Helvetica-Bold"
         label.fontColor = .white
         label.verticalAlignmentMode = .center
@@ -315,6 +406,45 @@ class HUDOverlay {
         container.addChild(label)
 
         return container
+    }
+
+    // MARK: - Mode Indicator
+
+    func updateModeIndicator(mode: ActionMode) {
+        switch mode {
+        case .placingBuilding(let type):
+            modeIndicatorLabel.text = "PLACING: \(type.displayName)"
+            modeIndicatorLabel.fontColor = .orange
+            modeIndicatorLabel.isHidden = false
+            modeIndicatorBg.isHidden = false
+        case .settingRallyPoint:
+            modeIndicatorLabel.text = "SET RALLY POINT"
+            modeIndicatorLabel.fontColor = SKColor(red: 0.3, green: 0.7, blue: 1.0, alpha: 1.0)
+            modeIndicatorLabel.isHidden = false
+            modeIndicatorBg.isHidden = false
+        case .attackMove:
+            modeIndicatorLabel.text = "ATTACK MOVE"
+            modeIndicatorLabel.fontColor = .red
+            modeIndicatorLabel.isHidden = false
+            modeIndicatorBg.isHidden = false
+        case .normal:
+            modeIndicatorLabel.isHidden = true
+            modeIndicatorBg.isHidden = true
+        }
+    }
+
+    // MARK: - Speed Button
+
+    func updateSpeedButton(speed: CGFloat) {
+        if let container = speedButton {
+            for child in container.children {
+                if let label = child as? SKLabelNode {
+                    if speed == 1.0 { label.text = "1x" }
+                    else if speed == 1.5 { label.text = "1.5x" }
+                    else { label.text = "2x" }
+                }
+            }
+        }
     }
 
     // MARK: - Update
@@ -346,8 +476,66 @@ class HUDOverlay {
             removeAgeProgressBar()
         }
 
+        // Update villager allocation
+        updateVillagerAllocation(player: player)
+
         // Update selection info
         updateSelectionInfo(player: player)
+    }
+
+    func updateIncomeRates(player: Player, deltaTime: CGFloat) {
+        incomeUpdateTimer += deltaTime
+        if incomeUpdateTimer >= 5.0 {
+            let foodRate = (player.resources.food - previousResources.food)
+            let woodRate = (player.resources.wood - previousResources.wood)
+            let goldRate = (player.resources.gold - previousResources.gold)
+            let stoneRate = (player.resources.stone - previousResources.stone)
+
+            foodIncomeLabel.text = foodRate >= 0 ? "+\(foodRate / 5)/s" : "\(foodRate / 5)/s"
+            woodIncomeLabel.text = woodRate >= 0 ? "+\(woodRate / 5)/s" : "\(woodRate / 5)/s"
+            goldIncomeLabel.text = goldRate >= 0 ? "+\(goldRate / 5)/s" : "\(goldRate / 5)/s"
+            stoneIncomeLabel.text = stoneRate >= 0 ? "+\(stoneRate / 5)/s" : "\(stoneRate / 5)/s"
+
+            foodIncomeLabel.fontColor = foodRate >= 0 ? SKColor(red: 0.4, green: 0.8, blue: 0.4, alpha: 0.8) : .red
+            woodIncomeLabel.fontColor = woodRate >= 0 ? SKColor(red: 0.4, green: 0.8, blue: 0.4, alpha: 0.8) : .red
+            goldIncomeLabel.fontColor = goldRate >= 0 ? SKColor(red: 0.4, green: 0.8, blue: 0.4, alpha: 0.8) : .red
+            stoneIncomeLabel.fontColor = stoneRate >= 0 ? SKColor(red: 0.4, green: 0.8, blue: 0.4, alpha: 0.8) : .red
+
+            previousResources = Resources(food: player.resources.food, wood: player.resources.wood,
+                                           gold: player.resources.gold, stone: player.resources.stone)
+            incomeUpdateTimer = 0
+        }
+    }
+
+    private func updateVillagerAllocation(player: Player) {
+        var foodW = 0, woodW = 0, goldW = 0, stoneW = 0, idleW = 0, buildW = 0
+        for unit in player.units where unit.type == .villager {
+            switch unit.state {
+            case .gathering(let rt, _):
+                switch rt {
+                case .food: foodW += 1
+                case .wood: woodW += 1
+                case .gold: goldW += 1
+                case .stone: stoneW += 1
+                }
+            case .building: buildW += 1
+            case .idle: idleW += 1
+            default: break
+            }
+        }
+        let total = foodW + woodW + goldW + stoneW + idleW + buildW
+        if total > 0 {
+            var parts: [String] = []
+            if foodW > 0 { parts.append("Food:\(foodW)") }
+            if woodW > 0 { parts.append("Wood:\(woodW)") }
+            if goldW > 0 { parts.append("Gold:\(goldW)") }
+            if stoneW > 0 { parts.append("Stone:\(stoneW)") }
+            if buildW > 0 { parts.append("Build:\(buildW)") }
+            if idleW > 0 { parts.append("Idle:\(idleW)") }
+            villagerAllocLabel.text = "Villagers: " + parts.joined(separator: "  ")
+        } else {
+            villagerAllocLabel.text = ""
+        }
     }
 
     private func updateAgeProgressBar(progress: CGFloat) {
@@ -356,7 +544,7 @@ class HUDOverlay {
             let bg = SKShapeNode(rectOf: CGSize(width: barWidth, height: 4))
             bg.fillColor = .darkGray
             bg.strokeColor = .clear
-            bg.position = CGPoint(x: viewSize.width - 120, y: viewSize.height - 50)
+            bg.position = CGPoint(x: viewSize.width - 150, y: viewSize.height - 50)
             bg.name = "ageProgressBg"
             bg.zPosition = 101
             hudNode.addChild(bg)
@@ -368,7 +556,7 @@ class HUDOverlay {
             let fill = SKShapeNode(rectOf: CGSize(width: 1, height: 4))
             fill.fillColor = .cyan
             fill.strokeColor = .clear
-            fill.position = CGPoint(x: viewSize.width - 120, y: viewSize.height - 50)
+            fill.position = CGPoint(x: viewSize.width - 150, y: viewSize.height - 50)
             fill.name = "ageProgressFill"
             fill.zPosition = 102
             hudNode.addChild(fill)
@@ -386,7 +574,6 @@ class HUDOverlay {
         let scaleX = (minimapSize - 10) / CGFloat(map.width)
         let scaleY = (minimapSize - 10) / CGFloat(map.height)
 
-        // Draw terrain features (sparse)
         let step = max(1, map.width / 30)
         for y in stride(from: 0, to: map.height, by: step) {
             for x in stride(from: 0, to: map.width, by: step) {
@@ -399,14 +586,12 @@ class HUDOverlay {
                 )
 
                 if !tile.isExplored {
-                    // Unexplored: dark
                     let fog = SKShapeNode(rectOf: dotSize)
                     fog.fillColor = SKColor.black.withAlphaComponent(0.7)
                     fog.strokeColor = .clear
                     fog.position = dotPos
                     minimapDots.addChild(fog)
                 } else {
-                    // Show terrain with better colors
                     let terrainColor: SKColor
                     switch tile.terrain {
                     case .water, .deepWater: terrainColor = SKColor(red: 0.15, green: 0.3, blue: 0.65, alpha: 0.8)
@@ -427,7 +612,6 @@ class HUDOverlay {
             }
         }
 
-        // Draw buildings
         for player in players {
             let color = SpriteFactory.playerColors[player.id % SpriteFactory.playerColors.count]
             for building in player.buildings {
@@ -441,7 +625,6 @@ class HUDOverlay {
                 minimapDots.addChild(dot)
             }
 
-            // Draw units
             for unit in player.units {
                 let dot = SKShapeNode(circleOfRadius: 1.5)
                 dot.fillColor = color
@@ -454,7 +637,6 @@ class HUDOverlay {
             }
         }
 
-        // Update camera view rect
         let camTileX = cameraPos.x / map.tileSize
         let camTileY = cameraPos.y / map.tileSize
         let viewTilesX = viewSize.width / map.tileSize
@@ -487,7 +669,7 @@ class HUDOverlay {
         if selected.count == 1 {
             let unit = selected[0]
             infoNameLabel.text = unit.type.displayName
-            infoHPLabel.text = "HP: \(unit.hp)/\(unit.maxHP)"
+            infoHPLabel.text = "HP: \(unit.hp)/\(unit.maxHP)  ATK: \(unit.effectiveAttack)  DEF: \(unit.effectiveDefense)"
             infoIcon.fillColor = unit.type.color
             selectionCountLabel.text = ""
 
@@ -505,7 +687,6 @@ class HUDOverlay {
                 queueLabel.text = ""
             }
 
-            // Show build button for villagers
             if unit.type == .villager {
                 updateActionButtons(for: unit, building: nil, player: player)
             } else {
@@ -514,9 +695,12 @@ class HUDOverlay {
         } else {
             let first = selected[0]
             infoNameLabel.text = first.type.displayName
+            let grouped = Dictionary(grouping: selected, by: { $0.type })
+            let composition = grouped.map { "\($0.value.count) \($0.key.displayName)\($0.value.count > 1 ? "s" : "")" }
+                .joined(separator: ", ")
             infoHPLabel.text = ""
             infoIcon.fillColor = first.type.color
-            selectionCountLabel.text = "\(selected.count) units selected"
+            selectionCountLabel.text = composition
             queueLabel.text = ""
 
             if selected.allSatisfy({ $0.type == .villager }) {
@@ -549,7 +733,6 @@ class HUDOverlay {
     }
 
     private func updateActionButtons(for unit: Unit?, building: Building?, player: Player) {
-        // Clear existing buttons
         for btn in actionButtons {
             btn.removeFromParent()
         }
@@ -563,7 +746,6 @@ class HUDOverlay {
         let startY: CGFloat = 40
 
         if let unit = unit, unit.type == .villager {
-            // Build button
             let buildBtn = createActionButton(
                 text: "Build", icon: "B",
                 color: SKColor(red: 0.5, green: 0.35, blue: 0.15, alpha: 1.0),
@@ -574,7 +756,6 @@ class HUDOverlay {
         }
 
         if let building = building, building.isConstructed {
-            // Show trainable units
             for (i, unitType) in building.type.trainableUnits.enumerated() {
                 guard player.currentAge.rawValue >= unitType.requiredAge.rawValue else { continue }
 
@@ -595,7 +776,6 @@ class HUDOverlay {
                 actionButtons.append(btn)
             }
 
-            // Rally point button for production buildings
             if !building.type.trainableUnits.isEmpty {
                 let rallyBtn = createActionButton(
                     text: "Rally", icon: "R",
@@ -646,6 +826,97 @@ class HUDOverlay {
 
         return container
     }
+
+    // MARK: - Exit Confirmation
+
+    func showExitConfirmation() {
+        isShowingExitConfirm = true
+
+        let overlay = SKNode()
+        overlay.name = "exitConfirm"
+        overlay.zPosition = 150
+
+        let bg = SKShapeNode(rectOf: CGSize(width: viewSize.width, height: viewSize.height))
+        bg.fillColor = SKColor.black.withAlphaComponent(0.6)
+        bg.strokeColor = .clear
+        bg.position = CGPoint(x: viewSize.width / 2, y: viewSize.height / 2)
+        bg.name = "exitConfirm"
+        overlay.addChild(bg)
+
+        let panel = SKShapeNode(rectOf: CGSize(width: 300, height: 140), cornerRadius: 10)
+        panel.fillColor = SKColor(red: 0.15, green: 0.12, blue: 0.08, alpha: 0.95)
+        panel.strokeColor = SKColor(red: 0.6, green: 0.5, blue: 0.3, alpha: 1.0)
+        panel.lineWidth = 2
+        panel.position = CGPoint(x: viewSize.width / 2, y: viewSize.height / 2)
+        overlay.addChild(panel)
+
+        let title = SKLabelNode(text: "Quit Game?")
+        title.fontSize = 20
+        title.fontName = "Helvetica-Bold"
+        title.fontColor = SKColor(red: 0.85, green: 0.7, blue: 0.4, alpha: 1.0)
+        title.position = CGPoint(x: viewSize.width / 2, y: viewSize.height / 2 + 35)
+        title.zPosition = 1
+        overlay.addChild(title)
+
+        let subtitle = SKLabelNode(text: "Your progress will be lost.")
+        subtitle.fontSize = 14
+        subtitle.fontName = "Helvetica"
+        subtitle.fontColor = .lightGray
+        subtitle.position = CGPoint(x: viewSize.width / 2, y: viewSize.height / 2 + 10)
+        subtitle.zPosition = 1
+        overlay.addChild(subtitle)
+
+        // Yes button
+        let yesBtn = SKNode()
+        yesBtn.position = CGPoint(x: viewSize.width / 2 - 60, y: viewSize.height / 2 - 30)
+        yesBtn.name = "exitConfirmYes"
+        let yesBg = SKShapeNode(rectOf: CGSize(width: 80, height: 36), cornerRadius: 5)
+        yesBg.fillColor = SKColor(red: 0.6, green: 0.15, blue: 0.1, alpha: 0.9)
+        yesBg.strokeColor = .white
+        yesBg.lineWidth = 1
+        yesBg.name = "exitConfirmYes"
+        yesBtn.addChild(yesBg)
+        let yesLabel = SKLabelNode(text: "Quit")
+        yesLabel.fontSize = 16
+        yesLabel.fontName = "Helvetica-Bold"
+        yesLabel.fontColor = .white
+        yesLabel.verticalAlignmentMode = .center
+        yesLabel.name = "exitConfirmYes"
+        yesBtn.addChild(yesLabel)
+        yesBtn.zPosition = 1
+        overlay.addChild(yesBtn)
+
+        // No button
+        let noBtn = SKNode()
+        noBtn.position = CGPoint(x: viewSize.width / 2 + 60, y: viewSize.height / 2 - 30)
+        noBtn.name = "exitConfirmNo"
+        let noBg = SKShapeNode(rectOf: CGSize(width: 80, height: 36), cornerRadius: 5)
+        noBg.fillColor = SKColor(red: 0.2, green: 0.4, blue: 0.2, alpha: 0.9)
+        noBg.strokeColor = .white
+        noBg.lineWidth = 1
+        noBg.name = "exitConfirmNo"
+        noBtn.addChild(noBg)
+        let noLabel = SKLabelNode(text: "Stay")
+        noLabel.fontSize = 16
+        noLabel.fontName = "Helvetica-Bold"
+        noLabel.fontColor = .white
+        noLabel.verticalAlignmentMode = .center
+        noLabel.name = "exitConfirmNo"
+        noBtn.addChild(noLabel)
+        noBtn.zPosition = 1
+        overlay.addChild(noBtn)
+
+        exitConfirmNode = overlay
+        hudNode.addChild(overlay)
+    }
+
+    func hideExitConfirmation() {
+        isShowingExitConfirm = false
+        exitConfirmNode?.removeFromParent()
+        exitConfirmNode = nil
+    }
+
+    var isExitConfirmShowing: Bool { isShowingExitConfirm }
 
     // MARK: - Build Menu
 
@@ -702,7 +973,7 @@ class HUDOverlay {
         closeBtn.position = CGPoint(x: 190, y: 110)
         closeBtn.name = "closeBuildMenu"
 
-        let closeBg = SKShapeNode(rectOf: CGSize(width: 24, height: 24), cornerRadius: 3)
+        let closeBg = SKShapeNode(rectOf: CGSize(width: 28, height: 28), cornerRadius: 4)
         closeBg.fillColor = SKColor(red: 0.6, green: 0.15, blue: 0.1, alpha: 0.9)
         closeBg.strokeColor = .white
         closeBg.lineWidth = 1
@@ -710,7 +981,7 @@ class HUDOverlay {
         closeBtn.addChild(closeBg)
 
         let closeLabel = SKLabelNode(text: "X")
-        closeLabel.fontSize = 14
+        closeLabel.fontSize = 16
         closeLabel.fontName = "Helvetica-Bold"
         closeLabel.fontColor = .white
         closeLabel.verticalAlignmentMode = .center
@@ -773,14 +1044,21 @@ class HUDOverlay {
 
     // MARK: - Status Messages
 
-    func showStatus(_ message: String, duration: CGFloat = 3.0) {
+    func showStatus(_ message: String, duration: CGFloat = 5.0) {
         statusLabel.text = message
         statusLabel.removeAllActions()
         statusLabel.alpha = 1.0
-        statusLabel.run(SKAction.sequence([
-            SKAction.wait(forDuration: TimeInterval(duration)),
-            SKAction.fadeOut(withDuration: 0.5)
-        ]))
+        statusBg.removeAllActions()
+        statusBg.alpha = message.isEmpty ? 0 : 0.7
+
+        if !message.isEmpty {
+            let fadeSeq = SKAction.sequence([
+                SKAction.wait(forDuration: TimeInterval(duration)),
+                SKAction.fadeOut(withDuration: 0.5)
+            ])
+            statusLabel.run(fadeSeq)
+            statusBg.run(fadeSeq)
+        }
     }
 
     func showGameOver(victory: Bool, player: Player? = nil) {
@@ -798,9 +1076,8 @@ class HUDOverlay {
         label.fontSize = 60
         label.fontName = "Helvetica-Bold"
         label.fontColor = color
-        label.position = CGPoint(x: viewSize.width / 2, y: viewSize.height / 2 + 60)
+        label.position = CGPoint(x: viewSize.width / 2, y: viewSize.height / 2 + 80)
         label.zPosition = 201
-        // Entrance animation
         label.setScale(0.1)
         label.run(SKAction.sequence([
             SKAction.scale(to: 1.2, duration: 0.3),
@@ -808,11 +1085,18 @@ class HUDOverlay {
         ]))
         hudNode.addChild(label)
 
-        // Stats
+        // Enhanced stats
         if let player = player {
+            let scene = gameScene
+            let gameDuration = scene != nil ? Int(scene!.gameTime - scene!.gameStartTime) : 0
+            let minutes = gameDuration / 60
+            let seconds = gameDuration % 60
+
             let stats = [
                 "Age: \(player.currentAge.displayName)",
+                "Game Time: \(minutes)m \(seconds)s",
                 "Units: \(player.units.count)  Buildings: \(player.buildings.count)",
+                "Units Trained: \(scene?.totalUnitsTrainedHuman ?? 0)  Units Lost: \(scene?.totalUnitsLostHuman ?? 0)",
                 "Resources: F:\(player.resources.food) W:\(player.resources.wood) G:\(player.resources.gold) S:\(player.resources.stone)"
             ]
             for (i, stat) in stats.enumerated() {
@@ -820,7 +1104,7 @@ class HUDOverlay {
                 statLabel.fontSize = 14
                 statLabel.fontName = "Helvetica"
                 statLabel.fontColor = .lightGray
-                statLabel.position = CGPoint(x: viewSize.width / 2, y: viewSize.height / 2 + 15 - CGFloat(i) * 20)
+                statLabel.position = CGPoint(x: viewSize.width / 2, y: viewSize.height / 2 + 35 - CGFloat(i) * 22)
                 statLabel.zPosition = 201
                 hudNode.addChild(statLabel)
             }
@@ -830,7 +1114,7 @@ class HUDOverlay {
         exitLabel.fontSize = 20
         exitLabel.fontName = "Helvetica"
         exitLabel.fontColor = .white
-        exitLabel.position = CGPoint(x: viewSize.width / 2, y: viewSize.height / 2 - 30)
+        exitLabel.position = CGPoint(x: viewSize.width / 2, y: viewSize.height / 2 - 90)
         exitLabel.zPosition = 201
         exitLabel.name = "gameOverExit"
         hudNode.addChild(exitLabel)
@@ -844,15 +1128,20 @@ class HUDOverlay {
         for node in nodes {
             guard let name = node.name else { continue }
 
+            // Exit confirmation
+            if name == "exitConfirmYes" { return .confirmExit }
+            if name == "exitConfirmNo" || (name == "exitConfirm" && isShowingExitConfirm) { return .cancelExit }
+
             if name == "pauseBtn" { return .pause }
             if name == "exitBtn" { return .exit }
             if name == "ageUpBtn" { return .ageUp }
             if name == "helpBtn" { return .showHelp }
             if name == "deselectBtn" { return .deselect }
+            if name == "speedBtn" { return .toggleSpeed }
             if name == "btn_build" { return .openBuildMenu }
             if name == "btn_rally" { return .setRallyPoint }
             if name == "closeBuildMenu" { return .closeBuildMenu }
-            if name == "gameOverExit" { return .exit }
+            if name == "gameOverExit" { return .confirmExit }
 
             if name.hasPrefix("build_") {
                 let typeStr = String(name.dropFirst(6))
@@ -882,15 +1171,11 @@ class HUDOverlay {
     }
 
     func isPointInHUD(_ point: CGPoint) -> Bool {
-        // Top resource bar
+        if isShowingExitConfirm { return true }
         if point.y > viewSize.height - 40 { return true }
-        // Bottom minimap
         if point.x < minimapSize + 20 && point.y < minimapSize + 20 { return true }
-        // Action panel
         if point.x > viewSize.width - 300 && point.y < 180 { return true }
-        // Info panel
         if point.x > minimapSize + 20 && point.x < minimapSize + 250 && point.y < 180 { return true }
-        // Build menu
         if isBuildMenuOpen { return true }
         return false
     }
@@ -929,6 +1214,8 @@ class HUDOverlay {
 enum HUDAction {
     case pause
     case exit
+    case confirmExit
+    case cancelExit
     case ageUp
     case showHelp
     case deselect
@@ -938,4 +1225,5 @@ enum HUDAction {
     case trainUnit(UnitType)
     case setRallyPoint
     case minimapTap(CGPoint)
+    case toggleSpeed
 }

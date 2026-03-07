@@ -6,7 +6,17 @@ class GameScene: SKScene {
     // MARK: - Properties
 
     var playerCivilization: Civilization = .britons
+    var aiDifficulty: AIDifficulty = .normal
     var onExit: (() -> Void)?
+
+    // Game speed
+    var gameSpeed: CGFloat = 1.0
+
+    // Stats tracking
+    var totalUnitsTrainedHuman: Int = 0
+    var totalUnitsLostHuman: Int = 0
+    var totalResourcesGathered: Resources = Resources()
+    var gameStartTime: TimeInterval = 0
 
     // Game systems
     var gameMap: GameMap!
@@ -62,6 +72,10 @@ class GameScene: SKScene {
     var tileRenderTimer: CGFloat = 0
     var minimapTimer: CGFloat = 0
 
+    // Tutorial
+    var tutorialStep: Int = -1  // -1 means no tutorial
+    var tutorialOverlay: SKNode?
+
     // MARK: - Scene Lifecycle
 
     override func didMove(to view: SKView) {
@@ -81,6 +95,92 @@ class GameScene: SKScene {
 
         // Initial render
         renderTiles()
+
+        // Start zoomed in on TC
+        zoomScale = 1.5
+        updateCamera()
+
+        // Show tutorial for first-time players
+        if !UserDefaults.standard.bool(forKey: "tutorialCompleted") {
+            showTutorial(step: 0)
+        }
+    }
+
+    // MARK: - Tutorial
+
+    private func showTutorial(step: Int) {
+        tutorialStep = step
+        tutorialOverlay?.removeFromParent()
+
+        let tips = [
+            "Select villagers and send them to gather resources (berries, trees, gold, stone).",
+            "Build a Barracks to train military units.",
+            "Advance through Ages to unlock stronger units and technologies.",
+            "Destroy the enemy Town Center to win!"
+        ]
+
+        guard step < tips.count else {
+            // Tutorial complete
+            tutorialStep = -1
+            UserDefaults.standard.set(true, forKey: "tutorialCompleted")
+            return
+        }
+
+        let overlay = SKNode()
+        overlay.zPosition = 200
+        overlay.name = "tutorialOverlay"
+
+        // Background panel
+        let bg = SKShapeNode(rectOf: CGSize(width: size.width * 0.7, height: 80), cornerRadius: 10)
+        bg.fillColor = SKColor.black.withAlphaComponent(0.8)
+        bg.strokeColor = SKColor(red: 0.85, green: 0.7, blue: 0.4, alpha: 1.0)
+        bg.lineWidth = 2
+        bg.position = CGPoint(x: 0, y: size.height * 0.3)
+        overlay.addChild(bg)
+
+        // Tip text
+        let label = SKLabelNode(text: tips[step])
+        label.fontSize = 14
+        label.fontName = "Helvetica"
+        label.fontColor = .white
+        label.preferredMaxLayoutWidth = size.width * 0.6
+        label.numberOfLines = 0
+        label.verticalAlignmentMode = .center
+        label.horizontalAlignmentMode = .center
+        label.position = CGPoint(x: 0, y: size.height * 0.3 + 8)
+        overlay.addChild(label)
+
+        // Step indicator
+        let stepLabel = SKLabelNode(text: "Tip \(step + 1)/\(tips.count)  —  Tap to continue")
+        stepLabel.fontSize = 11
+        stepLabel.fontName = "Helvetica"
+        stepLabel.fontColor = SKColor(red: 0.85, green: 0.7, blue: 0.4, alpha: 1.0)
+        stepLabel.verticalAlignmentMode = .center
+        stepLabel.horizontalAlignmentMode = .center
+        stepLabel.position = CGPoint(x: 0, y: size.height * 0.3 - 22)
+        overlay.addChild(stepLabel)
+
+        // Skip button
+        let skipBg = SKShapeNode(rectOf: CGSize(width: 90, height: 28), cornerRadius: 6)
+        skipBg.fillColor = SKColor(red: 0.4, green: 0.15, blue: 0.1, alpha: 0.9)
+        skipBg.strokeColor = SKColor(red: 0.85, green: 0.7, blue: 0.4, alpha: 0.6)
+        skipBg.lineWidth = 1
+        skipBg.position = CGPoint(x: size.width * 0.3, y: size.height * 0.3 - 22)
+        skipBg.name = "skipTutorial"
+        overlay.addChild(skipBg)
+
+        let skipLabel = SKLabelNode(text: "Skip")
+        skipLabel.fontSize = 12
+        skipLabel.fontName = "Helvetica-Bold"
+        skipLabel.fontColor = .white
+        skipLabel.verticalAlignmentMode = .center
+        skipLabel.horizontalAlignmentMode = .center
+        skipLabel.position = CGPoint(x: size.width * 0.3, y: size.height * 0.3 - 22)
+        skipLabel.name = "skipTutorialLabel"
+        overlay.addChild(skipLabel)
+
+        tutorialOverlay = overlay
+        hudCamera.addChild(overlay)
     }
 
     private func setupGameWorld() {
@@ -107,7 +207,7 @@ class GameScene: SKScene {
         let aiPlayer = Player(id: 1, civilization: aiCiv, isHuman: false)
         players.append(aiPlayer)
 
-        let ai = AIOpponent(player: aiPlayer)
+        let ai = AIOpponent(player: aiPlayer, difficulty: aiDifficulty)
         ai.gameScene = self
         aiOpponents.append(ai)
 
@@ -147,6 +247,7 @@ class GameScene: SKScene {
 
         for pos in villagerPositions {
             let unit = Unit(type: .villager, ownerID: player.id, position: pos)
+            unit.ownerPlayer = player
             unit.gridPosition = pos
             unit.position = gameMap.gridToWorld(pos)
 
@@ -161,6 +262,7 @@ class GameScene: SKScene {
         // Scout
         let scoutPos = GridPosition(x: center.x + 3, y: center.y)
         let scout = Unit(type: .scout, ownerID: player.id, position: scoutPos)
+        scout.ownerPlayer = player
         scout.gridPosition = scoutPos
         scout.position = gameMap.gridToWorld(scoutPos)
 
@@ -206,14 +308,16 @@ class GameScene: SKScene {
     override func update(_ currentTime: TimeInterval) {
         guard gameState == .playing else { return }
 
-        let deltaTime: CGFloat
+        let rawDelta: CGFloat
         if lastUpdateTime == 0 {
-            deltaTime = 1.0 / 60.0
+            rawDelta = 1.0 / 60.0
+            gameStartTime = currentTime
         } else {
-            deltaTime = CGFloat(min(currentTime - lastUpdateTime, 0.05))
+            rawDelta = CGFloat(min(currentTime - lastUpdateTime, 0.05))
         }
         lastUpdateTime = currentTime
         gameTime = currentTime
+        let deltaTime = rawDelta * gameSpeed
 
         // Update systems for all players
         for player in players {
@@ -280,6 +384,7 @@ class GameScene: SKScene {
 
         // HUD
         hud.update(player: humanPlayer)
+        hud.updateIncomeRates(player: humanPlayer, deltaTime: deltaTime)
         if let building = selectedBuilding {
             hud.showBuildingInfo(building: building, player: humanPlayer)
         }
@@ -477,6 +582,24 @@ class GameScene: SKScene {
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
         let locationInScene = touch.location(in: self)
+
+        // Handle tutorial taps
+        if tutorialStep >= 0, let overlay = tutorialOverlay {
+            let locInOverlay = touch.location(in: overlay)
+            let skipNodes = overlay.nodes(at: locInOverlay).filter { $0.name == "skipTutorial" || $0.name == "skipTutorialLabel" }
+            if !skipNodes.isEmpty {
+                // Skip tutorial entirely
+                tutorialStep = -1
+                tutorialOverlay?.removeFromParent()
+                tutorialOverlay = nil
+                UserDefaults.standard.set(true, forKey: "tutorialCompleted")
+            } else {
+                // Advance to next step
+                showTutorial(step: tutorialStep + 1)
+            }
+            return
+        }
+
         let worldPos = locationInScene
         let gridPos = gameMap.worldToGrid(worldPos)
 
@@ -522,6 +645,7 @@ class GameScene: SKScene {
             building.rallyPoint = gridPos
             hud.showStatus("Rally point set")
             actionMode = .normal
+            hud.updateModeIndicator(mode: .normal)
             // Show rally point indicator
             let indicator = spriteFactory.createMoveIndicator(at: gameMap.gridToWorld(gridPos))
             gameWorld.addChild(indicator)
@@ -670,21 +794,36 @@ class GameScene: SKScene {
             hud.showStatus(gameState == .paused ? "PAUSED" : "")
 
         case .exit:
+            hud.showExitConfirmation()
+
+        case .confirmExit:
+            hud.hideExitConfirmation()
             onExit?()
+
+        case .cancelExit:
+            hud.hideExitConfirmation()
+
+        case .toggleSpeed:
+            if gameSpeed == 1.0 { gameSpeed = 1.5 }
+            else if gameSpeed == 1.5 { gameSpeed = 2.0 }
+            else { gameSpeed = 1.0 }
+            hud.updateSpeedButton(speed: gameSpeed)
+            hud.showStatus("Speed: \(gameSpeed == 1.0 ? "1x" : gameSpeed == 1.5 ? "1.5x" : "2x")")
 
         case .showHelp:
             showHelpOverlay()
 
         case .deselect:
-            // Cancel placement or deselect
             if case .placingBuilding(_) = actionMode {
                 actionMode = .normal
                 placementGhost?.removeFromParent()
                 placementGhost = nil
                 hud.showStatus("")
+                hud.updateModeIndicator(mode: .normal)
             } else if case .settingRallyPoint(_) = actionMode {
                 actionMode = .normal
                 hud.showStatus("")
+                hud.updateModeIndicator(mode: .normal)
             } else {
                 unitSystem.deselectAll(player: humanPlayer)
                 selectedBuilding = nil
@@ -701,19 +840,21 @@ class GameScene: SKScene {
             actionMode = .normal
             placementGhost?.removeFromParent()
             placementGhost = nil
+            hud.updateModeIndicator(mode: .normal)
 
         case .selectBuilding(let type):
             hud.hideBuildMenu()
             actionMode = .placingBuilding(type)
             placementType = type
             hud.showStatus("Tap to place \(type.displayName)")
-            // Create placement ghost
+            hud.updateModeIndicator(mode: actionMode)
             createPlacementGhost(type: type)
 
         case .trainUnit(let type):
             if let building = selectedBuilding {
                 if buildingSystem.trainUnit(type: type, at: building, player: humanPlayer) {
                     hud.showStatus("Training \(type.displayName)")
+                    totalUnitsTrainedHuman += 1
                 } else {
                     if !humanPlayer.canAfford(type.cost) {
                         hud.showStatus("Not enough resources!")
@@ -729,6 +870,7 @@ class GameScene: SKScene {
             if let building = selectedBuilding {
                 hud.showStatus("Tap to set rally point")
                 actionMode = .settingRallyPoint(building)
+                hud.updateModeIndicator(mode: actionMode)
             }
 
         case .minimapTap(let point):
@@ -772,6 +914,7 @@ class GameScene: SKScene {
         actionMode = .normal
         placementGhost?.removeFromParent()
         placementGhost = nil
+        hud.updateModeIndicator(mode: .normal)
     }
 
     private func createPlacementGhost(type: BuildingType) {

@@ -163,6 +163,9 @@ class UnitSystem {
         if let scene = gameScene {
             let effect = scene.spriteFactory.createDeathEffect(at: unit.position)
             scene.gameWorld.addChild(effect)
+            if player.isHuman {
+                scene.totalUnitsLostHuman += 1
+            }
         }
         unit.node?.removeFromParent()
         player.units.removeAll { $0.id == unit.id }

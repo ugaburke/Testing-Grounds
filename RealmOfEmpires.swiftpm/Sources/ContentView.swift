@@ -1,18 +1,41 @@
 import SwiftUI
 import SpriteKit
 
+enum AIDifficulty: String, CaseIterable {
+    case easy
+    case normal
+    case hard
+
+    var displayName: String {
+        switch self {
+        case .easy: return "Easy"
+        case .normal: return "Normal"
+        case .hard: return "Hard"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .easy: return "Slower AI, late attacks"
+        case .normal: return "Balanced challenge"
+        case .hard: return "Fast AI, early aggression"
+        }
+    }
+}
+
 struct ContentView: View {
     @State private var showGame = false
     @State private var selectedCiv: Civilization = .britons
+    @State private var selectedDifficulty: AIDifficulty = .normal
 
     var body: some View {
         if showGame {
-            GameContainerView(civilization: selectedCiv, onExit: {
+            GameContainerView(civilization: selectedCiv, difficulty: selectedDifficulty, onExit: {
                 showGame = false
             })
             .ignoresSafeArea()
         } else {
-            MainMenuView(selectedCiv: $selectedCiv, onStart: {
+            MainMenuView(selectedCiv: $selectedCiv, selectedDifficulty: $selectedDifficulty, onStart: {
                 showGame = true
             })
         }
@@ -21,6 +44,7 @@ struct ContentView: View {
 
 struct MainMenuView: View {
     @Binding var selectedCiv: Civilization
+    @Binding var selectedDifficulty: AIDifficulty
     let onStart: () -> Void
 
     var body: some View {
@@ -33,7 +57,7 @@ struct MainMenuView: View {
             )
             .ignoresSafeArea()
 
-            VStack(spacing: 30) {
+            VStack(spacing: 24) {
                 // Title
                 VStack(spacing: 8) {
                     Text("REALM OF")
@@ -70,6 +94,20 @@ struct MainMenuView: View {
                     }
                 }
 
+                // Difficulty Selection
+                VStack(spacing: 12) {
+                    Text("Difficulty")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(Color(red: 0.85, green: 0.7, blue: 0.4))
+
+                    HStack(spacing: 16) {
+                        ForEach(AIDifficulty.allCases, id: \.self) { diff in
+                            DifficultyCard(difficulty: diff, isSelected: selectedDifficulty == diff)
+                                .onTapGesture { selectedDifficulty = diff }
+                        }
+                    }
+                }
+
                 Spacer()
 
                 // Start Button
@@ -93,6 +131,39 @@ struct MainMenuView: View {
                 .padding(.bottom, 60)
             }
         }
+    }
+}
+
+struct DifficultyCard: View {
+    let difficulty: AIDifficulty
+    let isSelected: Bool
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(difficulty.displayName)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundColor(.white)
+
+            Text(difficulty.description)
+                .font(.system(size: 10))
+                .foregroundColor(.gray)
+                .multilineTextAlignment(.center)
+                .frame(width: 110)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(isSelected
+                      ? Color(red: 0.4, green: 0.25, blue: 0.1)
+                      : Color(red: 0.2, green: 0.15, blue: 0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(isSelected
+                        ? Color(red: 0.85, green: 0.7, blue: 0.4)
+                        : Color.gray.opacity(0.3), lineWidth: isSelected ? 2 : 1)
+        )
     }
 }
 
@@ -134,6 +205,7 @@ struct CivSelectionCard: View {
 
 struct GameContainerView: View {
     let civilization: Civilization
+    let difficulty: AIDifficulty
     let onExit: () -> Void
     @State private var scene: GameScene?
 
@@ -149,6 +221,7 @@ struct GameContainerView: View {
                         let newScene = GameScene(size: UIScreen.main.bounds.size)
                         newScene.scaleMode = .resizeFill
                         newScene.playerCivilization = civilization
+                        newScene.aiDifficulty = difficulty
                         newScene.onExit = onExit
                         self.scene = newScene
                     }

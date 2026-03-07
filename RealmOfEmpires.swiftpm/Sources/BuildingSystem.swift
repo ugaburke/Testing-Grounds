@@ -113,8 +113,19 @@ class BuildingSystem {
         let hpBonus: CGFloat = type.isCavalry ? player.civilization.cavalryHPBonus : 1.0
         let unit = Unit(type: type, ownerID: player.id, position: pos,
                         hpBonus: hpBonus, speedBonus: type.isCavalry ? player.civilization.cavalrySpeedBonus : 1.0)
+        unit.ownerPlayer = player
         unit.gridPosition = pos
         unit.position = map.gridToWorld(pos)
+        // Apply loom HP bonus for villagers
+        if type == .villager && player.researchedTechs.contains(.loom) {
+            unit.maxHP += 15
+            unit.hp = unit.maxHP
+        }
+        // Apply bloodlines HP bonus for cavalry
+        if type.isCavalry && player.researchedTechs.contains(.bloodlines) {
+            unit.maxHP += 20
+            unit.hp = unit.maxHP
+        }
 
         let node = spriteFactory.createUnitNode(unit: unit)
         node.position = unit.position

@@ -82,12 +82,8 @@ class CombatSystem {
 
             // Attack with cooldown
             if unit.attackCooldown <= 0 {
-                var damage = max(1, unit.effectiveAttack - target.effectiveDefense)
-
-                // Bonus damage (spearman vs cavalry)
-                if target.type.isCavalry {
-                    damage += unit.type.bonusVsCavalry
-                }
+                let bonus = unit.bonusDamage(against: target)
+                let damage = max(1, unit.effectiveAttack + bonus - target.effectiveDefense / 2 + Int.random(in: 0...1))
 
                 target.hp -= damage
                 unit.attackCooldown = attackInterval
