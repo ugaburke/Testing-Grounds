@@ -83,7 +83,31 @@ class SpriteFactory {
 
         // Unit body shape
         let body: SKShapeNode
-        if unit.type.isCavalry {
+        if unit.type.isSiege {
+            if unit.type == .batteringRam {
+                // Wide rectangular ram shape
+                body = SKShapeNode(rectOf: CGSize(width: bodySize * 0.9, height: bodySize * 0.45), cornerRadius: bodySize * 0.08)
+                // Ram head (pointed front)
+                let ramHead = SKShapeNode(rectOf: CGSize(width: bodySize * 0.15, height: bodySize * 0.2))
+                ramHead.fillColor = SKColor(red: 0.5, green: 0.4, blue: 0.3, alpha: 1.0)
+                ramHead.strokeColor = .clear
+                ramHead.position = CGPoint(x: bodySize * 0.45, y: 0)
+                bodyContainer.addChild(ramHead)
+            } else {
+                // Mangonel: triangle with circle (catapult shape)
+                let path = CGMutablePath()
+                path.move(to: CGPoint(x: -bodySize * 0.35, y: -bodySize * 0.3))
+                path.addLine(to: CGPoint(x: bodySize * 0.35, y: -bodySize * 0.3))
+                path.addLine(to: CGPoint(x: 0, y: bodySize * 0.3))
+                path.closeSubpath()
+                body = SKShapeNode(path: path)
+                let boulder = SKShapeNode(circleOfRadius: bodySize * 0.12)
+                boulder.fillColor = SKColor(red: 0.6, green: 0.6, blue: 0.6, alpha: 1.0)
+                boulder.strokeColor = .clear
+                boulder.position = CGPoint(x: 0, y: bodySize * 0.15)
+                bodyContainer.addChild(boulder)
+            }
+        } else if unit.type.isCavalry {
             let path = CGMutablePath()
             path.addEllipse(in: CGRect(x: -bodySize * 0.5, y: -bodySize * 0.3,
                                         width: bodySize, height: bodySize * 0.6))

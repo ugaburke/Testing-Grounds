@@ -23,7 +23,61 @@ class UnitSystem {
                     autoAttackNearby(unit: unit, player: player, pathfinder: pathfinder)
                 }
             }
+
+            // Attack-move: move toward target, engage enemies along the way
+            if case .attackMoving(let dest) = unit.state {
+                if unit.path.isEmpty && unit.gridPosition.distance(to: dest) > 1.5 {
+                    unit.path = pathfinder.findPath(from: unit.gridPosition, to: dest)
+                }
+                // Scan for nearby enemies while moving
+                if let enemyID = findNearbyEnemy(unit: unit, player: player, range: 6.0) {
+                    unit.attackMoveDestination = dest
+                    unit.state = .attacking(targetUnitID: enemyID)
+                } else if unit.path.isEmpty {
+                    unit.state = .idle
+                    unit.attackMoveDestination = nil
+                }
+            }
+
+            // Resume attack-move after killing target
+            if case .idle = unit.state, let dest = unit.attackMoveDestination {
+                unit.state = .attackMoving(to: dest)
+                unit.attackMoveDestination = nil
+            }
+
+            // Patrolling: move between two points, engage enemies
+            if case .patrolling(let from, let to) = unit.state {
+                if unit.path.isEmpty && unit.gridPosition.distance(to: to) > 1.5 {
+                    unit.path = pathfinder.findPath(from: unit.gridPosition, to: to)
+                }
+                if let enemyID = findNearbyEnemy(unit: unit, player: player, range: 6.0) {
+                    unit.patrolPoints = (from, to)
+                    unit.state = .attacking(targetUnitID: enemyID)
+                } else if unit.path.isEmpty {
+                    // Reached destination, reverse patrol
+                    unit.state = .patrolling(from: to, to: from)
+                }
+            }
+
+            // Resume patrol after killing target
+            if case .idle = unit.state, let points = unit.patrolPoints {
+                unit.state = .patrolling(from: points.0, to: points.1)
+                unit.patrolPoints = nil
+            }
         }
+    }
+
+    private func findNearbyEnemy(unit: Unit, player: Player, range: CGFloat) -> Int? {
+        guard let scene = gameScene else { return nil }
+        for enemy in scene.players where enemy.id != player.id {
+            for enemyUnit in enemy.units {
+                let dist = unit.gridPosition.distance(to: enemyUnit.gridPosition)
+                if dist <= range {
+                    return enemyUnit.id
+                }
+            }
+        }
+        return nil
     }
 
     private func moveAlongPath(unit: Unit, map: GameMap, deltaTime: CGFloat, player: Player) {

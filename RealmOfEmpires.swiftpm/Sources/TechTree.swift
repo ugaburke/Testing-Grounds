@@ -101,6 +101,51 @@ enum TechType: String, CaseIterable {
         }
     }
 
+    var icon: String {
+        switch self {
+        case .loom: return "🧵"
+        case .wheelbarrow: return "🛒"
+        case .handCart: return "🛞"
+        case .doubleBitAxe, .bowSaw: return "🪓"
+        case .horseCollar, .heavyPlow: return "🌾"
+        case .goldMining: return "⛏"
+        case .stoneMining: return "🪨"
+        case .fletching, .bodkinArrow: return "🏹"
+        case .forging, .ironCasting: return "⚔"
+        case .scaleMailArmor, .chainMailArmor: return "🛡"
+        case .scaleBardingArmor, .chainBardingArmor: return "🐴"
+        case .paddedArcherArmor, .leatherArcherArmor: return "🎯"
+        case .ballistics: return "💥"
+        case .bloodlines: return "❤"
+        }
+    }
+
+    var effectDescription: String {
+        switch self {
+        case .loom: return "+1 Villager DEF, +15 HP"
+        case .wheelbarrow: return "+10% Speed, +5 Carry"
+        case .handCart: return "+10% Speed, +5 Carry"
+        case .doubleBitAxe: return "+20% Wood Gather"
+        case .bowSaw: return "+20% Wood Gather"
+        case .horseCollar: return "+25% Farm Gather"
+        case .heavyPlow: return "+25% Farm Gather"
+        case .goldMining: return "+15% Gold Gather"
+        case .stoneMining: return "+15% Stone Gather"
+        case .fletching: return "+1 Ranged ATK"
+        case .bodkinArrow: return "+1 Ranged ATK"
+        case .forging: return "+1 Melee ATK"
+        case .ironCasting: return "+1 Melee ATK"
+        case .scaleMailArmor: return "+1 Infantry DEF"
+        case .chainMailArmor: return "+1 Infantry DEF"
+        case .scaleBardingArmor: return "+1 Cavalry DEF"
+        case .chainBardingArmor: return "+1 Cavalry DEF"
+        case .paddedArcherArmor: return "+1 Archer DEF"
+        case .leatherArcherArmor: return "+1 Archer DEF"
+        case .ballistics: return "Improved Accuracy"
+        case .bloodlines: return "+20 Cavalry HP"
+        }
+    }
+
     var researchTime: CGFloat {
         switch self {
         case .loom: return 8

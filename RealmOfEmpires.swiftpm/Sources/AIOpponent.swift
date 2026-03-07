@@ -203,6 +203,9 @@ class AIOpponent {
             if !player.buildings.contains(where: { $0.type == .stable }) && player.resources.wood >= 175 {
                 buildNearTC(.stable)
             }
+            if !player.buildings.contains(where: { $0.type == .siegeWorkshop }) && player.resources.wood >= 200 {
+                buildNearTC(.siegeWorkshop)
+            }
         }
     }
 
@@ -246,6 +249,11 @@ class AIOpponent {
                     _ = scene.buildingSystem.trainUnit(type: .knight, at: building, player: player)
                 } else {
                     _ = scene.buildingSystem.trainUnit(type: .scout, at: building, player: player)
+                }
+            case .siegeWorkshop:
+                // Train rams for building destruction
+                if player.resources.wood >= 160 && player.resources.gold >= 75 {
+                    _ = scene.buildingSystem.trainUnit(type: .batteringRam, at: building, player: player)
                 }
             default:
                 break

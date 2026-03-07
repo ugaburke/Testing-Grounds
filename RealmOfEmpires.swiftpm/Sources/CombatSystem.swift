@@ -155,7 +155,7 @@ class CombatSystem {
             unit.path = []
 
             if unit.attackCooldown <= 0 {
-                let damage = max(1, unit.effectiveAttack)
+                let damage = max(1, unit.effectiveAttack + unit.type.bonusVsBuilding)
                 target.hp -= damage
                 unit.attackCooldown = attackInterval
 

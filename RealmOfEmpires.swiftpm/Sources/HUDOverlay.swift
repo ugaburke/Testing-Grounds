@@ -45,8 +45,16 @@ class HUDOverlay {
     private var buildMenuNode: SKNode!
     private var isBuildMenuOpen = false
 
+    // Tech menu
+    private var techMenuNode: SKNode!
+    private var isTechMenuOpen = false
+
     // Selection info
     private var selectionCountLabel: SKLabelNode!
+
+    // Idle villager button
+    private var idleVillagerBtn: SKNode!
+    private var idleVillagerCountLabel: SKLabelNode!
 
     // Game status
     private var statusLabel: SKLabelNode!
@@ -78,8 +86,10 @@ class HUDOverlay {
         setupActionPanel()
         setupInfoPanel()
         setupBuildMenu()
+        setupTechMenu()
         setupStatusLabel()
         setupGameButtons()
+        setupIdleVillagerButton()
         setupModeIndicator()
         setupVillagerAlloc()
     }
@@ -352,6 +362,54 @@ class HUDOverlay {
         hudNode.addChild(exitButton)
     }
 
+    private func setupIdleVillagerButton() {
+        idleVillagerBtn = SKNode()
+        idleVillagerBtn.position = CGPoint(x: viewSize.width - 350, y: viewSize.height - 36)
+        idleVillagerBtn.name = "idleVillagerBtn"
+        idleVillagerBtn.isHidden = true
+
+        let bg = SKShapeNode(rectOf: CGSize(width: 60, height: 34), cornerRadius: 5)
+        bg.fillColor = SKColor(red: 0.5, green: 0.4, blue: 0.1, alpha: 0.9)
+        bg.strokeColor = SKColor(red: 0.8, green: 0.7, blue: 0.3, alpha: 1.0)
+        bg.lineWidth = 1.5
+        bg.name = "idleVillagerBtn"
+        idleVillagerBtn.addChild(bg)
+
+        idleVillagerCountLabel = SKLabelNode(text: "Idle: 0")
+        idleVillagerCountLabel.fontSize = 12
+        idleVillagerCountLabel.fontName = "Helvetica-Bold"
+        idleVillagerCountLabel.fontColor = .yellow
+        idleVillagerCountLabel.verticalAlignmentMode = .center
+        idleVillagerCountLabel.name = "idleVillagerBtn"
+        idleVillagerBtn.addChild(idleVillagerCountLabel)
+
+        hudNode.addChild(idleVillagerBtn)
+    }
+
+    func updateIdleVillagerCount(player: Player) {
+        let idleCount = player.units.filter { unit in
+            guard unit.type == .villager else { return false }
+            if case .idle = unit.state { return true }
+            return false
+        }.count
+        if idleCount > 0 {
+            idleVillagerBtn.isHidden = false
+            idleVillagerCountLabel.text = "Idle: \(idleCount)"
+            // Pulse effect when idle villagers exist
+            if idleVillagerBtn.action(forKey: "pulse") == nil {
+                let pulse = SKAction.repeatForever(SKAction.sequence([
+                    SKAction.fadeAlpha(to: 0.6, duration: 0.5),
+                    SKAction.fadeAlpha(to: 1.0, duration: 0.5)
+                ]))
+                idleVillagerBtn.run(pulse, withKey: "pulse")
+            }
+        } else {
+            idleVillagerBtn.isHidden = true
+            idleVillagerBtn.removeAction(forKey: "pulse")
+            idleVillagerBtn.alpha = 1.0
+        }
+    }
+
     private func setupModeIndicator() {
         modeIndicatorBg = SKShapeNode(rectOf: CGSize(width: 200, height: 28), cornerRadius: 6)
         modeIndicatorBg.fillColor = SKColor.black.withAlphaComponent(0.7)
@@ -425,6 +483,11 @@ class HUDOverlay {
         case .attackMove:
             modeIndicatorLabel.text = "ATTACK MOVE"
             modeIndicatorLabel.fontColor = .red
+            modeIndicatorLabel.isHidden = false
+            modeIndicatorBg.isHidden = false
+        case .settingPatrol:
+            modeIndicatorLabel.text = "SET PATROL POINT"
+            modeIndicatorLabel.fontColor = SKColor(red: 0.3, green: 0.6, blue: 1.0, alpha: 1.0)
             modeIndicatorLabel.isHidden = false
             modeIndicatorBg.isHidden = false
         case .normal:
@@ -722,6 +785,9 @@ class HUDOverlay {
             let queueText = building.trainingQueue.map { $0.icon }.joined(separator: " ")
             let progress = Int(building.trainingProgress * 100)
             queueLabel.text = "Training: \(queueText) (\(progress)%)"
+        } else if let tech = building.currentResearch {
+            let progress = Int(building.researchProgress * 100)
+            queueLabel.text = "Researching: \(tech.displayName) (\(progress)%)"
         } else if !building.isConstructed {
             let progress = Int(building.constructionProgress * 100)
             queueLabel.text = "Building: \(progress)%"
@@ -756,7 +822,9 @@ class HUDOverlay {
         }
 
         if let building = building, building.isConstructed {
-            for (i, unitType) in building.type.trainableUnits.enumerated() {
+            for (i, rawUnitType) in building.type.trainableUnits.enumerated() {
+                // Resolve uniqueUnit to civ-specific type for display
+                let unitType = (rawUnitType == .uniqueUnit) ? player.civilization.uniqueUnitType : rawUnitType
                 guard player.currentAge.rawValue >= unitType.requiredAge.rawValue else { continue }
 
                 let col = i % cols
@@ -768,7 +836,7 @@ class HUDOverlay {
                 let btn = createActionButton(
                     text: unitType.displayName, icon: unitType.icon,
                     color: unitType.color,
-                    name: "train_\(unitType)",
+                    name: "train_\(rawUnitType)",
                     x: x, y: y, size: buttonSize,
                     subtitle: costText,
                     enabled: player.canAfford(unitType.cost))
@@ -777,14 +845,50 @@ class HUDOverlay {
             }
 
             if !building.type.trainableUnits.isEmpty {
+                let nextCol = min(building.type.trainableUnits.count, cols)
                 let rallyBtn = createActionButton(
                     text: "Rally", icon: "R",
                     color: SKColor(red: 0.2, green: 0.5, blue: 0.2, alpha: 1.0),
                     name: "btn_rally",
-                    x: startX + CGFloat(min(building.type.trainableUnits.count, cols)) * (buttonSize + padding),
+                    x: startX + CGFloat(nextCol) * (buttonSize + padding),
                     y: startY, size: buttonSize)
                 actionPanel.addChild(rallyBtn)
                 actionButtons.append(rallyBtn)
+            }
+
+            // Tech button for buildings that have researchable techs
+            let techBuildings: [BuildingType] = [.blacksmith, .lumberCamp, .miningCamp, .townCenter, .stable]
+            if techBuildings.contains(building.type) {
+                let techBtn = createActionButton(
+                    text: "Tech", icon: "T",
+                    color: SKColor(red: 0.4, green: 0.3, blue: 0.5, alpha: 1.0),
+                    name: "btn_tech",
+                    x: startX + CGFloat(cols - 1) * (buttonSize + padding),
+                    y: startY - (buttonSize + padding), size: buttonSize)
+                actionPanel.addChild(techBtn)
+                actionButtons.append(techBtn)
+            }
+        }
+
+        // Military unit action buttons (attack-move, patrol)
+        if unit == nil && building == nil {
+            let selected = player.units.filter { $0.isSelected && $0.type != .villager }
+            if !selected.isEmpty {
+                let atkBtn = createActionButton(
+                    text: "A-Move", icon: "AM",
+                    color: SKColor(red: 0.6, green: 0.2, blue: 0.2, alpha: 1.0),
+                    name: "btn_attackMove",
+                    x: startX, y: startY, size: buttonSize)
+                actionPanel.addChild(atkBtn)
+                actionButtons.append(atkBtn)
+
+                let patrolBtn = createActionButton(
+                    text: "Patrol", icon: "PT",
+                    color: SKColor(red: 0.2, green: 0.4, blue: 0.6, alpha: 1.0),
+                    name: "btn_patrol",
+                    x: startX + (buttonSize + padding), y: startY, size: buttonSize)
+                actionPanel.addChild(patrolBtn)
+                actionButtons.append(patrolBtn)
             }
         }
     }
@@ -925,7 +1029,7 @@ class HUDOverlay {
         buildMenuNode.isHidden = false
         buildMenuNode.removeAllChildren()
 
-        let bg = SKShapeNode(rectOf: CGSize(width: 420, height: 280), cornerRadius: 8)
+        let bg = SKShapeNode(rectOf: CGSize(width: 420, height: 340), cornerRadius: 8)
         bg.fillColor = SKColor(red: 0.1, green: 0.08, blue: 0.05, alpha: 0.95)
         bg.strokeColor = SKColor(red: 0.5, green: 0.4, blue: 0.2, alpha: 1.0)
         bg.lineWidth = 2
@@ -942,7 +1046,7 @@ class HUDOverlay {
         let buildingTypes: [BuildingType] = [
             .house, .farm, .lumberCamp, .miningCamp,
             .barracks, .archeryRange, .stable, .blacksmith,
-            .market, .tower, .wall, .castle
+            .market, .tower, .wall, .castle, .siegeWorkshop
         ]
 
         let buttonSize: CGFloat = 66
@@ -1041,6 +1145,135 @@ class HUDOverlay {
     }
 
     var isBuildMenuShowing: Bool { isBuildMenuOpen }
+
+    // MARK: - Tech Menu
+
+    private func setupTechMenu() {
+        techMenuNode = SKNode()
+        techMenuNode.position = CGPoint(x: viewSize.width / 2, y: viewSize.height / 2)
+        techMenuNode.zPosition = 120
+        techMenuNode.isHidden = true
+        hudNode.addChild(techMenuNode)
+    }
+
+    func showTechMenu(player: Player) {
+        isTechMenuOpen = true
+        techMenuNode.isHidden = false
+        techMenuNode.removeAllChildren()
+
+        let bg = SKShapeNode(rectOf: CGSize(width: 420, height: 340), cornerRadius: 8)
+        bg.fillColor = SKColor(red: 0.1, green: 0.08, blue: 0.05, alpha: 0.95)
+        bg.strokeColor = SKColor(red: 0.5, green: 0.4, blue: 0.2, alpha: 1.0)
+        bg.lineWidth = 2
+        bg.name = "techMenuBg"
+        techMenuNode.addChild(bg)
+
+        let title = SKLabelNode(text: "Research Technologies")
+        title.fontSize = 18
+        title.fontName = "Helvetica-Bold"
+        title.fontColor = SKColor(red: 0.85, green: 0.7, blue: 0.4, alpha: 1.0)
+        title.position = CGPoint(x: 0, y: 140)
+        techMenuNode.addChild(title)
+
+        let allTechs = TechType.allCases
+        let buttonSize: CGFloat = 66
+        let padding: CGFloat = 8
+        let cols = 5
+        let startX = -CGFloat(cols) * (buttonSize + padding) / 2 + buttonSize / 2
+        let startY: CGFloat = 90
+
+        for (i, tech) in allTechs.enumerated() {
+            let col = i % cols
+            let row = i / cols
+            let x = startX + CGFloat(col) * (buttonSize + padding)
+            let y = startY - CGFloat(row) * (buttonSize + padding)
+
+            let researched = player.researchedTechs.contains(tech)
+            let hasAge = player.currentAge.rawValue >= tech.requiredAge.rawValue
+            let affordable = player.canAfford(tech.cost)
+            let hasBuilding = player.buildings.contains { $0.type == tech.researchedAt && $0.isConstructed }
+            let alreadyResearching = player.buildings.contains { $0.currentResearch == tech }
+            let enabled = !researched && hasAge && affordable && hasBuilding && !alreadyResearching
+
+            let container = SKNode()
+            container.position = CGPoint(x: x, y: y)
+            container.name = "tech_\(tech)"
+            container.alpha = researched ? 0.3 : (enabled ? 1.0 : 0.5)
+
+            let btnBg = SKShapeNode(rectOf: CGSize(width: buttonSize, height: buttonSize), cornerRadius: 4)
+            btnBg.fillColor = researched
+                ? SKColor(red: 0.2, green: 0.4, blue: 0.2, alpha: 0.6)
+                : SKColor(red: 0.3, green: 0.25, blue: 0.15, alpha: 0.7)
+            btnBg.strokeColor = researched
+                ? .green
+                : (enabled ? SKColor(red: 0.6, green: 0.5, blue: 0.3, alpha: 1.0) : .gray)
+            btnBg.lineWidth = researched ? 2 : 1
+            btnBg.name = "tech_\(tech)"
+            container.addChild(btnBg)
+
+            let iconLabel = SKLabelNode(text: tech.icon)
+            iconLabel.fontSize = 16
+            iconLabel.verticalAlignmentMode = .center
+            iconLabel.position = CGPoint(x: 0, y: 14)
+            iconLabel.name = "tech_\(tech)"
+            container.addChild(iconLabel)
+
+            let nameLabel = SKLabelNode(text: tech.displayName)
+            nameLabel.fontSize = 8
+            nameLabel.fontName = "Helvetica"
+            nameLabel.fontColor = .lightGray
+            nameLabel.verticalAlignmentMode = .center
+            nameLabel.position = CGPoint(x: 0, y: -2)
+            nameLabel.name = "tech_\(tech)"
+            container.addChild(nameLabel)
+
+            let effectLabel = SKLabelNode(text: researched ? "Done" : tech.effectDescription)
+            effectLabel.fontSize = 7
+            effectLabel.fontName = "Helvetica"
+            effectLabel.fontColor = researched ? .green : .gray
+            effectLabel.verticalAlignmentMode = .center
+            effectLabel.position = CGPoint(x: 0, y: -14)
+            effectLabel.name = "tech_\(tech)"
+            container.addChild(effectLabel)
+
+            let costLabel = SKLabelNode(text: researched ? "" : formatCost(tech.cost))
+            costLabel.fontSize = 7
+            costLabel.fontName = "Helvetica"
+            costLabel.fontColor = affordable ? .lightGray : .red
+            costLabel.verticalAlignmentMode = .center
+            costLabel.position = CGPoint(x: 0, y: -24)
+            costLabel.name = "tech_\(tech)"
+            container.addChild(costLabel)
+
+            techMenuNode.addChild(container)
+        }
+
+        // Close button
+        let closeBtn = SKNode()
+        closeBtn.position = CGPoint(x: 190, y: 140)
+        closeBtn.name = "closeTechMenu"
+        let closeBg = SKShapeNode(rectOf: CGSize(width: 28, height: 28), cornerRadius: 4)
+        closeBg.fillColor = SKColor(red: 0.6, green: 0.15, blue: 0.1, alpha: 0.9)
+        closeBg.strokeColor = .white
+        closeBg.lineWidth = 1
+        closeBg.name = "closeTechMenu"
+        closeBtn.addChild(closeBg)
+        let closeLabel = SKLabelNode(text: "X")
+        closeLabel.fontSize = 16
+        closeLabel.fontName = "Helvetica-Bold"
+        closeLabel.fontColor = .white
+        closeLabel.verticalAlignmentMode = .center
+        closeLabel.name = "closeTechMenu"
+        closeBtn.addChild(closeLabel)
+        techMenuNode.addChild(closeBtn)
+    }
+
+    func hideTechMenu() {
+        isTechMenuOpen = false
+        techMenuNode.isHidden = true
+    }
+
+    var isTechMenuShowing: Bool { isTechMenuOpen }
 
     // MARK: - Status Messages
 
@@ -1142,6 +1375,11 @@ class HUDOverlay {
             if name == "btn_rally" { return .setRallyPoint }
             if name == "closeBuildMenu" { return .closeBuildMenu }
             if name == "gameOverExit" { return .confirmExit }
+            if name == "btn_tech" { return .openTechMenu }
+            if name == "closeTechMenu" { return .closeTechMenu }
+            if name == "btn_attackMove" { return .attackMoveMode }
+            if name == "btn_patrol" { return .patrolMode }
+            if name == "idleVillagerBtn" { return .selectIdleVillager }
 
             if name.hasPrefix("build_") {
                 let typeStr = String(name.dropFirst(6))
@@ -1154,6 +1392,13 @@ class HUDOverlay {
                 let typeStr = String(name.dropFirst(6))
                 if let unitType = parseUnitType(typeStr) {
                     return .trainUnit(unitType)
+                }
+            }
+
+            if name.hasPrefix("tech_") {
+                let typeStr = String(name.dropFirst(5))
+                if let techType = parseTechType(typeStr) {
+                    return .researchTech(techType)
                 }
             }
         }
@@ -1177,6 +1422,7 @@ class HUDOverlay {
         if point.x > viewSize.width - 300 && point.y < 180 { return true }
         if point.x > minimapSize + 20 && point.x < minimapSize + 250 && point.y < 180 { return true }
         if isBuildMenuOpen { return true }
+        if isTechMenuOpen { return true }
         return false
     }
 
@@ -1197,6 +1443,10 @@ class HUDOverlay {
 
     private func parseUnitType(_ str: String) -> UnitType? {
         UnitType.allCases.first { "\($0)" == str }
+    }
+
+    private func parseTechType(_ str: String) -> TechType? {
+        TechType.allCases.first { "\($0)" == str }
     }
 
     func minimapToWorld(point: CGPoint, map: GameMap) -> CGPoint {
@@ -1226,4 +1476,10 @@ enum HUDAction {
     case setRallyPoint
     case minimapTap(CGPoint)
     case toggleSpeed
+    case openTechMenu
+    case closeTechMenu
+    case researchTech(TechType)
+    case attackMoveMode
+    case patrolMode
+    case selectIdleVillager
 }

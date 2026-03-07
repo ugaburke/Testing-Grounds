@@ -67,6 +67,15 @@ enum Civilization: String, CaseIterable {
     var defenseBonus: CGFloat {
         self == .byzantines ? 1.1 : 1.0
     }
+
+    var uniqueUnitType: UnitType {
+        switch self {
+        case .britons: return .longbowman
+        case .franks: return .throwingAxeman
+        case .mongols: return .mangudai
+        case .byzantines: return .cataphract
+        }
+    }
 }
 
 // MARK: - Age / Era
@@ -305,6 +314,7 @@ enum BuildingType: CaseIterable {
     case miningCamp
     case wall
     case tower
+    case siegeWorkshop
 
     var displayName: String {
         switch self {
@@ -321,6 +331,7 @@ enum BuildingType: CaseIterable {
         case .miningCamp: return "Mining Camp"
         case .wall: return "Wall"
         case .tower: return "Tower"
+        case .siegeWorkshop: return "Siege Workshop"
         }
     }
 
@@ -339,6 +350,7 @@ enum BuildingType: CaseIterable {
         case .miningCamp: return "MC"
         case .wall: return "W"
         case .tower: return "TW"
+        case .siegeWorkshop: return "SW"
         }
     }
 
@@ -351,6 +363,7 @@ enum BuildingType: CaseIterable {
         case .farm: return (2, 2)
         case .wall: return (1, 1)
         case .tower: return (1, 1)
+        case .siegeWorkshop: return (3, 3)
         }
     }
 
@@ -369,6 +382,7 @@ enum BuildingType: CaseIterable {
         case .miningCamp: return Resources(food: 0, wood: 100, gold: 0, stone: 0)
         case .wall: return Resources(food: 0, wood: 0, gold: 0, stone: 5)
         case .tower: return Resources(food: 0, wood: 50, gold: 0, stone: 125)
+        case .siegeWorkshop: return Resources(food: 0, wood: 200)
         }
     }
 
@@ -387,6 +401,7 @@ enum BuildingType: CaseIterable {
         case .miningCamp: return 600
         case .wall: return 900
         case .tower: return 1500
+        case .siegeWorkshop: return 1200
         }
     }
 
@@ -405,6 +420,7 @@ enum BuildingType: CaseIterable {
         case .miningCamp: return 6
         case .wall: return 2
         case .tower: return 15
+        case .siegeWorkshop: return 12
         }
     }
 
@@ -422,6 +438,7 @@ enum BuildingType: CaseIterable {
         case .townCenter, .house, .farm, .lumberCamp, .miningCamp, .barracks: return .darkAge
         case .archeryRange, .stable, .blacksmith, .market, .wall, .tower: return .feudalAge
         case .castle: return .castleAge
+        case .siegeWorkshop: return .castleAge
         }
     }
 
@@ -432,6 +449,7 @@ enum BuildingType: CaseIterable {
         case .archeryRange: return [.archer, .crossbowman, .skirmisher]
         case .stable: return [.scout, .knight, .lightCavalry]
         case .castle: return [.uniqueUnit]
+        case .siegeWorkshop: return [.batteringRam, .mangonel]
         default: return []
         }
     }
@@ -451,6 +469,7 @@ enum BuildingType: CaseIterable {
         case .miningCamp: return SKColor(red: 0.45, green: 0.45, blue: 0.35, alpha: 1.0)
         case .wall: return SKColor(red: 0.5, green: 0.5, blue: 0.5, alpha: 1.0)
         case .tower: return SKColor(red: 0.55, green: 0.55, blue: 0.5, alpha: 1.0)
+        case .siegeWorkshop: return SKColor(red: 0.5, green: 0.35, blue: 0.2, alpha: 1.0)
         }
     }
 
@@ -489,6 +508,8 @@ class Building {
     var trainingQueue: [UnitType] = []
     var trainingProgress: CGFloat = 0
     var rallyPoint: GridPosition?
+    var currentResearch: TechType?
+    var researchProgress: CGFloat = 0
     var node: SKNode?
 
     init(type: BuildingType, ownerID: Int, position: GridPosition, civilizationBonus: CGFloat = 1.0) {
@@ -516,6 +537,12 @@ enum UnitType: CaseIterable {
     case knight
     case lightCavalry
     case uniqueUnit
+    case batteringRam
+    case mangonel
+    case longbowman
+    case throwingAxeman
+    case mangudai
+    case cataphract
 
     var displayName: String {
         switch self {
@@ -530,6 +557,12 @@ enum UnitType: CaseIterable {
         case .knight: return "Knight"
         case .lightCavalry: return "Light Cavalry"
         case .uniqueUnit: return "Champion"
+        case .batteringRam: return "Battering Ram"
+        case .mangonel: return "Mangonel"
+        case .longbowman: return "Longbowman"
+        case .throwingAxeman: return "Throwing Axeman"
+        case .mangudai: return "Mangudai"
+        case .cataphract: return "Cataphract"
         }
     }
 
@@ -546,6 +579,12 @@ enum UnitType: CaseIterable {
         case .knight: return "KN"
         case .lightCavalry: return "LC"
         case .uniqueUnit: return "UU"
+        case .batteringRam: return "RM"
+        case .mangonel: return "MG"
+        case .longbowman: return "LB"
+        case .throwingAxeman: return "TA"
+        case .mangudai: return "MD"
+        case .cataphract: return "CT"
         }
     }
 
@@ -562,6 +601,12 @@ enum UnitType: CaseIterable {
         case .knight: return Resources(food: 60, gold: 90)
         case .lightCavalry: return Resources(food: 80)
         case .uniqueUnit: return Resources(food: 60, gold: 60)
+        case .batteringRam: return Resources(food: 0, wood: 160, gold: 75)
+        case .mangonel: return Resources(food: 0, wood: 160, gold: 135)
+        case .longbowman: return Resources(food: 35, wood: 40, gold: 40)
+        case .throwingAxeman: return Resources(food: 60, gold: 50)
+        case .mangudai: return Resources(food: 60, wood: 0, gold: 60)
+        case .cataphract: return Resources(food: 70, gold: 75)
         }
     }
 
@@ -578,6 +623,12 @@ enum UnitType: CaseIterable {
         case .knight: return 85
         case .lightCavalry: return 60
         case .uniqueUnit: return 80
+        case .batteringRam: return 200
+        case .mangonel: return 50
+        case .longbowman: return 40
+        case .throwingAxeman: return 60
+        case .mangudai: return 65
+        case .cataphract: return 120
         }
     }
 
@@ -594,6 +645,12 @@ enum UnitType: CaseIterable {
         case .knight: return 10
         case .lightCavalry: return 7
         case .uniqueUnit: return 12
+        case .batteringRam: return 2
+        case .mangonel: return 12
+        case .longbowman: return 6
+        case .throwingAxeman: return 8
+        case .mangudai: return 7
+        case .cataphract: return 12
         }
     }
 
@@ -610,6 +667,12 @@ enum UnitType: CaseIterable {
         case .knight: return 3
         case .lightCavalry: return 2
         case .uniqueUnit: return 3
+        case .batteringRam: return 3
+        case .mangonel: return 0
+        case .longbowman: return 0
+        case .throwingAxeman: return 2
+        case .mangudai: return 1
+        case .cataphract: return 5
         }
     }
 
@@ -623,6 +686,12 @@ enum UnitType: CaseIterable {
         case .knight: return 1.35
         case .lightCavalry: return 1.5
         case .uniqueUnit: return 1.1
+        case .batteringRam: return 0.6
+        case .mangonel: return 0.6
+        case .longbowman: return 0.96
+        case .throwingAxeman: return 0.9
+        case .mangudai: return 2.5
+        case .cataphract: return 1.2
         }
     }
 
@@ -631,6 +700,10 @@ enum UnitType: CaseIterable {
         case .archer: return 5.0
         case .crossbowman: return 5.0
         case .skirmisher: return 4.0
+        case .mangonel: return 7.0
+        case .longbowman: return 7.0
+        case .throwingAxeman: return 3.0
+        case .mangudai: return 4.0
         default: return 1.2
         }
     }
@@ -652,6 +725,12 @@ enum UnitType: CaseIterable {
         case .knight: return 10.0
         case .lightCavalry: return 8.0
         case .uniqueUnit: return 12.0
+        case .batteringRam: return 10.0
+        case .mangonel: return 12.0
+        case .longbowman: return 10.0
+        case .throwingAxeman: return 10.0
+        case .mangudai: return 10.0
+        case .cataphract: return 12.0
         }
     }
 
@@ -661,12 +740,14 @@ enum UnitType: CaseIterable {
         case .manAtArms, .archer, .skirmisher, .scout, .spearman: return .feudalAge
         case .crossbowman, .knight, .lightCavalry: return .castleAge
         case .uniqueUnit: return .castleAge
+        case .batteringRam, .mangonel: return .castleAge
+        case .longbowman, .throwingAxeman, .mangudai, .cataphract: return .castleAge
         }
     }
 
     var isCavalry: Bool {
         switch self {
-        case .scout, .knight, .lightCavalry: return true
+        case .scout, .knight, .lightCavalry, .mangudai, .cataphract: return true
         default: return false
         }
     }
@@ -687,8 +768,23 @@ enum UnitType: CaseIterable {
 
     var isInfantry: Bool {
         switch self {
-        case .militia, .manAtArms, .spearman: return true
+        case .militia, .manAtArms, .spearman, .throwingAxeman: return true
         default: return false
+        }
+    }
+
+    var isSiege: Bool {
+        switch self {
+        case .batteringRam, .mangonel: return true
+        default: return false
+        }
+    }
+
+    var bonusVsBuilding: Int {
+        switch self {
+        case .batteringRam: return 40
+        case .mangonel: return 15
+        default: return 0
         }
     }
 
@@ -702,6 +798,12 @@ enum UnitType: CaseIterable {
         case .scout, .lightCavalry: return SKColor(red: 0.5, green: 0.4, blue: 0.5, alpha: 1.0)
         case .knight: return SKColor(red: 0.6, green: 0.5, blue: 0.2, alpha: 1.0)
         case .uniqueUnit: return SKColor(red: 0.7, green: 0.3, blue: 0.5, alpha: 1.0)
+        case .batteringRam: return SKColor(red: 0.5, green: 0.35, blue: 0.2, alpha: 1.0)
+        case .mangonel: return SKColor(red: 0.55, green: 0.4, blue: 0.2, alpha: 1.0)
+        case .longbowman: return SKColor(red: 0.2, green: 0.5, blue: 0.2, alpha: 1.0)
+        case .throwingAxeman: return SKColor(red: 0.6, green: 0.25, blue: 0.25, alpha: 1.0)
+        case .mangudai: return SKColor(red: 0.6, green: 0.5, blue: 0.3, alpha: 1.0)
+        case .cataphract: return SKColor(red: 0.5, green: 0.45, blue: 0.6, alpha: 1.0)
         }
     }
 }
@@ -716,6 +818,7 @@ enum UnitState {
     case building(buildingID: Int)
     case attacking(targetUnitID: Int)
     case attackingBuilding(targetBuildingID: Int)
+    case attackMoving(to: GridPosition)
     case patrolling(from: GridPosition, to: GridPosition)
     case garrisoned(buildingID: Int)
 }
@@ -742,6 +845,8 @@ class Unit {
     var isSelected: Bool = false
     var lastAttackTime: TimeInterval = 0
     var lastDirection: CGFloat = 0
+    var attackMoveDestination: GridPosition?
+    var patrolPoints: (GridPosition, GridPosition)?
     weak var ownerPlayer: Player?
 
     init(type: UnitType, ownerID: Int, position: GridPosition, hpBonus: CGFloat = 1.0, speedBonus: CGFloat = 1.0) {
@@ -822,4 +927,5 @@ enum ActionMode {
     case placingBuilding(BuildingType)
     case attackMove
     case settingRallyPoint(Building)
+    case settingPatrol
 }

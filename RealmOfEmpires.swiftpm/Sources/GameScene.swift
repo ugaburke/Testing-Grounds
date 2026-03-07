@@ -72,6 +72,9 @@ class GameScene: SKScene {
     var tileRenderTimer: CGFloat = 0
     var minimapTimer: CGFloat = 0
 
+    // Idle villager cycling
+    var lastIdleVillagerIndex: Int = 0
+
     // Tutorial
     var tutorialStep: Int = -1  // -1 means no tutorial
     var tutorialOverlay: SKNode?
@@ -385,6 +388,7 @@ class GameScene: SKScene {
         // HUD
         hud.update(player: humanPlayer)
         hud.updateIncomeRates(player: humanPlayer, deltaTime: deltaTime)
+        hud.updateIdleVillagerCount(player: humanPlayer)
         if let building = selectedBuilding {
             hud.showBuildingInfo(building: building, player: humanPlayer)
         }
@@ -658,6 +662,34 @@ class GameScene: SKScene {
             return
         }
 
+        // Attack-move mode
+        if case .attackMove = actionMode {
+            let selectedUnits = unitSystem.selectedUnits(for: humanPlayer)
+            for unit in selectedUnits where unit.type != .villager {
+                unit.state = .attackMoving(to: gridPos)
+            }
+            actionMode = .normal
+            hud.updateModeIndicator(mode: .normal)
+            hud.showStatus("Attack-moving to position")
+            let indicator = spriteFactory.createMoveIndicator(at: gameMap.gridToWorld(gridPos))
+            gameWorld.addChild(indicator)
+            return
+        }
+
+        // Patrol mode
+        if case .settingPatrol = actionMode {
+            let selectedUnits = unitSystem.selectedUnits(for: humanPlayer)
+            for unit in selectedUnits where unit.type != .villager {
+                unit.state = .patrolling(from: unit.gridPosition, to: gridPos)
+            }
+            actionMode = .normal
+            hud.updateModeIndicator(mode: .normal)
+            hud.showStatus("Patrolling")
+            let indicator = spriteFactory.createMoveIndicator(at: gameMap.gridToWorld(gridPos))
+            gameWorld.addChild(indicator)
+            return
+        }
+
         // Check what was tapped
         let selectedUnits = unitSystem.selectedUnits(for: humanPlayer)
 
@@ -824,6 +856,14 @@ class GameScene: SKScene {
                 actionMode = .normal
                 hud.showStatus("")
                 hud.updateModeIndicator(mode: .normal)
+            } else if case .attackMove = actionMode {
+                actionMode = .normal
+                hud.showStatus("")
+                hud.updateModeIndicator(mode: .normal)
+            } else if case .settingPatrol = actionMode {
+                actionMode = .normal
+                hud.showStatus("")
+                hud.updateModeIndicator(mode: .normal)
             } else {
                 unitSystem.deselectAll(player: humanPlayer)
                 selectedBuilding = nil
@@ -878,6 +918,65 @@ class GameScene: SKScene {
             cameraPosition = worldPoint
             updateCamera()
             renderTiles()
+
+        case .openTechMenu:
+            hud.showTechMenu(player: humanPlayer)
+
+        case .closeTechMenu:
+            hud.hideTechMenu()
+
+        case .researchTech(let tech):
+            guard !humanPlayer.researchedTechs.contains(tech) else {
+                hud.showStatus("Already researched!")
+                return
+            }
+            // Find a building that can research this tech
+            let researchBuilding = humanPlayer.buildings.first {
+                $0.type == tech.researchedAt && $0.isConstructed && $0.currentResearch == nil
+            }
+            guard let building = researchBuilding else {
+                hud.showStatus("No available \(tech.researchedAt.displayName)!")
+                return
+            }
+            guard humanPlayer.canAfford(tech.cost) else {
+                hud.showStatus("Not enough resources!")
+                return
+            }
+            humanPlayer.spend(tech.cost)
+            building.currentResearch = tech
+            building.researchProgress = 0
+            hud.showStatus("Researching \(tech.displayName)...")
+            hud.hideTechMenu()
+
+        case .attackMoveMode:
+            actionMode = .attackMove
+            hud.updateModeIndicator(mode: .attackMove)
+            hud.showStatus("Click destination to attack-move")
+
+        case .patrolMode:
+            actionMode = .settingPatrol
+            hud.updateModeIndicator(mode: .settingPatrol)
+            hud.showStatus("Click destination to patrol")
+
+        case .selectIdleVillager:
+            let idleVillagers = humanPlayer.units.filter { unit in
+                guard unit.type == .villager else { return false }
+                if case .idle = unit.state { return true }
+                return false
+            }
+            guard !idleVillagers.isEmpty else {
+                hud.showStatus("No idle villagers")
+                return
+            }
+            lastIdleVillagerIndex = lastIdleVillagerIndex % idleVillagers.count
+            let villager = idleVillagers[lastIdleVillagerIndex]
+            unitSystem.deselectAll(player: humanPlayer)
+            villager.isSelected = true
+            selectedBuilding = nil
+            cameraPosition = villager.position
+            updateCamera()
+            renderTiles()
+            lastIdleVillagerIndex = (lastIdleVillagerIndex + 1) % idleVillagers.count
         }
     }
 

@@ -25,6 +25,19 @@ class BuildingSystem {
                 }
             }
 
+            // Process research queue
+            if let tech = building.currentResearch {
+                building.researchProgress += deltaTime / tech.researchTime
+                if building.researchProgress >= 1.0 {
+                    player.researchedTechs.insert(tech)
+                    building.currentResearch = nil
+                    building.researchProgress = 0
+                    if let scene = gameScene {
+                        scene.hud.showStatus("\(tech.displayName) researched!")
+                    }
+                }
+            }
+
             // Building attack (towers, TC, castle)
             if building.type.attackDamage > 0 {
                 handleBuildingAttack(building: building, map: map)
@@ -93,14 +106,16 @@ class BuildingSystem {
 
     func trainUnit(type: UnitType, at building: Building, player: Player) -> Bool {
         guard building.isConstructed else { return false }
+        // Resolve unique unit to civ-specific type
+        let actualType = (type == .uniqueUnit) ? player.civilization.uniqueUnitType : type
         guard building.type.trainableUnits.contains(type) else { return false }
-        guard player.canAfford(type.cost) else { return false }
-        guard player.currentAge.rawValue >= type.requiredAge.rawValue else { return false }
+        guard player.canAfford(actualType.cost) else { return false }
+        guard player.currentAge.rawValue >= actualType.requiredAge.rawValue else { return false }
         let totalQueued = player.buildings.reduce(0) { $0 + $1.trainingQueue.count }
         guard player.population + totalQueued < player.populationCap else { return false }
 
-        player.spend(type.cost)
-        building.trainingQueue.append(type)
+        player.spend(actualType.cost)
+        building.trainingQueue.append(actualType)
         return true
     }
 
