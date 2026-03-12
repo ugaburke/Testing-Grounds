@@ -89,12 +89,14 @@ class ResourceSystem {
             return
         }
 
-        // Gather resources
+        // Gather resources using accumulator for sub-frame precision
         let gatherSpeed = effectiveGatherSpeed(for: player, resourceType: resourceType)
         let carryCapacity = effectiveCarryCapacity(for: player)
-        let amountToGather = Int(gatherSpeed * deltaTime * 10)
+        unit.gatherAccumulator += gatherSpeed * deltaTime * 10
+        let amountToGather = Int(unit.gatherAccumulator)
 
         if amountToGather > 0 {
+            unit.gatherAccumulator -= CGFloat(amountToGather)
             let actualGathered = min(amountToGather, tile.resourceRemaining, carryCapacity - unit.carriedAmount)
             tile.resourceRemaining -= actualGathered
             unit.carriedAmount += actualGathered

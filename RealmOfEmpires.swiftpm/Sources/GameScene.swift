@@ -55,11 +55,14 @@ class GameScene: SKScene {
     var selectionStart: CGPoint?
     var selectionRect: SKShapeNode?
     var isBoxSelecting = false
+    var touchStartedOnEmptyGround = false
+    var touchHandledByHUD = false
 
     // Touch tracking
     var lastTouchPosition: CGPoint?
     var isPanning = false
     var panVelocity = CGPoint.zero
+    var lastTouchMoveTime: TimeInterval = 0
     var touchStartTime: TimeInterval = 0
     var lastTapTime: TimeInterval = 0
     var lastTappedUnitType: UnitType?
@@ -370,7 +373,7 @@ class GameScene: SKScene {
 
         // Tile rendering (throttled)
         tileRenderTimer += deltaTime
-        if tileRenderTimer >= 0.5 {
+        if tileRenderTimer >= 0.25 {
             tileRenderTimer = 0
             renderTiles()
             gameMap.addTerrainBlending(cameraPosition: cameraPosition, viewSize: size)
@@ -476,9 +479,14 @@ class GameScene: SKScene {
         if abs(panVelocity.x) > 1 || abs(panVelocity.y) > 1 {
             cameraPosition.x += panVelocity.x * deltaTime
             cameraPosition.y += panVelocity.y * deltaTime
-            panVelocity.x *= 0.92
-            panVelocity.y *= 0.92
+            // Frame-rate independent decay (~0.92 per frame at 60fps)
+            let decayRate: CGFloat = 60.0 * -log(0.92)
+            let decay = exp(-decayRate * deltaTime)
+            panVelocity.x *= decay
+            panVelocity.y *= decay
             updateCamera()
+        } else {
+            panVelocity = .zero
         }
     }
 
@@ -509,29 +517,48 @@ class GameScene: SKScene {
                                y: locationInHUD.y + size.height / 2)
 
         touchStartTime = gameTime
+        touchHandledByHUD = false
 
         // Dismiss help overlay if showing
         if let helpOverlay = hudCamera.childNode(withName: "helpOverlay") {
             helpOverlay.removeFromParent()
             gameState = .playing
+            touchHandledByHUD = true
             return
         }
 
         // Check HUD first
         if let action = hud.handleTouch(at: hudPoint) {
             handleHUDAction(action)
+            touchHandledByHUD = true
             return
         }
 
-        if hud.isPointInHUD(hudPoint) { return }
+        if hud.isPointInHUD(hudPoint) {
+            touchHandledByHUD = true
+            return
+        }
 
         // Game world interaction
         lastTouchPosition = locationInScene
         isPanning = false
+        lastTouchMoveTime = CACurrentMediaTime()
 
         if touches.count == 1 {
             selectionStart = locationInScene
         }
+
+        // Determine if touch started on empty ground (for box select vs pan)
+        let startTapRadius: CGFloat = gameMap.tileSize
+        var touchedUnit = false
+        for unit in humanPlayer.units {
+            let dist = sqrt(pow(unit.position.x - locationInScene.x, 2) + pow(unit.position.y - locationInScene.y, 2))
+            if dist < startTapRadius {
+                touchedUnit = true
+                break
+            }
+        }
+        touchStartedOnEmptyGround = !touchedUnit
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -544,43 +571,61 @@ class GameScene: SKScene {
         let dy = location.y - lastPos.y
         let dist = sqrt(dx * dx + dy * dy)
 
-        if dist > 5 {
-            isPanning = true
+        // Update placement ghost (before pan/box-select decision)
+        if case .placingBuilding(_) = actionMode {
+            updatePlacementGhost(at: location)
+            lastTouchPosition = location
+            return
+        }
 
-            // Pan camera
-            cameraPosition.x -= dx
-            cameraPosition.y -= dy
-            panVelocity = CGPoint(x: -dx / CGFloat(1.0 / 60.0),
-                                   y: -dy / CGFloat(1.0 / 60.0))
-            updateCamera()
-            renderTiles()
+        if dist > 5 {
+            let currentSelected = unitSystem.selectedUnits(for: humanPlayer)
+
+            // Box select if: touch started on empty ground AND no units selected
+            if touchStartedOnEmptyGround && currentSelected.isEmpty, let start = selectionStart {
+                // Box selection mode
+                if selectionRect == nil {
+                    selectionRect = SKShapeNode()
+                    selectionRect?.strokeColor = SKColor.green.withAlphaComponent(0.7)
+                    selectionRect?.fillColor = SKColor.green.withAlphaComponent(0.1)
+                    selectionRect?.lineWidth = 1
+                    selectionRect?.zPosition = 90
+                    addChild(selectionRect!)
+                }
+                isBoxSelecting = true
+
+                let rect = CGRect(x: min(start.x, location.x),
+                                  y: min(start.y, location.y),
+                                  width: abs(location.x - start.x),
+                                  height: abs(location.y - start.y))
+                selectionRect?.path = CGPath(rect: rect, transform: nil)
+            } else {
+                // Pan camera
+                isPanning = true
+                cameraPosition.x -= dx
+                cameraPosition.y -= dy
+
+                // Smooth velocity tracking
+                let now = CACurrentMediaTime()
+                let moveDelta = CGFloat(max(now - lastTouchMoveTime, 1.0 / 120.0))
+                lastTouchMoveTime = now
+                let instantVelocity = CGPoint(x: -dx / moveDelta, y: -dy / moveDelta)
+                let smoothing: CGFloat = 0.3
+                panVelocity = CGPoint(
+                    x: panVelocity.x * (1 - smoothing) + instantVelocity.x * smoothing,
+                    y: panVelocity.y * (1 - smoothing) + instantVelocity.y * smoothing
+                )
+                // Cap velocity
+                let maxVel: CGFloat = 2000
+                panVelocity.x = max(-maxVel, min(maxVel, panVelocity.x))
+                panVelocity.y = max(-maxVel, min(maxVel, panVelocity.y))
+
+                updateCamera()
+                // Don't call renderTiles() here - the 0.25s timer in update() handles it
+            }
         }
 
         lastTouchPosition = location
-
-        // Update placement ghost
-        if case .placingBuilding(_) = actionMode {
-            updatePlacementGhost(at: location)
-        }
-
-        // Box selection
-        if !isPanning, let start = selectionStart {
-            if selectionRect == nil {
-                selectionRect = SKShapeNode()
-                selectionRect?.strokeColor = SKColor.green.withAlphaComponent(0.7)
-                selectionRect?.fillColor = SKColor.green.withAlphaComponent(0.1)
-                selectionRect?.lineWidth = 1
-                selectionRect?.zPosition = 90
-                addChild(selectionRect!)
-            }
-            isBoxSelecting = true
-
-            let rect = CGRect(x: min(start.x, location.x),
-                              y: min(start.y, location.y),
-                              width: abs(location.x - start.x),
-                              height: abs(location.y - start.y))
-            selectionRect?.path = CGPath(rect: rect, transform: nil)
-        }
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -604,6 +649,18 @@ class GameScene: SKScene {
             return
         }
 
+        // If touch was handled by HUD in touchesBegan, don't process game world
+        if touchHandledByHUD {
+            touchHandledByHUD = false
+            selectionRect?.removeFromParent()
+            selectionRect = nil
+            isBoxSelecting = false
+            selectionStart = nil
+            lastTouchPosition = nil
+            isPanning = false
+            return
+        }
+
         let worldPos = locationInScene
         let gridPos = gameMap.worldToGrid(worldPos)
 
@@ -621,6 +678,7 @@ class GameScene: SKScene {
             isBoxSelecting = false
             selectionStart = nil
             lastTouchPosition = nil
+            touchStartedOnEmptyGround = false
             return
         }
 
@@ -632,11 +690,14 @@ class GameScene: SKScene {
         guard !isPanning else {
             isPanning = false
             lastTouchPosition = nil
+            touchStartedOnEmptyGround = false
+            renderTiles()
             return
         }
 
         isPanning = false
         lastTouchPosition = nil
+        touchStartedOnEmptyGround = false
 
         // Handle game over tap
         if gameState == .victory || gameState == .defeat {
@@ -748,6 +809,35 @@ class GameScene: SKScene {
                 }
             }
 
+            // Check if tapping on a friendly unit — select it instead of moving
+            let friendlyTapRadius: CGFloat = gameMap.tileSize
+            var tappedFriendlyUnit: Unit?
+            var bestFriendlyDist: CGFloat = .infinity
+            for unit in humanPlayer.units {
+                let dist = sqrt(pow(unit.position.x - worldPos.x, 2) + pow(unit.position.y - worldPos.y, 2))
+                if dist < friendlyTapRadius && dist < bestFriendlyDist {
+                    bestFriendlyDist = dist
+                    tappedFriendlyUnit = unit
+                }
+            }
+            if let friendlyUnit = tappedFriendlyUnit {
+                let now = gameTime
+                if now - lastTapTime < 0.4 && lastTappedUnitType == friendlyUnit.type {
+                    for u in humanPlayer.units where u.type == friendlyUnit.type {
+                        u.isSelected = true
+                    }
+                    selectedBuilding = nil
+                    lastTapTime = 0
+                    lastTappedUnitType = nil
+                } else {
+                    lastTapTime = now
+                    lastTappedUnitType = friendlyUnit.type
+                    unitSystem.selectUnit(friendlyUnit, player: humanPlayer)
+                    selectedBuilding = nil
+                }
+                return
+            }
+
             // Move selected units
             unitSystem.moveUnits(selectedUnits, to: gridPos, pathfinder: pathfinder)
             return
@@ -815,6 +905,7 @@ class GameScene: SKScene {
         selectionStart = nil
         lastTouchPosition = nil
         isPanning = false
+        touchStartedOnEmptyGround = false
     }
 
     // MARK: - HUD Actions

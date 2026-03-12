@@ -845,6 +845,7 @@ class Unit {
     var isSelected: Bool = false
     var lastAttackTime: TimeInterval = 0
     var lastDirection: CGFloat = 0
+    var gatherAccumulator: CGFloat = 0
     var attackMoveDestination: GridPosition?
     var patrolPoints: (GridPosition, GridPosition)?
     weak var ownerPlayer: Player?
