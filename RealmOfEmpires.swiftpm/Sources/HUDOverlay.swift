@@ -38,6 +38,7 @@ class HUDOverlay {
     private var infoPanel: SKNode!
     private var infoNameLabel: SKLabelNode!
     private var infoHPLabel: SKLabelNode!
+    private var infoStatsLabel: SKLabelNode!
     private var infoIcon: SKShapeNode!
     private var queueLabel: SKLabelNode!
 
@@ -75,6 +76,9 @@ class HUDOverlay {
     private var exitConfirmNode: SKNode?
     private var isShowingExitConfirm = false
 
+    // Safe area offset to avoid iOS status bar
+    private let safeAreaTop: CGFloat = 50
+
     init(viewSize: CGSize) {
         self.viewSize = viewSize
         self.hudNode = SKNode()
@@ -98,52 +102,53 @@ class HUDOverlay {
 
     private func setupResourceBar() {
         let barHeight: CGFloat = 36
+        let barY = viewSize.height - barHeight / 2 - safeAreaTop
         let bar = SKShapeNode(rectOf: CGSize(width: viewSize.width, height: barHeight))
         bar.fillColor = SKColor(red: 0.1, green: 0.08, blue: 0.05, alpha: 0.9)
         bar.strokeColor = SKColor(red: 0.4, green: 0.3, blue: 0.15, alpha: 1.0)
         bar.lineWidth = 1
-        bar.position = CGPoint(x: viewSize.width / 2, y: viewSize.height - barHeight / 2)
+        bar.position = CGPoint(x: viewSize.width / 2, y: barY)
         hudNode.addChild(bar)
 
         let startX: CGFloat = 30
         let spacing: CGFloat = 120
 
         // Food
-        let foodIcon = createResourceIcon(color: .red, symbol: "F", x: startX, y: viewSize.height - barHeight / 2)
+        let foodIcon = createResourceIcon(color: .red, symbol: "F", x: startX, y: barY)
         hudNode.addChild(foodIcon)
-        foodLabel = createLabel(x: startX + 22, y: viewSize.height - barHeight / 2)
+        foodLabel = createLabel(x: startX + 22, y: barY)
         hudNode.addChild(foodLabel)
-        foodIncomeLabel = createIncomeLabel(x: startX + 70, y: viewSize.height - barHeight / 2)
+        foodIncomeLabel = createIncomeLabel(x: startX + 70, y: barY)
         hudNode.addChild(foodIncomeLabel)
 
         // Wood
-        let woodIcon = createResourceIcon(color: .brown, symbol: "W", x: startX + spacing, y: viewSize.height - barHeight / 2)
+        let woodIcon = createResourceIcon(color: .brown, symbol: "W", x: startX + spacing, y: barY)
         hudNode.addChild(woodIcon)
-        woodLabel = createLabel(x: startX + spacing + 22, y: viewSize.height - barHeight / 2)
+        woodLabel = createLabel(x: startX + spacing + 22, y: barY)
         hudNode.addChild(woodLabel)
-        woodIncomeLabel = createIncomeLabel(x: startX + spacing + 70, y: viewSize.height - barHeight / 2)
+        woodIncomeLabel = createIncomeLabel(x: startX + spacing + 70, y: barY)
         hudNode.addChild(woodIncomeLabel)
 
         // Gold
-        let goldIcon = createResourceIcon(color: .yellow, symbol: "G", x: startX + spacing * 2, y: viewSize.height - barHeight / 2)
+        let goldIcon = createResourceIcon(color: .yellow, symbol: "G", x: startX + spacing * 2, y: barY)
         hudNode.addChild(goldIcon)
-        goldLabel = createLabel(x: startX + spacing * 2 + 22, y: viewSize.height - barHeight / 2)
+        goldLabel = createLabel(x: startX + spacing * 2 + 22, y: barY)
         hudNode.addChild(goldLabel)
-        goldIncomeLabel = createIncomeLabel(x: startX + spacing * 2 + 70, y: viewSize.height - barHeight / 2)
+        goldIncomeLabel = createIncomeLabel(x: startX + spacing * 2 + 70, y: barY)
         hudNode.addChild(goldIncomeLabel)
 
         // Stone
-        let stoneIcon = createResourceIcon(color: .gray, symbol: "S", x: startX + spacing * 3, y: viewSize.height - barHeight / 2)
+        let stoneIcon = createResourceIcon(color: .gray, symbol: "S", x: startX + spacing * 3, y: barY)
         hudNode.addChild(stoneIcon)
-        stoneLabel = createLabel(x: startX + spacing * 3 + 22, y: viewSize.height - barHeight / 2)
+        stoneLabel = createLabel(x: startX + spacing * 3 + 22, y: barY)
         hudNode.addChild(stoneLabel)
-        stoneIncomeLabel = createIncomeLabel(x: startX + spacing * 3 + 70, y: viewSize.height - barHeight / 2)
+        stoneIncomeLabel = createIncomeLabel(x: startX + spacing * 3 + 70, y: barY)
         hudNode.addChild(stoneIncomeLabel)
 
         // Population
-        let popIcon = createResourceIcon(color: .cyan, symbol: "P", x: startX + spacing * 4, y: viewSize.height - barHeight / 2)
+        let popIcon = createResourceIcon(color: .cyan, symbol: "P", x: startX + spacing * 4, y: barY)
         hudNode.addChild(popIcon)
-        popLabel = createLabel(x: startX + spacing * 4 + 22, y: viewSize.height - barHeight / 2)
+        popLabel = createLabel(x: startX + spacing * 4 + 22, y: barY)
         hudNode.addChild(popLabel)
 
         // Age
@@ -151,7 +156,7 @@ class HUDOverlay {
         ageLabel.fontSize = 14
         ageLabel.fontName = "Helvetica-Bold"
         ageLabel.fontColor = SKColor(red: 0.85, green: 0.7, blue: 0.4, alpha: 1.0)
-        ageLabel.position = CGPoint(x: viewSize.width - 150, y: viewSize.height - barHeight / 2 - 5)
+        ageLabel.position = CGPoint(x: viewSize.width - 150, y: barY - 5)
         ageLabel.horizontalAlignmentMode = .center
         hudNode.addChild(ageLabel)
     }
@@ -263,12 +268,20 @@ class HUDOverlay {
         infoPanel.addChild(infoNameLabel)
 
         infoHPLabel = SKLabelNode(text: "")
-        infoHPLabel.fontSize = 11
-        infoHPLabel.fontName = "Helvetica"
-        infoHPLabel.fontColor = .lightGray
-        infoHPLabel.position = CGPoint(x: 10, y: 10)
+        infoHPLabel.fontSize = 13
+        infoHPLabel.fontName = "Helvetica-Bold"
+        infoHPLabel.fontColor = .white
+        infoHPLabel.position = CGPoint(x: 10, y: 12)
         infoHPLabel.horizontalAlignmentMode = .left
         infoPanel.addChild(infoHPLabel)
+
+        infoStatsLabel = SKLabelNode(text: "")
+        infoStatsLabel.fontSize = 12
+        infoStatsLabel.fontName = "Helvetica-Bold"
+        infoStatsLabel.fontColor = SKColor(red: 1.0, green: 0.7, blue: 0.3, alpha: 1.0)
+        infoStatsLabel.position = CGPoint(x: 10, y: -6)
+        infoStatsLabel.horizontalAlignmentMode = .left
+        infoPanel.addChild(infoStatsLabel)
 
         queueLabel = SKLabelNode(text: "")
         queueLabel.fontSize = 11
@@ -318,7 +331,7 @@ class HUDOverlay {
         statusBg = SKShapeNode(rectOf: CGSize(width: 300, height: 28), cornerRadius: 6)
         statusBg.fillColor = SKColor.black.withAlphaComponent(0.6)
         statusBg.strokeColor = .clear
-        statusBg.position = CGPoint(x: viewSize.width / 2, y: viewSize.height - 62)
+        statusBg.position = CGPoint(x: viewSize.width / 2, y: viewSize.height - 62 - safeAreaTop)
         statusBg.zPosition = 119
         statusBg.alpha = 0
         hudNode.addChild(statusBg)
@@ -327,7 +340,7 @@ class HUDOverlay {
         statusLabel.fontSize = 18
         statusLabel.fontName = "Helvetica-Bold"
         statusLabel.fontColor = .yellow
-        statusLabel.position = CGPoint(x: viewSize.width / 2, y: viewSize.height - 62)
+        statusLabel.position = CGPoint(x: viewSize.width / 2, y: viewSize.height - 62 - safeAreaTop)
         statusLabel.horizontalAlignmentMode = .center
         statusLabel.verticalAlignmentMode = .center
         statusLabel.zPosition = 120
@@ -335,7 +348,7 @@ class HUDOverlay {
     }
 
     private func setupGameButtons() {
-        let btnY = viewSize.height - 36
+        let btnY = viewSize.height - 36 - safeAreaTop
 
         // Speed button
         speedButton = createHUDButton(text: "1x", x: viewSize.width - 300, y: btnY, name: "speedBtn", width: 44)
@@ -345,26 +358,26 @@ class HUDOverlay {
         ageUpButton = createHUDButton(text: "AGE UP", x: viewSize.width - 240, y: btnY, name: "ageUpBtn", width: 80)
         hudNode.addChild(ageUpButton)
 
-        // Cancel button
-        deselectButton = createHUDButton(text: "Cancel", x: viewSize.width - 160, y: btnY, name: "deselectBtn", width: 52)
+        // Deselect button
+        deselectButton = createHUDButton(text: "Deselect", x: viewSize.width - 155, y: btnY, name: "deselectBtn", width: 62)
         hudNode.addChild(deselectButton)
 
         // Help button
-        let helpBtn = createHUDButton(text: "?", x: viewSize.width - 110, y: btnY, name: "helpBtn", width: 44)
+        let helpBtn = createHUDButton(text: "?", x: viewSize.width - 105, y: btnY, name: "helpBtn", width: 44)
         hudNode.addChild(helpBtn)
 
         // Pause button
-        pauseButton = createHUDButton(text: "Pause", x: viewSize.width - 60, y: btnY, name: "pauseBtn", width: 52)
+        pauseButton = createHUDButton(text: "Pause", x: viewSize.width - 55, y: btnY, name: "pauseBtn", width: 52)
         hudNode.addChild(pauseButton)
 
         // Exit button
-        exitButton = createHUDButton(text: "Quit", x: viewSize.width - 15, y: btnY, name: "exitBtn", width: 44)
+        exitButton = createHUDButton(text: "Quit", x: viewSize.width - 10, y: btnY, name: "exitBtn", width: 44)
         hudNode.addChild(exitButton)
     }
 
     private func setupIdleVillagerButton() {
         idleVillagerBtn = SKNode()
-        idleVillagerBtn.position = CGPoint(x: viewSize.width - 350, y: viewSize.height - 36)
+        idleVillagerBtn.position = CGPoint(x: viewSize.width - 350, y: viewSize.height - 36 - safeAreaTop)
         idleVillagerBtn.name = "idleVillagerBtn"
         idleVillagerBtn.isHidden = true
 
@@ -414,7 +427,7 @@ class HUDOverlay {
         modeIndicatorBg = SKShapeNode(rectOf: CGSize(width: 200, height: 28), cornerRadius: 6)
         modeIndicatorBg.fillColor = SKColor.black.withAlphaComponent(0.7)
         modeIndicatorBg.strokeColor = .clear
-        modeIndicatorBg.position = CGPoint(x: viewSize.width / 2, y: viewSize.height - 90)
+        modeIndicatorBg.position = CGPoint(x: viewSize.width / 2, y: viewSize.height - 90 - safeAreaTop)
         modeIndicatorBg.zPosition = 119
         modeIndicatorBg.isHidden = true
         hudNode.addChild(modeIndicatorBg)
@@ -423,7 +436,7 @@ class HUDOverlay {
         modeIndicatorLabel.fontSize = 16
         modeIndicatorLabel.fontName = "Helvetica-Bold"
         modeIndicatorLabel.fontColor = .orange
-        modeIndicatorLabel.position = CGPoint(x: viewSize.width / 2, y: viewSize.height - 90)
+        modeIndicatorLabel.position = CGPoint(x: viewSize.width / 2, y: viewSize.height - 90 - safeAreaTop)
         modeIndicatorLabel.horizontalAlignmentMode = .center
         modeIndicatorLabel.verticalAlignmentMode = .center
         modeIndicatorLabel.zPosition = 120
@@ -436,7 +449,7 @@ class HUDOverlay {
         villagerAllocLabel.fontSize = 11
         villagerAllocLabel.fontName = "Helvetica"
         villagerAllocLabel.fontColor = SKColor(red: 0.8, green: 0.8, blue: 0.6, alpha: 0.9)
-        villagerAllocLabel.position = CGPoint(x: viewSize.width / 2, y: viewSize.height - 50)
+        villagerAllocLabel.position = CGPoint(x: viewSize.width / 2, y: viewSize.height - 50 - safeAreaTop)
         villagerAllocLabel.horizontalAlignmentMode = .center
         villagerAllocLabel.verticalAlignmentMode = .center
         villagerAllocLabel.zPosition = 101
@@ -723,6 +736,7 @@ class HUDOverlay {
 
         if selected.isEmpty {
             infoPanel.isHidden = true
+            infoStatsLabel.text = ""
             updateActionButtons(for: nil, building: nil, player: player)
             return
         }
@@ -732,7 +746,8 @@ class HUDOverlay {
         if selected.count == 1 {
             let unit = selected[0]
             infoNameLabel.text = unit.type.displayName
-            infoHPLabel.text = "HP: \(unit.hp)/\(unit.maxHP)  ATK: \(unit.effectiveAttack)  DEF: \(unit.effectiveDefense)"
+            infoHPLabel.text = "HP: \(unit.hp)/\(unit.maxHP)"
+            infoStatsLabel.text = "ATK: \(unit.effectiveAttack)  DEF: \(unit.effectiveDefense)"
             infoIcon.fillColor = unit.type.color
             selectionCountLabel.text = ""
 
@@ -757,11 +772,14 @@ class HUDOverlay {
             }
         } else {
             let first = selected[0]
-            infoNameLabel.text = first.type.displayName
+            infoNameLabel.text = "\(selected.count) Units"
             let grouped = Dictionary(grouping: selected, by: { $0.type })
             let composition = grouped.map { "\($0.value.count) \($0.key.displayName)\($0.value.count > 1 ? "s" : "")" }
                 .joined(separator: ", ")
-            infoHPLabel.text = ""
+            let totalHP = selected.reduce(0) { $0 + $1.hp }
+            let totalMaxHP = selected.reduce(0) { $0 + $1.maxHP }
+            infoHPLabel.text = "HP: \(totalHP)/\(totalMaxHP)"
+            infoStatsLabel.text = ""
             infoIcon.fillColor = first.type.color
             selectionCountLabel.text = composition
             queueLabel.text = ""
@@ -778,6 +796,7 @@ class HUDOverlay {
         infoPanel.isHidden = false
         infoNameLabel.text = building.type.displayName
         infoHPLabel.text = "HP: \(building.hp)/\(building.maxHP)"
+        infoStatsLabel.text = ""
         infoIcon.fillColor = building.type.color
         selectionCountLabel.text = ""
 
@@ -1044,7 +1063,7 @@ class HUDOverlay {
         buildMenuNode.addChild(title)
 
         let buildingTypes: [BuildingType] = [
-            .house, .farm, .lumberCamp, .miningCamp,
+            .townCenter, .house, .farm, .lumberCamp, .miningCamp,
             .barracks, .archeryRange, .stable, .blacksmith,
             .market, .tower, .wall, .castle, .siegeWorkshop
         ]
@@ -1417,7 +1436,7 @@ class HUDOverlay {
 
     func isPointInHUD(_ point: CGPoint) -> Bool {
         if isShowingExitConfirm { return true }
-        if point.y > viewSize.height - 40 { return true }
+        if point.y > viewSize.height - 40 - safeAreaTop { return true }
         if point.x < minimapSize + 20 && point.y < minimapSize + 20 { return true }
         if point.x > viewSize.width - 300 && point.y < 180 { return true }
         if point.x > minimapSize + 20 && point.x < minimapSize + 250 && point.y < 180 { return true }

@@ -371,9 +371,10 @@ class GameScene: SKScene {
         // Terrain animations (every frame for visible tiles only)
         gameMap.animateWaterTiles(time: CGFloat(gameTime), cameraPosition: cameraPosition, viewSize: size)
 
-        // Tile rendering (throttled)
+        // Tile rendering (throttled — faster during active pan)
         tileRenderTimer += deltaTime
-        if tileRenderTimer >= 0.25 {
+        let renderInterval: CGFloat = (isPanning || panVelocity.x != 0 || panVelocity.y != 0) ? 0.1 : 0.25
+        if tileRenderTimer >= renderInterval {
             tileRenderTimer = 0
             renderTiles()
             gameMap.addTerrainBlending(cameraPosition: cameraPosition, viewSize: size)
@@ -581,9 +582,9 @@ class GameScene: SKScene {
         if dist > 5 {
             let currentSelected = unitSystem.selectedUnits(for: humanPlayer)
 
-            // Box select if: touch started on empty ground AND no units selected
-            if touchStartedOnEmptyGround && currentSelected.isEmpty, let start = selectionStart {
-                // Box selection mode
+            // Box select if: touch started on empty ground AND no units selected AND dragged far enough
+            if touchStartedOnEmptyGround && currentSelected.isEmpty && dist > 20, let start = selectionStart {
+                // Box selection mode — only activate with significant drag
                 if selectionRect == nil {
                     selectionRect = SKShapeNode()
                     selectionRect?.strokeColor = SKColor.green.withAlphaComponent(0.7)
@@ -599,7 +600,7 @@ class GameScene: SKScene {
                                   width: abs(location.x - start.x),
                                   height: abs(location.y - start.y))
                 selectionRect?.path = CGPath(rect: rect, transform: nil)
-            } else {
+            } else if !isBoxSelecting {
                 // Pan camera
                 isPanning = true
                 cameraPosition.x -= dx
@@ -664,14 +665,16 @@ class GameScene: SKScene {
         let worldPos = locationInScene
         let gridPos = gameMap.worldToGrid(worldPos)
 
-        // Box selection
+        // Box selection — require minimum 30x30 box to count as selection
         if isBoxSelecting, let start = selectionStart {
             let rect = CGRect(x: min(start.x, locationInScene.x),
                               y: min(start.y, locationInScene.y),
                               width: abs(locationInScene.x - start.x),
                               height: abs(locationInScene.y - start.y))
-            let _ = unitSystem.selectUnitsInRect(rect, player: humanPlayer)
-            selectedBuilding = nil
+            if rect.width > 30 || rect.height > 30 {
+                let _ = unitSystem.selectUnitsInRect(rect, player: humanPlayer)
+                selectedBuilding = nil
+            }
 
             selectionRect?.removeFromParent()
             selectionRect = nil
@@ -1185,8 +1188,14 @@ class GameScene: SKScene {
         }
 
         let nextAge = Age(rawValue: humanPlayer.currentAge.rawValue + 1)!
-        guard humanPlayer.canAfford(nextAge.advanceCost) else {
-            hud.showStatus("Not enough resources to advance!")
+        let cost = nextAge.advanceCost
+        guard humanPlayer.canAfford(cost) else {
+            var needed: [String] = []
+            if cost.food > 0 { needed.append("F:\(cost.food)") }
+            if cost.wood > 0 { needed.append("W:\(cost.wood)") }
+            if cost.gold > 0 { needed.append("G:\(cost.gold)") }
+            if cost.stone > 0 { needed.append("S:\(cost.stone)") }
+            hud.showStatus("Need \(needed.joined(separator: " ")) for \(nextAge.displayName)")
             return
         }
 

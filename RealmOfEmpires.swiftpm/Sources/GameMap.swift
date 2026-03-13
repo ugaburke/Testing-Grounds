@@ -238,6 +238,13 @@ class GameMap {
                         node.addChild(bush)
                     }
 
+                    // Set initial alpha based on fog state to prevent flash
+                    if !tile.isExplored {
+                        node.alpha = 0.0
+                    } else if !tile.isVisible {
+                        node.alpha = 0.65
+                    }
+
                     mapNode.addChild(node)
                     tile.node = node
                 }
