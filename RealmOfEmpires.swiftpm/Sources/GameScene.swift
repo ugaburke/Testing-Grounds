@@ -718,12 +718,35 @@ class GameScene: SKScene {
         // Rally point mode
         if case .settingRallyPoint(let building) = actionMode {
             building.rallyPoint = gridPos
+
+            // Remove old rally flag
+            building.rallyFlagNode?.removeFromParent()
+
+            // Create persistent rally flag
+            let playerColor = SpriteFactory.playerColors[humanPlayer.id % SpriteFactory.playerColors.count]
+            let flag = spriteFactory.createRallyFlag(at: gameMap.gridToWorld(gridPos), playerColor: playerColor)
+            gameWorld.addChild(flag)
+            building.rallyFlagNode = flag
+
+            // Draw temporary line from building to rally point
+            let line = SKShapeNode()
+            let linePath = CGMutablePath()
+            linePath.move(to: building.node?.position ?? .zero)
+            linePath.addLine(to: gameMap.gridToWorld(gridPos))
+            line.path = linePath
+            line.strokeColor = playerColor.withAlphaComponent(0.4)
+            line.lineWidth = 1.0
+            line.zPosition = 24
+            line.run(SKAction.sequence([
+                SKAction.wait(forDuration: 3.0),
+                SKAction.fadeOut(withDuration: 1.0),
+                SKAction.removeFromParent()
+            ]))
+            gameWorld.addChild(line)
+
             hud.showStatus("Rally point set")
             actionMode = .normal
             hud.updateModeIndicator(mode: .normal)
-            // Show rally point indicator
-            let indicator = spriteFactory.createMoveIndicator(at: gameMap.gridToWorld(gridPos))
-            gameWorld.addChild(indicator)
             return
         }
 
@@ -1078,6 +1101,36 @@ class GameScene: SKScene {
             updateCamera()
             renderTiles()
             lastIdleVillagerIndex = (lastIdleVillagerIndex + 1) % idleVillagers.count
+
+        case .cancelTraining:
+            if let building = selectedBuilding {
+                if buildingSystem.cancelTraining(at: building, player: humanPlayer) {
+                    hud.showStatus("Training cancelled (75% refunded)")
+                }
+            }
+
+        case .cycleStance:
+            let selected = unitSystem.selectedUnits(for: humanPlayer).filter { $0.type != .villager }
+            for unit in selected {
+                switch unit.stance {
+                case .aggressive:
+                    unit.stance = .defensive
+                    unit.stanceAnchorPosition = unit.gridPosition
+                case .defensive:
+                    unit.stance = .standGround
+                case .standGround:
+                    unit.stance = .aggressive
+                }
+            }
+            if let first = selected.first {
+                let stanceName: String
+                switch first.stance {
+                case .aggressive: stanceName = "Aggressive"
+                case .defensive: stanceName = "Defensive"
+                case .standGround: stanceName = "Stand Ground"
+                }
+                hud.showStatus("Stance: \(stanceName)")
+            }
         }
     }
 

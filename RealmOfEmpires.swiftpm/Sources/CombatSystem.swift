@@ -88,6 +88,12 @@ class CombatSystem {
                 target.hp -= damage
                 unit.attackCooldown = attackInterval
 
+                // Track kills for veterancy
+                if target.hp <= 0 {
+                    unit.killCount += 1
+                    updateVeterancyIndicator(unit: unit)
+                }
+
                 // Visual effect
                 if let scene = gameScene {
                     // Damage number
@@ -122,9 +128,27 @@ class CombatSystem {
                 }
             }
         } else {
-            // Move towards target
-            if unit.path.isEmpty {
-                unit.path = pathfinder.findPath(from: unit.gridPosition, to: target.gridPosition)
+            // Move towards target (stance-aware)
+            if unit.stance == .standGround {
+                // Can't reach target, go idle
+                unit.state = .idle
+                unit.path = []
+            } else if unit.stance == .defensive {
+                // Only chase within limited range from anchor
+                if let anchor = unit.stanceAnchorPosition,
+                   unit.gridPosition.distance(to: anchor) > 8.0 {
+                    // Too far from anchor, return
+                    unit.state = .moving(to: anchor)
+                    unit.path = pathfinder.findPath(from: unit.gridPosition, to: anchor)
+                } else {
+                    if unit.path.isEmpty {
+                        unit.path = pathfinder.findPath(from: unit.gridPosition, to: target.gridPosition)
+                    }
+                }
+            } else {
+                if unit.path.isEmpty {
+                    unit.path = pathfinder.findPath(from: unit.gridPosition, to: target.gridPosition)
+                }
             }
         }
     }
@@ -173,5 +197,20 @@ class CombatSystem {
                 unit.path = pathfinder.findPath(from: unit.gridPosition, to: target.gridPosition)
             }
         }
+    }
+
+    private func updateVeterancyIndicator(unit: Unit) {
+        guard unit.veterancyLevel > 0 else { return }
+        unit.node?.childNode(withName: "vetStar")?.removeFromParent()
+
+        let star = SKLabelNode(text: unit.veterancyLevel >= 2 ? "\u{2605}\u{2605}" : "\u{2605}")
+        star.fontSize = 8
+        star.fontName = "Helvetica-Bold"
+        star.fontColor = unit.veterancyLevel >= 2 ? .yellow : SKColor(red: 0.8, green: 0.8, blue: 0.8, alpha: 1.0)
+        star.position = CGPoint(x: 0, y: 10)
+        star.verticalAlignmentMode = .bottom
+        star.name = "vetStar"
+        star.zPosition = 15
+        unit.node?.addChild(star)
     }
 }

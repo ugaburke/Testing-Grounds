@@ -512,6 +512,7 @@ class Building {
     var currentResearch: TechType?
     var researchProgress: CGFloat = 0
     var node: SKNode?
+    var rallyFlagNode: SKNode?
 
     init(type: BuildingType, ownerID: Int, position: GridPosition, civilizationBonus: CGFloat = 1.0) {
         self.id = Building.nextID
@@ -617,8 +618,8 @@ enum UnitType: CaseIterable {
         case .militia: return 45
         case .manAtArms: return 55
         case .spearman: return 50
-        case .archer: return 35
-        case .crossbowman: return 40
+        case .archer: return 40
+        case .crossbowman: return 45
         case .skirmisher: return 35
         case .scout: return 60
         case .knight: return 85
@@ -661,7 +662,7 @@ enum UnitType: CaseIterable {
         case .militia: return 1
         case .manAtArms: return 2
         case .spearman: return 2
-        case .archer: return 0
+        case .archer: return 1
         case .crossbowman: return 1
         case .skirmisher: return 1
         case .scout: return 1
@@ -755,7 +756,7 @@ enum UnitType: CaseIterable {
 
     var bonusVsCavalry: Int {
         switch self {
-        case .spearman: return 8
+        case .spearman: return 15
         default: return 0
         }
     }
@@ -824,6 +825,14 @@ enum UnitState {
     case garrisoned(buildingID: Int)
 }
 
+// MARK: - Unit Stance
+
+enum UnitStance {
+    case aggressive  // Auto-attack and chase enemies
+    case defensive   // Attack enemies in range, return to anchor if they flee
+    case standGround // Don't move, attack only enemies in weapon range
+}
+
 // MARK: - Unit
 
 class Unit {
@@ -848,7 +857,11 @@ class Unit {
     var lastDirection: CGFloat = 0
     var gatherAccumulator: CGFloat = 0
     var attackMoveDestination: GridPosition?
+    var savedMoveDestination: GridPosition?
     var patrolPoints: (GridPosition, GridPosition)?
+    var killCount: Int = 0
+    var stance: UnitStance = .aggressive
+    var stanceAnchorPosition: GridPosition?
     weak var ownerPlayer: Player?
 
     init(type: UnitType, ownerID: Int, position: GridPosition, hpBonus: CGFloat = 1.0, speedBonus: CGFloat = 1.0) {
@@ -862,9 +875,15 @@ class Unit {
         self.hp = self.maxHP
     }
 
+    var veterancyLevel: Int {
+        if killCount >= 5 { return 2 }
+        if killCount >= 3 { return 1 }
+        return 0
+    }
+
     var effectiveAttack: Int {
         var atk = type.attack
-        guard let techs = ownerPlayer?.researchedTechs else { return atk }
+        guard let techs = ownerPlayer?.researchedTechs else { return atk + min(veterancyLevel, 2) }
 
         if type.isInfantry || type.isCavalry {
             // Melee attack upgrades
@@ -876,6 +895,7 @@ class Unit {
             if techs.contains(.fletching) { atk += 1 }
             if techs.contains(.bodkinArrow) { atk += 1 }
         }
+        atk += min(veterancyLevel, 2)
         return atk
     }
 
@@ -898,6 +918,7 @@ class Unit {
         if type == .villager && techs.contains(.loom) {
             def += 1
         }
+        if veterancyLevel >= 2 { def += 1 }
         return def
     }
 

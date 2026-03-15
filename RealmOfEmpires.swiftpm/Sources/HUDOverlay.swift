@@ -526,16 +526,16 @@ class HUDOverlay {
     // MARK: - Update
 
     func update(player: Player) {
-        // Update resources with low-resource warnings
-        let warningThreshold = 50
+        // Update resources with enhanced low-resource warnings
         foodLabel.text = "\(player.resources.food)"
-        foodLabel.fontColor = player.resources.food < warningThreshold ? .red : .white
         woodLabel.text = "\(player.resources.wood)"
-        woodLabel.fontColor = player.resources.wood < warningThreshold ? .red : .white
         goldLabel.text = "\(player.resources.gold)"
-        goldLabel.fontColor = player.resources.gold < warningThreshold ? .red : .white
         stoneLabel.text = "\(player.resources.stone)"
-        stoneLabel.fontColor = player.resources.stone < warningThreshold ? .red : .white
+
+        applyResourceWarning(label: foodLabel, value: player.resources.food)
+        applyResourceWarning(label: woodLabel, value: player.resources.wood)
+        applyResourceWarning(label: goldLabel, value: player.resources.gold)
+        applyResourceWarning(label: stoneLabel, value: player.resources.stone)
 
         popLabel.text = "\(player.population)/\(player.populationCap)"
         popLabel.fontColor = player.population >= player.populationCap ? .red : .white
@@ -747,7 +747,8 @@ class HUDOverlay {
             let unit = selected[0]
             infoNameLabel.text = unit.type.displayName
             infoHPLabel.text = "HP: \(unit.hp)/\(unit.maxHP)"
-            infoStatsLabel.text = "ATK: \(unit.effectiveAttack)  DEF: \(unit.effectiveDefense)"
+            let vetText = unit.killCount > 0 ? "  Kills: \(unit.killCount)" : ""
+            infoStatsLabel.text = "ATK: \(unit.effectiveAttack)  DEF: \(unit.effectiveDefense)\(vetText)"
             infoIcon.fillColor = unit.type.color
             selectionCountLabel.text = ""
 
@@ -873,6 +874,18 @@ class HUDOverlay {
                     y: startY, size: buttonSize)
                 actionPanel.addChild(rallyBtn)
                 actionButtons.append(rallyBtn)
+
+                // Cancel training button (shown when queue is not empty)
+                if !building.trainingQueue.isEmpty {
+                    let cancelBtn = createActionButton(
+                        text: "Cancel", icon: "X",
+                        color: SKColor(red: 0.6, green: 0.15, blue: 0.15, alpha: 1.0),
+                        name: "btn_cancelTrain",
+                        x: startX + CGFloat(nextCol + 1) * (buttonSize + padding),
+                        y: startY, size: buttonSize)
+                    actionPanel.addChild(cancelBtn)
+                    actionButtons.append(cancelBtn)
+                }
             }
 
             // Tech button for buildings that have researchable techs
@@ -908,6 +921,14 @@ class HUDOverlay {
                     x: startX + (buttonSize + padding), y: startY, size: buttonSize)
                 actionPanel.addChild(patrolBtn)
                 actionButtons.append(patrolBtn)
+
+                let stanceBtn = createActionButton(
+                    text: "Stance", icon: "ST",
+                    color: SKColor(red: 0.5, green: 0.5, blue: 0.2, alpha: 1.0),
+                    name: "btn_stance",
+                    x: startX + 2 * (buttonSize + padding), y: startY, size: buttonSize)
+                actionPanel.addChild(stanceBtn)
+                actionButtons.append(stanceBtn)
             }
         }
     }
@@ -1398,6 +1419,8 @@ class HUDOverlay {
             if name == "closeTechMenu" { return .closeTechMenu }
             if name == "btn_attackMove" { return .attackMoveMode }
             if name == "btn_patrol" { return .patrolMode }
+            if name == "btn_stance" { return .cycleStance }
+            if name == "btn_cancelTrain" { return .cancelTraining }
             if name == "idleVillagerBtn" { return .selectIdleVillager }
 
             if name.hasPrefix("build_") {
@@ -1446,6 +1469,29 @@ class HUDOverlay {
     }
 
     // MARK: - Helpers
+
+    private func applyResourceWarning(label: SKLabelNode, value: Int) {
+        let warningThreshold = 50
+        let criticalThreshold = 20
+        if value < criticalThreshold {
+            // Critical: fast pulse between red and dark red
+            if label.action(forKey: "resFlash") == nil {
+                let flash = SKAction.repeatForever(SKAction.sequence([
+                    SKAction.run { label.fontColor = .red },
+                    SKAction.wait(forDuration: 0.3),
+                    SKAction.run { label.fontColor = SKColor(red: 0.5, green: 0, blue: 0, alpha: 1) },
+                    SKAction.wait(forDuration: 0.3)
+                ]))
+                label.run(flash, withKey: "resFlash")
+            }
+        } else if value < warningThreshold {
+            label.removeAction(forKey: "resFlash")
+            label.fontColor = SKColor(red: 1.0, green: 0.5, blue: 0.2, alpha: 1.0) // orange warning
+        } else {
+            label.removeAction(forKey: "resFlash")
+            label.fontColor = .white
+        }
+    }
 
     private func formatCost(_ cost: Resources) -> String {
         var parts: [String] = []
@@ -1501,4 +1547,6 @@ enum HUDAction {
     case attackMoveMode
     case patrolMode
     case selectIdleVillager
+    case cancelTraining
+    case cycleStance
 }

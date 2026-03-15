@@ -17,11 +17,26 @@ class UnitSystem {
                 unit.attackCooldown -= deltaTime
             }
 
-            // Auto-attack nearby enemies if idle
-            if case .idle = unit.state {
-                if unit.type != .villager {
+            // Auto-attack nearby enemies if idle or moving
+            let shouldAutoAttack: Bool
+            switch unit.state {
+            case .idle: shouldAutoAttack = true
+            case .moving: shouldAutoAttack = (unit.stance != .standGround)
+            default: shouldAutoAttack = false
+            }
+            if shouldAutoAttack && unit.type != .villager {
+                if case .moving = unit.state {
+                    autoAttackNearby(unit: unit, player: player, pathfinder: pathfinder, range: 3.0)
+                } else {
                     autoAttackNearby(unit: unit, player: player, pathfinder: pathfinder)
                 }
+            }
+
+            // Resume movement after combat if saved destination exists
+            if case .idle = unit.state, let dest = unit.savedMoveDestination {
+                unit.state = .moving(to: dest)
+                unit.path = pathfinder.findPath(from: unit.gridPosition, to: dest)
+                unit.savedMoveDestination = nil
             }
 
             // Attack-move: move toward target, engage enemies along the way
@@ -164,15 +179,22 @@ class UnitSystem {
         player.units.filter { $0.isSelected }
     }
 
-    private func autoAttackNearby(unit: Unit, player: Player, pathfinder: Pathfinder) {
+    private func autoAttackNearby(unit: Unit, player: Player, pathfinder: Pathfinder, range: CGFloat = 6.0) {
         guard let scene = gameScene else { return }
 
-        let sightRange: CGFloat = 6.0
+        // Stand ground melee units don't auto-engage (can't reach without moving)
+        if unit.stance == .standGround && unit.type.attackRange <= 1.2 { return }
+
+        let effectiveRange = unit.stance == .standGround ? unit.type.attackRange : range
 
         for enemy in scene.players where enemy.id != player.id {
             for enemyUnit in enemy.units {
                 let dist = unit.gridPosition.distance(to: enemyUnit.gridPosition)
-                if dist <= sightRange {
+                if dist <= effectiveRange {
+                    // Save move destination before switching to attack
+                    if case .moving(let dest) = unit.state {
+                        unit.savedMoveDestination = dest
+                    }
                     unit.state = .attacking(targetUnitID: enemyUnit.id)
                     if dist > unit.type.attackRange {
                         unit.path = pathfinder.findPath(from: unit.gridPosition, to: enemyUnit.gridPosition)

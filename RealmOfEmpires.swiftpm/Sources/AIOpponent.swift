@@ -209,26 +209,32 @@ class AIOpponent {
         }
     }
 
+    private func analyzeEnemyComposition() -> (cavalry: Int, ranged: Int, infantry: Int) {
+        guard let scene = gameScene else { return (0, 0, 0) }
+        var cav = 0, ranged = 0, inf = 0
+        for enemy in scene.players where enemy.id != player.id {
+            for unit in enemy.units where unit.type != .villager {
+                if unit.type.isCavalry { cav += 1 }
+                if unit.type.isRanged { ranged += 1 }
+                if unit.type.isInfantry { inf += 1 }
+            }
+        }
+        return (cav, ranged, inf)
+    }
+
     private func handleMilitary() {
         guard let scene = gameScene else { return }
 
-        // Analyze enemy composition for counter-building
-        var enemyCavalryCount = 0
-        var enemyRangedCount = 0
-        for enemy in scene.players where enemy.id != player.id {
-            for unit in enemy.units {
-                if unit.type.isCavalry { enemyCavalryCount += 1 }
-                if unit.type.isRanged { enemyRangedCount += 1 }
-            }
-        }
+        let enemy = analyzeEnemyComposition()
+        let totalEnemy = enemy.cavalry + enemy.ranged + enemy.infantry
 
         for building in player.buildings where building.isConstructed {
             guard building.trainingQueue.count < 2 else { continue }
 
             switch building.type {
             case .barracks:
-                // Counter-build: spearmen vs cavalry
-                if enemyCavalryCount > 3 {
+                // Counter-build: spearmen if enemy is 40%+ cavalry
+                if totalEnemy > 0 && enemy.cavalry * 100 / max(totalEnemy, 1) > 40 {
                     _ = scene.buildingSystem.trainUnit(type: .spearman, at: building, player: player)
                 } else if player.currentAge.rawValue >= Age.feudalAge.rawValue {
                     _ = scene.buildingSystem.trainUnit(type: .manAtArms, at: building, player: player)
@@ -236,8 +242,8 @@ class AIOpponent {
                     _ = scene.buildingSystem.trainUnit(type: .militia, at: building, player: player)
                 }
             case .archeryRange:
-                // Counter-build: skirmishers vs archers
-                if enemyRangedCount > 3 {
+                // Counter-build: skirmishers if enemy is 40%+ ranged
+                if totalEnemy > 0 && enemy.ranged * 100 / max(totalEnemy, 1) > 40 {
                     _ = scene.buildingSystem.trainUnit(type: .skirmisher, at: building, player: player)
                 } else if player.currentAge.rawValue >= Age.castleAge.rawValue {
                     _ = scene.buildingSystem.trainUnit(type: .crossbowman, at: building, player: player)
@@ -245,13 +251,21 @@ class AIOpponent {
                     _ = scene.buildingSystem.trainUnit(type: .archer, at: building, player: player)
                 }
             case .stable:
-                if player.currentAge.rawValue >= Age.castleAge.rawValue && player.resources.gold >= 90 {
-                    _ = scene.buildingSystem.trainUnit(type: .knight, at: building, player: player)
+                // Knights crush infantry-heavy compositions
+                if totalEnemy > 0 && enemy.infantry * 100 / max(totalEnemy, 1) > 50 {
+                    if player.currentAge.rawValue >= Age.castleAge.rawValue && player.resources.gold >= 75 {
+                        _ = scene.buildingSystem.trainUnit(type: .knight, at: building, player: player)
+                    } else {
+                        _ = scene.buildingSystem.trainUnit(type: .scout, at: building, player: player)
+                    }
                 } else {
-                    _ = scene.buildingSystem.trainUnit(type: .scout, at: building, player: player)
+                    if player.currentAge.rawValue >= Age.castleAge.rawValue && player.resources.gold >= 75 {
+                        _ = scene.buildingSystem.trainUnit(type: .knight, at: building, player: player)
+                    } else {
+                        _ = scene.buildingSystem.trainUnit(type: .scout, at: building, player: player)
+                    }
                 }
             case .siegeWorkshop:
-                // Train rams for building destruction
                 if player.resources.wood >= 160 && player.resources.gold >= 75 {
                     _ = scene.buildingSystem.trainUnit(type: .batteringRam, at: building, player: player)
                 }
@@ -275,13 +289,21 @@ class AIOpponent {
         let fastUnits = militaryUnits.filter { $0.type == .scout || $0.type == .lightCavalry }
         let mainArmy = militaryUnits.filter { $0.type != .scout && $0.type != .lightCavalry }
 
-        // Harass: send scouts to raid villagers
-        if fastUnits.count >= 2 {
+        // Harass: send scouts to raid villagers (even with just 1 scout)
+        if fastUnits.count >= 1 {
             let enemyVillagers = humanPlayer.units.filter { $0.type == .villager }
-            if let targetVillager = enemyVillagers.first {
+            // Target villager furthest from their TC (most vulnerable)
+            let enemyTC = humanPlayer.buildings.first(where: { $0.type == .townCenter })
+            let targetVillager = enemyVillagers
+                .max(by: { a, b in
+                    let aDist = enemyTC.map { a.gridPosition.distance(to: $0.gridPosition) } ?? 0
+                    let bDist = enemyTC.map { b.gridPosition.distance(to: $0.gridPosition) } ?? 0
+                    return aDist < bDist
+                })
+            if let target = targetVillager {
                 for unit in fastUnits.prefix(3) {
                     if isIdle(unit) {
-                        scene.unitSystem.attackTarget(unit: unit, targetID: targetVillager.id, pathfinder: scene.pathfinder)
+                        scene.unitSystem.attackTarget(unit: unit, targetID: target.id, pathfinder: scene.pathfinder)
                     }
                 }
             }

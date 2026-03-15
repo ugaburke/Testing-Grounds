@@ -758,6 +758,41 @@ class SpriteFactory {
         return ring
     }
 
+    func createRallyFlag(at position: CGPoint, playerColor: SKColor) -> SKNode {
+        let container = SKNode()
+        container.position = position
+        container.zPosition = 25
+        container.name = "rallyFlag"
+
+        // Flag pole
+        let pole = SKShapeNode(rectOf: CGSize(width: 1.5, height: tileSize * 0.8))
+        pole.fillColor = SKColor(red: 0.4, green: 0.3, blue: 0.2, alpha: 1.0)
+        pole.strokeColor = .clear
+        pole.position = CGPoint(x: 0, y: tileSize * 0.2)
+        container.addChild(pole)
+
+        // Flag triangle
+        let flagPath = CGMutablePath()
+        flagPath.move(to: CGPoint(x: 1, y: tileSize * 0.6))
+        flagPath.addLine(to: CGPoint(x: tileSize * 0.4, y: tileSize * 0.45))
+        flagPath.addLine(to: CGPoint(x: 1, y: tileSize * 0.3))
+        flagPath.closeSubpath()
+        let flag = SKShapeNode(path: flagPath)
+        flag.fillColor = playerColor
+        flag.strokeColor = playerColor.withAlphaComponent(0.8)
+        flag.lineWidth = 0.5
+        container.addChild(flag)
+
+        // Gentle wave animation
+        let wave = SKAction.repeatForever(SKAction.sequence([
+            SKAction.scaleX(to: 1.1, duration: 0.6),
+            SKAction.scaleX(to: 0.9, duration: 0.6)
+        ]))
+        flag.run(wave)
+
+        return container
+    }
+
     func createDeathEffect(at position: CGPoint) -> SKNode {
         let container = SKNode()
         container.position = position

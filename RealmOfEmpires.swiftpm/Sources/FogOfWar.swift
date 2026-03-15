@@ -19,9 +19,12 @@ class FogOfWar {
             }
         }
 
-        // Reveal around units
+        // Reveal around units (scouts and mounted units get bonus vision)
         for unit in player.units {
-            revealArea(around: unit.gridPosition, range: sightRange)
+            var unitRange = sightRange
+            if unit.type == .scout || unit.type == .mangudai { unitRange += 4 }
+            else if unit.type == .lightCavalry { unitRange += 2 }
+            revealArea(around: unit.gridPosition, range: unitRange)
         }
 
         // Reveal around buildings

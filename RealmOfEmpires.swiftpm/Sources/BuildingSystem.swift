@@ -119,6 +119,29 @@ class BuildingSystem {
         return true
     }
 
+    func cancelTraining(at building: Building, player: Player) -> Bool {
+        guard !building.trainingQueue.isEmpty else { return false }
+
+        // Cancel last item in queue
+        let cancelIndex = building.trainingQueue.count - 1
+        let unitType = building.trainingQueue[cancelIndex]
+        building.trainingQueue.remove(at: cancelIndex)
+
+        // If we canceled the actively training unit (index 0), reset progress
+        if cancelIndex == 0 {
+            building.trainingProgress = 0
+        }
+
+        // Refund 75% of cost
+        let cost = unitType.cost
+        player.resources.food += Int(Double(cost.food) * 0.75)
+        player.resources.wood += Int(Double(cost.wood) * 0.75)
+        player.resources.gold += Int(Double(cost.gold) * 0.75)
+        player.resources.stone += Int(Double(cost.stone) * 0.75)
+
+        return true
+    }
+
     private func spawnUnit(type: UnitType, player: Player, building: Building,
                             map: GameMap, spriteFactory: SpriteFactory) {
         // Find spawn position near building
@@ -238,6 +261,7 @@ class BuildingSystem {
             }
         }
 
+        building.rallyFlagNode?.removeFromParent()
         building.node?.removeFromParent()
         player.buildings.removeAll { $0.id == building.id }
     }
