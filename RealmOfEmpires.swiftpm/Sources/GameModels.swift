@@ -294,6 +294,7 @@ class Player {
     }
 
     func spend(_ cost: Resources) {
+        guard canAfford(cost) else { return }
         resources.subtract(cost)
     }
 }

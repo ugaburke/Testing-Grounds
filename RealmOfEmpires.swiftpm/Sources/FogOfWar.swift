@@ -63,13 +63,11 @@ class FogOfWar {
                 let tile = map.tiles[y][x]
 
                 if tile.isVisible {
-                    // Fully visible — fade out fog smoothly
+                    // Fully visible — fade out fog but keep node for reuse
                     if let fogNode = fogNodes[y][x] {
-                        fogNode.run(SKAction.sequence([
-                            SKAction.fadeOut(withDuration: fadeDuration),
-                            SKAction.removeFromParent()
-                        ]))
-                        fogNodes[y][x] = nil
+                        if fogNode.alpha > 0.01 {
+                            fogNode.run(SKAction.fadeAlpha(to: 0.0, duration: fadeDuration), withKey: "fogFade")
+                        }
                     }
 
                     // Fade tile to full visibility
@@ -82,7 +80,12 @@ class FogOfWar {
                         tileNode.run(SKAction.fadeAlpha(to: 0.65, duration: fadeDuration), withKey: "fogFade")
                     }
 
-                    if fogNodes[y][x] == nil {
+                    if let fogNode = fogNodes[y][x] {
+                        // Reuse existing fog node — fade it back in
+                        if fogNode.alpha < 0.9 {
+                            fogNode.run(SKAction.fadeAlpha(to: 1.0, duration: fadeDuration), withKey: "fogFade")
+                        }
+                    } else {
                         let fogNode = SKShapeNode(rectOf: CGSize(width: map.tileSize, height: map.tileSize))
                         fogNode.fillColor = SKColor.black.withAlphaComponent(0.25)
                         fogNode.strokeColor = .clear
@@ -90,7 +93,7 @@ class FogOfWar {
                         fogNode.zPosition = 50
                         fogNode.alpha = 0
                         map.mapNode.addChild(fogNode)
-                        fogNode.run(SKAction.fadeAlpha(to: 1.0, duration: fadeDuration))
+                        fogNode.run(SKAction.fadeAlpha(to: 1.0, duration: fadeDuration), withKey: "fogFade")
                         fogNodes[y][x] = fogNode
                     }
                 } else {

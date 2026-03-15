@@ -620,7 +620,7 @@ class HUDOverlay {
             let bg = SKShapeNode(rectOf: CGSize(width: barWidth, height: 4))
             bg.fillColor = .darkGray
             bg.strokeColor = .clear
-            bg.position = CGPoint(x: viewSize.width - 150, y: viewSize.height - 50)
+            bg.position = CGPoint(x: viewSize.width - 150, y: viewSize.height - 50 - safeAreaTop)
             bg.name = "ageProgressBg"
             bg.zPosition = 101
             hudNode.addChild(bg)
@@ -632,7 +632,7 @@ class HUDOverlay {
             let fill = SKShapeNode(rectOf: CGSize(width: 1, height: 4))
             fill.fillColor = .cyan
             fill.strokeColor = .clear
-            fill.position = CGPoint(x: viewSize.width - 150, y: viewSize.height - 50)
+            fill.position = CGPoint(x: viewSize.width - 150, y: viewSize.height - 50 - safeAreaTop)
             fill.name = "ageProgressFill"
             fill.zPosition = 102
             hudNode.addChild(fill)

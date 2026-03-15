@@ -583,7 +583,14 @@ class GameScene: SKScene {
             let currentSelected = unitSystem.selectedUnits(for: humanPlayer)
 
             // Box select if: touch started on empty ground AND no units selected AND dragged far enough
-            if touchStartedOnEmptyGround && currentSelected.isEmpty && dist > 20, let start = selectionStart {
+            // Use total drag distance from selectionStart, not per-frame dist
+            var totalDragDist: CGFloat = 0
+            if let start = selectionStart {
+                let tdx = location.x - start.x
+                let tdy = location.y - start.y
+                totalDragDist = sqrt(tdx * tdx + tdy * tdy)
+            }
+            if touchStartedOnEmptyGround && currentSelected.isEmpty && totalDragDist > 30, let start = selectionStart {
                 // Box selection mode — only activate with significant drag
                 if selectionRect == nil {
                     selectionRect = SKShapeNode()
@@ -1191,11 +1198,12 @@ class GameScene: SKScene {
         let cost = nextAge.advanceCost
         guard humanPlayer.canAfford(cost) else {
             var needed: [String] = []
-            if cost.food > 0 { needed.append("F:\(cost.food)") }
-            if cost.wood > 0 { needed.append("W:\(cost.wood)") }
-            if cost.gold > 0 { needed.append("G:\(cost.gold)") }
-            if cost.stone > 0 { needed.append("S:\(cost.stone)") }
-            hud.showStatus("Need \(needed.joined(separator: " ")) for \(nextAge.displayName)")
+            let r = humanPlayer.resources
+            if cost.food > r.food { needed.append("F:\(cost.food - r.food)") }
+            if cost.wood > r.wood { needed.append("W:\(cost.wood - r.wood)") }
+            if cost.gold > r.gold { needed.append("G:\(cost.gold - r.gold)") }
+            if cost.stone > r.stone { needed.append("S:\(cost.stone - r.stone)") }
+            hud.showStatus("Need \(needed.joined(separator: " ")) more for \(nextAge.displayName)")
             return
         }
 
@@ -1246,7 +1254,7 @@ class GameScene: SKScene {
             "Tap unfinished buildings with villagers to help build",
             "Select military buildings to train units",
             "Double-tap a unit to select all of same type",
-            "ESC button cancels placement / deselects",
+            "Deselect button cancels placement / deselects",
             "Tap enemy units or buildings to attack",
         ]
 

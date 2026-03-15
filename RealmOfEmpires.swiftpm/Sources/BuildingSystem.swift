@@ -123,7 +123,11 @@ class BuildingSystem {
                             map: GameMap, spriteFactory: SpriteFactory) {
         // Find spawn position near building
         let spawnPos = findSpawnPosition(near: building, map: map)
-        guard let pos = spawnPos else { return }
+        guard let pos = spawnPos else {
+            // Re-queue the unit so it retries next frame instead of being lost
+            building.trainingQueue.insert(type, at: 0)
+            return
+        }
 
         let hpBonus: CGFloat = type.isCavalry ? player.civilization.cavalryHPBonus : 1.0
         let unit = Unit(type: type, ownerID: player.id, position: pos,
