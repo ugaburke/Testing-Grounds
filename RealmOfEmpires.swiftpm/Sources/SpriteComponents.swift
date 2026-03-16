@@ -368,8 +368,14 @@ class SpriteFactory {
 
         // Update selection ring
         if let ring = container.childNode(withName: "selectionRing") as? SKShapeNode {
+            let wasHidden = ring.isHidden
             ring.isHidden = !unit.isSelected
             if unit.isSelected && ring.action(forKey: "pulse") == nil {
+                // Pop animation on first selection
+                if wasHidden {
+                    ring.setScale(1.4)
+                    ring.run(SKAction.scale(to: 1.0, duration: 0.15))
+                }
                 let pulse = SKAction.sequence([
                     SKAction.scale(to: 1.1, duration: 0.4),
                     SKAction.scale(to: 1.0, duration: 0.4)
@@ -553,6 +559,22 @@ class SpriteFactory {
         flag.zPosition = 2
         flag.name = "flag"
         container.addChild(flag)
+
+        // Flag waving animation
+        let wave = SKAction.repeatForever(SKAction.sequence([
+            SKAction.scaleX(to: 0.8, duration: 0.4),
+            SKAction.scaleX(to: 1.0, duration: 0.3),
+            SKAction.scaleX(to: 1.1, duration: 0.3),
+            SKAction.scaleX(to: 1.0, duration: 0.4)
+        ]))
+        flag.run(wave)
+
+        // Building breathing animation (subtle scale pulse)
+        let breathe = SKAction.repeatForever(SKAction.sequence([
+            SKAction.scale(to: 1.01, duration: 2.0),
+            SKAction.scale(to: 0.99, duration: 2.0)
+        ]))
+        body.run(breathe)
 
         return container
     }
@@ -753,14 +775,32 @@ class SpriteFactory {
 
     func createAttackEffect(at position: CGPoint, isRanged: Bool) -> SKNode {
         if isRanged {
+            let container = SKNode()
+            container.position = position
+            container.zPosition = 15
+            container.name = "projectile"
+
+            // Main projectile
             let projectile = SKShapeNode(circleOfRadius: 2.5)
             projectile.fillColor = .yellow
             projectile.strokeColor = .orange
             projectile.lineWidth = 1
-            projectile.position = position
-            projectile.zPosition = 15
-            projectile.name = "projectile"
-            return projectile
+            container.addChild(projectile)
+
+            // Glow halo
+            let glow = SKShapeNode(circleOfRadius: 5)
+            glow.fillColor = SKColor.yellow.withAlphaComponent(0.2)
+            glow.strokeColor = .clear
+            glow.run(SKAction.repeatForever(SKAction.sequence([
+                SKAction.fadeAlpha(to: 0.1, duration: 0.1),
+                SKAction.fadeAlpha(to: 0.3, duration: 0.1)
+            ])))
+            container.addChild(glow)
+
+            // Rotation
+            projectile.run(SKAction.repeatForever(SKAction.rotate(byAngle: .pi * 2, duration: 0.3)))
+
+            return container
         } else {
             // Enhanced melee effect: multiple slashes + hit splatter
             let container = SKNode()

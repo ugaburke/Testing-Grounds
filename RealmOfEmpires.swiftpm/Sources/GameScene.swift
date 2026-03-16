@@ -578,6 +578,19 @@ class GameScene: SKScene {
         }
     }
 
+    func shakeCamera(intensity: CGFloat = 4.0, duration: CGFloat = 0.2) {
+        guard let cam = hudCamera else { return }
+        let shakeCount = 4
+        var actions: [SKAction] = []
+        for _ in 0..<shakeCount {
+            let dx = CGFloat.random(in: -intensity...intensity)
+            let dy = CGFloat.random(in: -intensity...intensity)
+            actions.append(SKAction.moveBy(x: dx, y: dy, duration: TimeInterval(duration) / Double(shakeCount * 2)))
+            actions.append(SKAction.moveBy(x: -dx, y: -dy, duration: TimeInterval(duration) / Double(shakeCount * 2)))
+        }
+        cam.run(SKAction.sequence(actions))
+    }
+
     private func checkGameEnd() {
         // Check if human player lost all buildings
         if humanPlayer.buildings.isEmpty && humanPlayer.units.isEmpty {

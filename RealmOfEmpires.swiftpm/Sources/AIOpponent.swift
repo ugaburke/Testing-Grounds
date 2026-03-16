@@ -55,10 +55,10 @@ class AIOpponent {
         decisionTimer += deltaTime
         rushTimer += deltaTime
 
-        // Hard AI gets hidden gather bonus (scaled by dynamic difficulty)
+        // Hard AI gets small gather bonus (scaled by dynamic difficulty)
         if difficulty == .hard {
-            player.resources.food += Int(deltaTime * 0.5 * dynamicDifficultyAdjust)
-            player.resources.wood += Int(deltaTime * 0.3 * dynamicDifficultyAdjust)
+            player.resources.food += Int(deltaTime * 0.15 * dynamicDifficultyAdjust)
+            player.resources.wood += Int(deltaTime * 0.1 * dynamicDifficultyAdjust)
         }
 
         // Dynamic difficulty: adjust based on score differential
@@ -66,9 +66,9 @@ class AIOpponent {
             let humanScore = human.units.count + human.buildings.count * 2
             let aiScore = player.units.count + player.buildings.count * 2
             if aiScore > humanScore * 2 {
-                dynamicDifficultyAdjust = 0.7  // AI is way ahead, slow down
+                dynamicDifficultyAdjust = 0.8  // AI is way ahead, slow down
             } else if humanScore > aiScore * 2 {
-                dynamicDifficultyAdjust = 1.5  // AI is behind, catch up
+                dynamicDifficultyAdjust = 1.2  // AI is behind, catch up slightly
             } else {
                 dynamicDifficultyAdjust = 1.0
             }

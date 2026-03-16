@@ -100,7 +100,7 @@ class CombatSystem {
                 let armorReduction = unit.type.isRanged ? target.type.pierceArmor : target.type.meleeArmor
                 // Japanese infantry attack speed bonus
                 let effectiveInterval = unit.type.isInfantry ? attackInterval * (unit.ownerPlayer?.civilization.infantryAttackSpeedBonus ?? 1.0) : attackInterval
-                let damage = max(1, unit.effectiveAttack + bonus - (target.effectiveDefense + armorReduction) / 2 + Int.random(in: 0...1))
+                let damage = max(1, unit.effectiveAttack + bonus - (target.effectiveDefense + armorReduction) + Int.random(in: 0...2))
 
                 target.hp -= damage
                 unit.attackCooldown = effectiveInterval
@@ -222,6 +222,11 @@ class CombatSystem {
                 let damage = max(1, unit.effectiveAttack + bonusVsBuilding)
                 target.hp -= damage
 
+                // Screen shake for siege unit hits on buildings
+                if unit.type == .batteringRam || unit.type == .trebuchet || unit.type == .mangonel {
+                    gameScene?.shakeCamera(intensity: 3.0, duration: 0.15)
+                }
+
                 // Petard: self-destruct after hitting building
                 if unit.type == .petard && !unit.isExploding {
                     unit.isExploding = true
@@ -229,6 +234,7 @@ class CombatSystem {
                     if let scene = gameScene {
                         let explosion = scene.spriteFactory.createExplosionEffect(at: unit.position)
                         scene.gameWorld.addChild(explosion)
+                        scene.shakeCamera(intensity: 8.0, duration: 0.3)
                     }
                 }
                 unit.attackCooldown = attackInterval
@@ -267,8 +273,8 @@ class CombatSystem {
             unit.path = []
             unit.healCooldown -= deltaTime
             if unit.healCooldown <= 0 {
-                target.hp = min(target.maxHP, target.hp + 3)
-                unit.healCooldown = 1.5
+                target.hp = min(target.maxHP, target.hp + 5)
+                unit.healCooldown = 1.0
 
                 // Healing visual effect
                 if let scene = gameScene {
@@ -307,7 +313,7 @@ class CombatSystem {
         let dist = unit.gridPosition.distance(to: target.gridPosition)
         if dist <= 6.0 {
             unit.path = []
-            unit.conversionProgress += deltaTime / 8.0  // 8 seconds to convert
+            unit.conversionProgress += deltaTime / 5.0  // 5 seconds to convert
 
             // Visual: golden glow on target
             if let scene = gameScene, Int(unit.conversionProgress * 10) % 3 == 0 {

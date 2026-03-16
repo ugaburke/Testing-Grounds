@@ -34,7 +34,7 @@ class BuildingSystem {
                 for unitID in building.garrisonedUnits {
                     if let unit = player.units.first(where: { $0.id == unitID }) {
                         if unit.hp < unit.maxHP {
-                            unit.hp = min(unit.maxHP, unit.hp + 1)
+                            unit.hp = min(unit.maxHP, unit.hp + 3)
                         }
                     }
                 }
@@ -252,7 +252,7 @@ class BuildingSystem {
 
         let ownerPlayer = scene.players.first { $0.id == building.ownerID }
         let range = building.type.attackRange
-        let garrisonBonus = building.garrisonedUnits.count
+        let garrisonBonus = building.garrisonedUnits.count * 2
         var damage = building.type.attackDamage + garrisonBonus
         // Arrowslits: towers get +3 attack
         if building.type == .tower, let p = ownerPlayer, p.researchedTechs.contains(.arrowslits) {

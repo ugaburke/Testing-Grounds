@@ -1304,6 +1304,14 @@ class HUDOverlay {
         buildMenuNode.isHidden = false
         buildMenuNode.removeAllChildren()
 
+        // Entrance animation
+        buildMenuNode.setScale(0.7)
+        buildMenuNode.alpha = 0
+        buildMenuNode.run(SKAction.group([
+            SKAction.scale(to: 1.0, duration: 0.15),
+            SKAction.fadeIn(withDuration: 0.15)
+        ]))
+
         let bg = SKShapeNode(rectOf: CGSize(width: 420, height: 380), cornerRadius: 8)
         bg.fillColor = SKColor(red: 0.1, green: 0.08, blue: 0.05, alpha: 0.95)
         bg.strokeColor = SKColor(red: 0.5, green: 0.4, blue: 0.2, alpha: 1.0)
@@ -1406,7 +1414,7 @@ class HUDOverlay {
         let costLabel = SKLabelNode(text: formatCost(type.cost))
         costLabel.fontSize = 9
         costLabel.fontName = "Helvetica"
-        costLabel.fontColor = .gray
+        costLabel.fontColor = enabled ? .gray : SKColor(red: 0.8, green: 0.3, blue: 0.2, alpha: 1.0)
         costLabel.verticalAlignmentMode = .center
         costLabel.position = CGPoint(x: 0, y: -22)
         costLabel.name = "build_\(type)"
@@ -1417,7 +1425,13 @@ class HUDOverlay {
 
     func hideBuildMenu() {
         isBuildMenuOpen = false
-        buildMenuNode.isHidden = true
+        buildMenuNode.run(SKAction.group([
+            SKAction.scale(to: 0.7, duration: 0.1),
+            SKAction.fadeOut(withDuration: 0.1)
+        ])) { [weak self] in
+            self?.buildMenuNode.isHidden = true
+            self?.buildMenuNode.setScale(1.0)
+        }
     }
 
     var isBuildMenuShowing: Bool { isBuildMenuOpen }
@@ -1436,6 +1450,14 @@ class HUDOverlay {
         isTechMenuOpen = true
         techMenuNode.isHidden = false
         techMenuNode.removeAllChildren()
+
+        // Entrance animation
+        techMenuNode.setScale(0.7)
+        techMenuNode.alpha = 0
+        techMenuNode.run(SKAction.group([
+            SKAction.scale(to: 1.0, duration: 0.15),
+            SKAction.fadeIn(withDuration: 0.15)
+        ]))
 
         let bg = SKShapeNode(rectOf: CGSize(width: 420, height: 380), cornerRadius: 8)
         bg.fillColor = SKColor(red: 0.1, green: 0.08, blue: 0.05, alpha: 0.95)
@@ -1546,27 +1568,60 @@ class HUDOverlay {
 
     func hideTechMenu() {
         isTechMenuOpen = false
-        techMenuNode.isHidden = true
+        techMenuNode.run(SKAction.group([
+            SKAction.scale(to: 0.7, duration: 0.1),
+            SKAction.fadeOut(withDuration: 0.1)
+        ])) { [weak self] in
+            self?.techMenuNode.isHidden = true
+            self?.techMenuNode.setScale(1.0)
+        }
     }
 
     var isTechMenuShowing: Bool { isTechMenuOpen }
 
     // MARK: - Status Messages
 
-    func showStatus(_ message: String, duration: CGFloat = 5.0) {
+    func showStatus(_ message: String, duration: CGFloat = 5.0, color: SKColor? = nil) {
         statusLabel.text = message
         statusLabel.removeAllActions()
-        statusLabel.alpha = 1.0
+        statusLabel.alpha = 0
         statusBg.removeAllActions()
-        statusBg.alpha = message.isEmpty ? 0 : 0.7
+        statusBg.alpha = 0
+
+        // Color code based on message content or explicit color
+        if let color = color {
+            statusLabel.fontColor = color
+        } else if message.contains("!") || message.contains("attack") || message.lowercased().contains("enemy") {
+            statusLabel.fontColor = SKColor(red: 1.0, green: 0.4, blue: 0.3, alpha: 1.0)
+        } else if message.contains("complete") || message.contains("finished") || message.contains("researched") {
+            statusLabel.fontColor = SKColor(red: 0.4, green: 1.0, blue: 0.4, alpha: 1.0)
+        } else if message.contains("cannot") || message.contains("need") || message.contains("insufficient") {
+            statusLabel.fontColor = SKColor(red: 1.0, green: 0.85, blue: 0.3, alpha: 1.0)
+        } else {
+            statusLabel.fontColor = .white
+        }
 
         if !message.isEmpty {
+            // Slide in from top
+            let slideIn = SKAction.group([
+                SKAction.fadeIn(withDuration: 0.2),
+                SKAction.moveBy(x: 0, y: -5, duration: 0.2)
+            ])
+            let bgFade = SKAction.fadeAlpha(to: 0.7, duration: 0.2)
             let fadeSeq = SKAction.sequence([
+                slideIn,
                 SKAction.wait(forDuration: TimeInterval(duration)),
-                SKAction.fadeOut(withDuration: 0.5)
+                SKAction.group([
+                    SKAction.fadeOut(withDuration: 0.5),
+                    SKAction.moveBy(x: 0, y: 5, duration: 0.5)
+                ])
             ])
             statusLabel.run(fadeSeq)
-            statusBg.run(fadeSeq)
+            statusBg.run(SKAction.sequence([
+                bgFade,
+                SKAction.wait(forDuration: TimeInterval(duration)),
+                SKAction.fadeOut(withDuration: 0.5)
+            ]))
         }
     }
 
@@ -1708,11 +1763,30 @@ class HUDOverlay {
 
     // MARK: - Touch Handling
 
+    private func animateButtonPress(_ node: SKNode) {
+        // Find the topmost named parent (the button container)
+        var target = node
+        if let parent = node.parent, parent.name != nil && parent.name != "hudNode" {
+            target = parent
+        }
+        target.run(SKAction.sequence([
+            SKAction.scale(to: 0.85, duration: 0.05),
+            SKAction.scale(to: 1.0, duration: 0.08)
+        ]))
+    }
+
     func handleTouch(at point: CGPoint) -> HUDAction? {
         let nodes = hudNode.nodes(at: point)
 
         for node in nodes {
             guard let name = node.name else { continue }
+
+            // Animate button press for any named node
+            if name.hasPrefix("btn_") || name.hasPrefix("build_") || name.hasPrefix("train_") ||
+               name.hasPrefix("tech_") || name == "pauseBtn" || name == "ageUpBtn" ||
+               name == "helpBtn" || name == "speedBtn" {
+                animateButtonPress(node)
+            }
 
             // Exit confirmation
             if name == "exitConfirmYes" { return .confirmExit }

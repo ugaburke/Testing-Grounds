@@ -320,7 +320,7 @@ class Player {
         self.id = id
         self.civilization = civilization
         self.isHuman = isHuman
-        self.resources = Resources(food: 200, wood: 200, gold: 100, stone: 100)
+        self.resources = Resources(food: 200, wood: 200, gold: 150, stone: 100)
     }
 
     func canAfford(_ cost: Resources) -> Bool {
@@ -759,11 +759,11 @@ enum UnitType: CaseIterable {
         case .lightCavalry: return Resources(food: 80)
         case .uniqueUnit: return Resources(food: 60, gold: 60)
         case .batteringRam: return Resources(food: 0, wood: 160, gold: 75)
-        case .mangonel: return Resources(food: 0, wood: 160, gold: 135)
+        case .mangonel: return Resources(food: 0, wood: 140, gold: 100)
         case .longbowman: return Resources(food: 35, wood: 40, gold: 40)
         case .throwingAxeman: return Resources(food: 60, gold: 50)
         case .mangudai: return Resources(food: 60, wood: 0, gold: 60)
-        case .cataphract: return Resources(food: 70, gold: 75)
+        case .cataphract: return Resources(food: 80, gold: 100)
         case .monk: return Resources(food: 0, gold: 100)
         case .trebuchet: return Resources(food: 0, wood: 200, gold: 200)
         case .fishingBoat: return Resources(food: 0, wood: 75)
@@ -786,19 +786,19 @@ enum UnitType: CaseIterable {
         case .spearman: return 50
         case .archer: return 40
         case .crossbowman: return 45
-        case .skirmisher: return 35
+        case .skirmisher: return 40
         case .scout: return 60
         case .knight: return 85
         case .lightCavalry: return 60
         case .uniqueUnit: return 80
         case .batteringRam: return 200
-        case .mangonel: return 50
+        case .mangonel: return 70
         case .longbowman: return 40
         case .throwingAxeman: return 60
         case .mangudai: return 65
-        case .cataphract: return 120
+        case .cataphract: return 100
         case .monk: return 30
-        case .trebuchet: return 70
+        case .trebuchet: return 95
         case .fishingBoat: return 60
         case .tradeCart: return 70
         case .warGalley: return 120
@@ -807,7 +807,7 @@ enum UnitType: CaseIterable {
         case .camelRider: return 70
         case .handCannoneer: return 40
         case .samurai: return 80
-        case .warElephant: return 600
+        case .warElephant: return 350
         }
     }
 
@@ -816,16 +816,16 @@ enum UnitType: CaseIterable {
         case .villager: return 3
         case .militia: return 5
         case .manAtArms: return 7
-        case .spearman: return 4
+        case .spearman: return 6
         case .archer: return 5
         case .crossbowman: return 6
-        case .skirmisher: return 4
+        case .skirmisher: return 5
         case .scout: return 5
         case .knight: return 10
         case .lightCavalry: return 7
         case .uniqueUnit: return 12
         case .batteringRam: return 2
-        case .mangonel: return 12
+        case .mangonel: return 16
         case .longbowman: return 6
         case .throwingAxeman: return 8
         case .mangudai: return 7
@@ -836,7 +836,7 @@ enum UnitType: CaseIterable {
         case .tradeCart: return 0
         case .warGalley: return 8
         case .fireShip: return 3
-        case .petard: return 50
+        case .petard: return 30
         case .camelRider: return 6
         case .handCannoneer: return 7
         case .samurai: return 8

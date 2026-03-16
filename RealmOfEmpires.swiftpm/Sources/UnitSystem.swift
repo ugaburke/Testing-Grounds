@@ -278,7 +278,18 @@ class UnitSystem {
                 scene.totalUnitsLostHuman += 1
             }
         }
-        unit.node?.removeFromParent()
+        // Death tilt/fall animation
+        if let node = unit.node {
+            let fallDirection = CGFloat.random(in: -1...1) * .pi / 3
+            node.run(SKAction.sequence([
+                SKAction.group([
+                    SKAction.rotate(byAngle: fallDirection, duration: 0.3),
+                    SKAction.fadeOut(withDuration: 0.3),
+                    SKAction.scale(to: 0.6, duration: 0.3)
+                ]),
+                SKAction.removeFromParent()
+            ]))
+        }
         player.units.removeAll { $0.id == unit.id }
     }
 

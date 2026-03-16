@@ -78,7 +78,7 @@ class ResourceSystem {
         for building in player.buildings where building.type == .fishTrap && building.isConstructed {
             let tile = map.tile(at: building.gridPosition)
             if let tile = tile, tile.resourceRemaining > 0 {
-                let fishRate: CGFloat = 0.3 * player.civilization.fishingBonus * deltaTime * 10
+                let fishRate: CGFloat = 0.6 * player.civilization.fishingBonus * deltaTime * 10
                 let amount = Int(fishRate)
                 if amount > 0 {
                     tile.resourceRemaining -= amount
@@ -112,8 +112,8 @@ class ResourceSystem {
             }
             // Auto-reseed: if farm is depleted and auto-reseed is on, reset resources
             if let tile = tile, tile.resourceRemaining <= 0 && building.autoReseed {
-                if player.resources.wood >= 60 {
-                    player.resources.wood -= 60
+                if player.resources.wood >= 30 {
+                    player.resources.wood -= 30
                     tile.resourceRemaining = TerrainType.farm.resourceAmount
                     if let scene = gameScene {
                         scene.hud.showStatus("Farm auto-reseeded")
@@ -447,7 +447,7 @@ class ResourceSystem {
         let sellPrice = player.marketPrices[sell] ?? 1.0
         let buyPrice = player.marketPrices[buy] ?? 1.0
         let sellAmount = amount
-        let buyAmount = Int(Double(amount) * 0.8 * Double(sellPrice / buyPrice))
+        let buyAmount = Int(Double(amount) * 0.9 * Double(sellPrice / buyPrice))
 
         switch sell {
         case .food: guard player.resources.food >= sellAmount else { return false }
