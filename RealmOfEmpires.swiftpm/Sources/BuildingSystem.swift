@@ -13,7 +13,7 @@ class BuildingSystem {
                 let unitType = building.trainingQueue[0]
                 var trainSpeed = unitType.trainTime
                 if player.researchedTechs.contains(.conscription) {
-                    trainSpeed *= 0.67  // 33% faster
+                    trainSpeed *= GameConstants.conscriptionSpeedMultiplier
                 }
                 building.trainingProgress += deltaTime / trainSpeed
 
@@ -34,7 +34,7 @@ class BuildingSystem {
                 for unitID in building.garrisonedUnits {
                     if let unit = player.units.first(where: { $0.id == unitID }) {
                         if unit.hp < unit.maxHP {
-                            unit.hp = min(unit.maxHP, unit.hp + 3)
+                            unit.hp = min(unit.maxHP, unit.hp + GameConstants.garrisonHealRate)
                         }
                     }
                 }
@@ -133,6 +133,9 @@ class BuildingSystem {
 
         player.buildings.append(building)
 
+        // Invalidate pathfinding cache since map passability changed
+        gameScene?.pathfinder.invalidateCache()
+
         // Create sprite
         let node = spriteFactory.createBuildingNode(building: building)
         let worldPos = map.gridToWorld(gridPos)
@@ -146,7 +149,7 @@ class BuildingSystem {
 
     func trainUnit(type: UnitType, at building: Building, player: Player) -> Bool {
         guard building.isConstructed else { return false }
-        guard building.trainingQueue.count < 5 else { return false }
+        guard building.trainingQueue.count < GameConstants.trainingQueueMax else { return false }
         // Resolve unique unit to civ-specific type
         let actualType = (type == .uniqueUnit) ? player.civilization.uniqueUnitType : type
         guard building.type.trainableUnits.contains(type) else { return false }
@@ -284,7 +287,7 @@ class BuildingSystem {
                     let currentTime = scene.gameTime
                     let buildingKey = "building_attack_\(building.id)"
                     let lastAttack = scene.lastBuildingAttackTimes[buildingKey] ?? 0
-                    if currentTime - lastAttack >= 2.0 {
+                    if currentTime - lastAttack >= GameConstants.buildingAttackInterval {
                         var finalDamage = damage
                         if hasHeatedShot && unit.type.isNaval { finalDamage += 4 }
                         unit.hp -= finalDamage
@@ -371,6 +374,9 @@ class BuildingSystem {
         building.rallyFlagNode?.removeFromParent()
         building.node?.removeFromParent()
         player.buildings.removeAll { $0.id == building.id }
+
+        // Invalidate pathfinding cache since map passability changed
+        gameScene?.pathfinder.invalidateCache()
     }
 
     func cancelResearch(at building: Building, player: Player) -> Bool {

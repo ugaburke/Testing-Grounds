@@ -194,7 +194,7 @@ class UnitSystem {
 
         // Spawn movement dust particles on land
         unit.dustTimer += deltaTime
-        if unit.dustTimer >= 0.3 {
+        if unit.dustTimer >= GameConstants.dustParticleInterval {
             unit.dustTimer = 0
             let tile = map.worldToGrid(unit.position)
             if map.isValid(tile) && map.tiles[tile.y][tile.x].terrain.isPassable {

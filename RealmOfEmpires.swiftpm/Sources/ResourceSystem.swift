@@ -3,8 +3,8 @@ import SpriteKit
 
 class ResourceSystem {
     weak var gameScene: GameScene?
-    let gatherRate: CGFloat = 0.6   // base gather rate per second
-    let baseCarryCapacity: Int = 15
+    let gatherRate: CGFloat = GameConstants.baseGatherRate
+    let baseCarryCapacity: Int = GameConstants.baseCarryCapacity
 
     func effectiveCarryCapacity(for player: Player) -> Int {
         var cap = baseCarryCapacity
@@ -79,7 +79,7 @@ class ResourceSystem {
         for building in player.buildings where building.type == .fishTrap && building.isConstructed {
             let tile = map.tile(at: building.gridPosition)
             if let tile = tile, tile.resourceRemaining > 0 {
-                let fishRate: CGFloat = 0.6 * player.civilization.fishingBonus * deltaTime * 10
+                let fishRate: CGFloat = GameConstants.fishTrapGatherRate * player.civilization.fishingBonus * deltaTime * GameConstants.gatherMultiplier
                 let amount = Int(fishRate)
                 if amount > 0 {
                     tile.resourceRemaining -= amount
@@ -120,12 +120,12 @@ class ResourceSystem {
             }
             // Auto-reseed: if farm is depleted and auto-reseed is on, reset resources
             if let tile = tile, tile.resourceRemaining <= 0 && building.autoReseed {
-                if player.resources.wood >= 30 {
-                    player.resources.wood -= 30
+                if player.resources.wood >= GameConstants.farmReseedCost {
+                    player.resources.wood -= GameConstants.farmReseedCost
                     var farmFood = TerrainType.farm.resourceAmount
-                    // Crop Rotation: +175 farm food
+                    // Crop Rotation: bonus farm food
                     if player.researchedTechs.contains(.cropRotation) {
-                        farmFood += 175
+                        farmFood += GameConstants.cropRotationBonusFood
                     }
                     tile.resourceRemaining = farmFood
                     if let scene = gameScene {
@@ -163,7 +163,7 @@ class ResourceSystem {
         // Gather resources using accumulator for sub-frame precision
         let gatherSpeed = effectiveGatherSpeed(for: player, resourceType: resourceType)
         let carryCapacity = effectiveCarryCapacity(for: player)
-        unit.gatherAccumulator += gatherSpeed * deltaTime * 10
+        unit.gatherAccumulator += gatherSpeed * deltaTime * GameConstants.gatherMultiplier
         let amountToGather = Int(unit.gatherAccumulator)
 
         if amountToGather > 0 {
@@ -369,7 +369,7 @@ class ResourceSystem {
         }
 
         // Generate food from fishing
-        unit.gatherAccumulator += 0.5 * deltaTime * 10
+        unit.gatherAccumulator += GameConstants.fishingBoatGatherRate * deltaTime * GameConstants.gatherMultiplier
         let amount = Int(unit.gatherAccumulator)
         if amount > 0 {
             unit.gatherAccumulator -= CGFloat(amount)
@@ -493,7 +493,7 @@ class ResourceSystem {
         }
 
         // Repair rate: 1% of max HP per second, costs resources proportionally
-        let repairRate = CGFloat(building.maxHP) * 0.01 * deltaTime
+        let repairRate = CGFloat(building.maxHP) * GameConstants.repairRatePercent * deltaTime
         let hpToRepair = min(repairRate, CGFloat(building.maxHP - building.hp))
         let costFraction = hpToRepair / CGFloat(building.maxHP)
         let woodCost = Int(CGFloat(building.type.cost.wood) * costFraction * 0.5)

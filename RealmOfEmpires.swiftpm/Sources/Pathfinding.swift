@@ -1,14 +1,66 @@
 import Foundation
 
+// MARK: - Path Cache Key
+
+private struct PathCacheKey: Hashable {
+    let start: GridPosition
+    let end: GridPosition
+}
+
+// MARK: - LRU Path Cache
+
+private class LRUPathCache {
+    private var cache: [PathCacheKey: [GridPosition]] = [:]
+    private var accessOrder: [PathCacheKey] = []
+    private let maxEntries: Int
+
+    init(maxEntries: Int = GameConstants.pathCacheMaxEntries) {
+        self.maxEntries = maxEntries
+    }
+
+    func get(_ key: PathCacheKey) -> [GridPosition]? {
+        guard let result = cache[key] else { return nil }
+        // Move to end (most recently used)
+        accessOrder.removeAll { $0 == key }
+        accessOrder.append(key)
+        return result
+    }
+
+    func set(_ key: PathCacheKey, path: [GridPosition]) {
+        if cache[key] != nil {
+            accessOrder.removeAll { $0 == key }
+        } else if cache.count >= maxEntries {
+            // Evict least recently used
+            if let oldest = accessOrder.first {
+                cache.removeValue(forKey: oldest)
+                accessOrder.removeFirst()
+            }
+        }
+        cache[key] = path
+        accessOrder.append(key)
+    }
+
+    func invalidate() {
+        cache.removeAll()
+        accessOrder.removeAll()
+    }
+}
+
 class Pathfinder {
     let map: GameMap
+    private var pathCache = LRUPathCache()
 
     init(map: GameMap) {
         self.map = map
     }
 
+    /// Call when buildings are placed or destroyed to clear cached paths.
+    func invalidateCache() {
+        pathCache.invalidate()
+    }
+
     // A* pathfinding
-    func findPath(from start: GridPosition, to end: GridPosition, maxIterations: Int = 500) -> [GridPosition] {
+    func findPath(from start: GridPosition, to end: GridPosition, maxIterations: Int = GameConstants.pathfindingMaxIterations) -> [GridPosition] {
         guard map.isValid(start) && map.isValid(end) else { return [] }
 
         // If destination is not passable, find nearest passable tile
@@ -21,6 +73,12 @@ class Pathfinder {
         }
 
         if start == target { return [target] }
+
+        // Check cache
+        let cacheKey = PathCacheKey(start: start, end: target)
+        if let cached = pathCache.get(cacheKey) {
+            return cached
+        }
 
         var openSet = PriorityQueue<PathNode>()
         var closedSet = Set<GridPosition>()
@@ -36,7 +94,9 @@ class Pathfinder {
             if iterations > maxIterations { break }
 
             if current.position == target {
-                return reconstructPath(cameFrom: cameFrom, current: target)
+                let path = reconstructPath(cameFrom: cameFrom, current: target)
+                pathCache.set(cacheKey, path: path)
+                return path
             }
 
             closedSet.insert(current.position)

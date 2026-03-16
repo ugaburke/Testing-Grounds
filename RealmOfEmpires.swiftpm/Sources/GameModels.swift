@@ -1,6 +1,54 @@
 import Foundation
 import SpriteKit
 
+// MARK: - Game Constants
+
+enum GameConstants {
+    // Gather rates
+    static let baseGatherRate: CGFloat = 0.6
+    static let baseCarryCapacity: Int = 15
+    static let gatherMultiplier: CGFloat = 10.0  // Applied to gather speed * deltaTime
+    static let fishTrapGatherRate: CGFloat = 0.6
+    static let fishingBoatGatherRate: CGFloat = 0.5
+    static let farmReseedCost: Int = 30
+    static let cropRotationBonusFood: Int = 175
+
+    // Combat
+    static let baseAttackInterval: CGFloat = 1.2
+    static let buildingAttackInterval: TimeInterval = 2.0
+    static let rangedMissChance: CGFloat = 0.15
+    static let cavalryChargeMultiplier: CGFloat = 1.5
+    static let cavalryChargeTilesRequired: CGFloat = 3.0
+    static let splashDamageRadius: CGFloat = 1.5
+    static let healAmountPerTick: Int = 5
+    static let healCooldownInterval: CGFloat = 1.0
+    static let conversionTime: CGFloat = 5.0
+    static let conversionTimeFast: CGFloat = 3.5  // With Theocracy
+    static let trebuchetUnpackTime: CGFloat = 2.0
+
+    // Building
+    static let garrisonHealRate: Int = 3
+    static let trainingQueueMax: Int = 5
+    static let conscriptionSpeedMultiplier: CGFloat = 0.67
+    static let repairRatePercent: CGFloat = 0.01
+
+    // FOW & Vision
+    static let baseSightRange: Int = 8
+    static let scoutVisionBonus: Int = 4
+    static let cavalryVisionBonus: Int = 2
+    static let townWatchBonus: Int = 2
+
+    // Pathfinding
+    static let pathfindingMaxIterations: Int = 500
+    static let pathCacheMaxEntries: Int = 100
+
+    // Tile / Map
+    static let defaultTileSize: CGFloat = 32
+
+    // Movement dust interval
+    static let dustParticleInterval: CGFloat = 0.3
+}
+
 // MARK: - Civilization
 
 enum Civilization: String, CaseIterable {

@@ -3,8 +3,15 @@ import SpriteKit
 
 class FogOfWar {
     let map: GameMap
-    let sightRange: Int = 8
+    let sightRange: Int = GameConstants.baseSightRange
     var fogNodes: [[SKShapeNode?]]
+
+    // Track last known unit positions to skip recalculation for stationary units
+    private var lastUnitPositions: [Int: GridPosition] = [:]
+    private var lastBuildingCount: Int = 0
+    private var lastHasTownWatch: Bool = false
+    // Track which tiles were revealed by stationary entities to avoid full reset
+    private var needsFullRecalc: Bool = true
 
     init(map: GameMap) {
         self.map = map
@@ -12,29 +19,85 @@ class FogOfWar {
     }
 
     func update(player: Player) {
-        // Reset visibility
-        for y in 0..<map.height {
-            for x in 0..<map.width {
-                map.tiles[y][x].isVisible = false
+        let hasTownWatch = player.researchedTechs.contains(.townWatch)
+
+        // Check if we need full recalculation
+        let buildingCountChanged = player.buildings.count != lastBuildingCount
+        let townWatchChanged = hasTownWatch != lastHasTownWatch
+
+        // Determine which units moved
+        var movedUnitIDs: Set<Int> = []
+        var currentUnitIDs: Set<Int> = []
+        for unit in player.units {
+            currentUnitIDs.insert(unit.id)
+            if let lastPos = lastUnitPositions[unit.id] {
+                if lastPos != unit.gridPosition {
+                    movedUnitIDs.insert(unit.id)
+                }
+            } else {
+                // New unit, treat as moved
+                movedUnitIDs.insert(unit.id)
             }
         }
 
-        // Reveal around units (scouts and mounted units get bonus vision)
-        for unit in player.units {
-            var unitRange = sightRange
-            if unit.type == .scout || unit.type == .mangudai { unitRange += 4 }
-            else if unit.type == .lightCavalry { unitRange += 2 }
-            revealArea(around: unit.gridPosition, range: unitRange)
-        }
+        // Check for removed units
+        let removedUnits = lastUnitPositions.keys.filter { !currentUnitIDs.contains($0) }
 
-        // Reveal around buildings (use building-specific sight ranges)
-        let hasTownWatch = player.researchedTechs.contains(.townWatch)
-        for building in player.buildings {
-            var buildingRange = building.type.sightRange
-            // Town Watch: +2 LOS for all buildings
-            if hasTownWatch { buildingRange += 2 }
-            revealArea(around: building.gridPosition, range: buildingRange)
+        // Force full recalc if buildings changed, units removed, or town watch researched
+        if buildingCountChanged || townWatchChanged || !removedUnits.isEmpty || needsFullRecalc {
+            // Full recalculation
+            for y in 0..<map.height {
+                for x in 0..<map.width {
+                    map.tiles[y][x].isVisible = false
+                }
+            }
+
+            for unit in player.units {
+                var unitRange = sightRange
+                if unit.type == .scout || unit.type == .mangudai { unitRange += GameConstants.scoutVisionBonus }
+                else if unit.type == .lightCavalry { unitRange += GameConstants.cavalryVisionBonus }
+                revealArea(around: unit.gridPosition, range: unitRange)
+            }
+
+            for building in player.buildings {
+                var buildingRange = building.type.sightRange
+                if hasTownWatch { buildingRange += GameConstants.townWatchBonus }
+                revealArea(around: building.gridPosition, range: buildingRange)
+            }
+
+            needsFullRecalc = false
+        } else if !movedUnitIDs.isEmpty {
+            // Incremental: only reset visibility for tiles around moved units' old positions
+            // then re-reveal everything (we must reset all visibility since we can't track
+            // which tiles were revealed by which entity). But we only do full reset if units moved.
+            for y in 0..<map.height {
+                for x in 0..<map.width {
+                    map.tiles[y][x].isVisible = false
+                }
+            }
+
+            for unit in player.units {
+                var unitRange = sightRange
+                if unit.type == .scout || unit.type == .mangudai { unitRange += GameConstants.scoutVisionBonus }
+                else if unit.type == .lightCavalry { unitRange += GameConstants.cavalryVisionBonus }
+                revealArea(around: unit.gridPosition, range: unitRange)
+            }
+
+            for building in player.buildings {
+                var buildingRange = building.type.sightRange
+                if hasTownWatch { buildingRange += GameConstants.townWatchBonus }
+                revealArea(around: building.gridPosition, range: buildingRange)
+            }
         }
+        // If no units moved and no structural changes, skip entirely (visibility stays same)
+
+        // Update tracking state
+        lastUnitPositions.removeAll(keepingCapacity: true)
+        for unit in player.units {
+            lastUnitPositions[unit.id] = unit.gridPosition
+        }
+        lastBuildingCount = player.buildings.count
+        lastHasTownWatch = hasTownWatch
     }
 
     private func revealArea(around center: GridPosition, range: Int) {

@@ -373,10 +373,13 @@ class AIOpponent {
         let hasBarracks = player.buildings.contains { $0.type == .barracks && $0.isConstructed }
 
         // Train villagers
-        let maxVillagers = difficulty == .hard ? 20 : (difficulty == .normal ? 15 : 12)
+        // Chinese AI: higher villager cap and more aggressive early villager production
+        let baseMaxVillagers = difficulty == .hard ? 20 : (difficulty == .normal ? 15 : 12)
+        let maxVillagers = player.civilization == .chinese ? baseMaxVillagers + 3 : baseMaxVillagers
+        let maxQueue = player.civilization == .chinese ? 3 : 2
         if villagerCount < maxVillagers {
             if let tc = player.buildings.first(where: { $0.type == .townCenter && $0.isConstructed }) {
-                if tc.trainingQueue.count < 2 {
+                if tc.trainingQueue.count < maxQueue {
                     _ = scene.buildingSystem.trainUnit(type: .villager, at: tc, player: player)
                 }
             }
@@ -447,6 +450,13 @@ class AIOpponent {
             }
             if !player.buildings.contains(where: { $0.type == .blacksmith }) && player.resources.wood >= 150 {
                 buildNearTC(.blacksmith)
+            }
+
+            // Vikings: prioritize dock in Feudal Age for naval bonuses
+            if player.civilization == .vikings {
+                if !player.buildings.contains(where: { $0.type == .dock }) && player.resources.wood >= 150 {
+                    buildNearTC(.dock)
+                }
             }
 
             // Counter rush: build towers if enemy is rushing
@@ -603,6 +613,23 @@ class AIOpponent {
                 let desiredMonks = difficulty == .hard ? 3 : 2
                 if monkCount < desiredMonks && player.resources.gold >= 100 {
                     _ = scene.buildingSystem.trainUnit(type: .monk, at: building, player: player)
+                }
+
+            case .castle:
+                // Train civilization unique units from the castle
+                let uniqueCount = player.units.filter { $0.type == player.civilization.uniqueUnitType }.count
+                let desiredUnique = difficulty == .hard ? 5 : 3
+                if uniqueCount < desiredUnique {
+                    _ = scene.buildingSystem.trainUnit(type: .uniqueUnit, at: building, player: player)
+                }
+
+            case .dock:
+                // Vikings prioritize war galleys for naval dominance
+                if player.civilization == .vikings {
+                    let warGalleys = player.units.filter { $0.type == .warGalley }.count
+                    if warGalleys < 3 && player.resources.wood >= 135 && player.resources.gold >= 60 {
+                        _ = scene.buildingSystem.trainUnit(type: .warGalley, at: building, player: player)
+                    }
                 }
 
             default:
@@ -1112,11 +1139,13 @@ class AIOpponent {
 
     private func handleNavalStrategy() {
         guard let scene = gameScene else { return }
-        guard player.currentAge.rawValue >= Age.castleAge.rawValue else { return }
+        // Vikings can build docks in Feudal Age; others wait for Castle Age
+        let minNavalAge = player.civilization == .vikings ? Age.feudalAge : Age.castleAge
+        guard player.currentAge.rawValue >= minNavalAge.rawValue else { return }
 
         let hasDock = player.buildings.contains { $0.type == .dock && $0.isConstructed }
 
-        // Build dock if near water
+        // Build dock if near water (Vikings prioritize this)
         if !hasDock && player.resources.wood >= 150 {
             // Find water-adjacent position
             if let tc = player.buildings.first(where: { $0.type == .townCenter }) {
@@ -1143,10 +1172,11 @@ class AIOpponent {
             }
         }
 
-        // Train fishing boats for economy
+        // Train fishing boats for economy (Vikings get more)
         if hasDock {
             let fishingBoats = player.units.filter { $0.type == .fishingBoat }.count
-            if fishingBoats < 3 {
+            let maxFishingBoats = player.civilization == .vikings ? 5 : 3
+            if fishingBoats < maxFishingBoats {
                 if let dock = player.buildings.first(where: { $0.type == .dock && $0.isConstructed }) {
                     _ = scene.buildingSystem.trainUnit(type: .fishingBoat, at: dock, player: player)
                 }

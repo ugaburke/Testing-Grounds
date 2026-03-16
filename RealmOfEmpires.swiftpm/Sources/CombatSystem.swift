@@ -3,7 +3,7 @@ import SpriteKit
 
 class CombatSystem {
     weak var gameScene: GameScene?
-    let attackInterval: CGFloat = 1.2
+    let attackInterval: CGFloat = GameConstants.baseAttackInterval
 
     func update(deltaTime: CGFloat, players: [Player], map: GameMap, pathfinder: Pathfinder) {
         guard let scene = gameScene else { return }
@@ -113,7 +113,7 @@ class CombatSystem {
                 if unit.isPackedSiege {
                     // Need to unpack (2 second setup time)
                     unit.packTimer += deltaTime
-                    if unit.packTimer >= 2.0 {
+                    if unit.packTimer >= GameConstants.trebuchetUnpackTime {
                         unit.isPackedSiege = false
                         unit.packTimer = 0
                     }
@@ -125,7 +125,7 @@ class CombatSystem {
             if unit.attackCooldown <= 0 {
                 // Ranged accuracy: 15% miss chance, ballistics removes it
                 if unit.type.isRanged && !(unit.ownerPlayer?.researchedTechs.contains(.ballistics) ?? false) {
-                    if CGFloat.random(in: 0...1) < 0.15 {
+                    if CGFloat.random(in: 0...1) < GameConstants.rangedMissChance {
                         unit.attackCooldown = attackInterval * 0.5  // Partial cooldown on miss
                         return  // Miss!
                     }
@@ -140,8 +140,8 @@ class CombatSystem {
                 var damage = max(1, unit.effectiveAttack + bonus - (target.effectiveDefense + armorReduction) + Int.random(in: 0...2))
 
                 // Cavalry charge bonus: +50% damage after moving 3+ tiles
-                if unit.type.isCavalry && unit.tilesMoved >= 3.0 {
-                    damage = Int(CGFloat(damage) * 1.5)
+                if unit.type.isCavalry && unit.tilesMoved >= GameConstants.cavalryChargeTilesRequired {
+                    damage = Int(CGFloat(damage) * GameConstants.cavalryChargeMultiplier)
                     unit.tilesMoved = 0  // Reset after charge
                     // Visual: show "CHARGE!" text
                     if let scene = gameScene {
@@ -186,7 +186,7 @@ class CombatSystem {
 
                 // Splash damage for siege units
                 if unit.type == .mangonel || unit.type == .trebuchet {
-                    let splashRadius: CGFloat = 1.5
+                    let splashRadius: CGFloat = GameConstants.splashDamageRadius
                     let splashDamage = max(1, damage / 3)
                     for p in allPlayers where p.id != player.id {
                         for splashTarget in p.units where splashTarget.id != target.id {
@@ -367,8 +367,8 @@ class CombatSystem {
             unit.path = []
             unit.healCooldown -= deltaTime
             if unit.healCooldown <= 0 {
-                target.hp = min(target.maxHP, target.hp + 5)
-                unit.healCooldown = 1.0
+                target.hp = min(target.maxHP, target.hp + GameConstants.healAmountPerTick)
+                unit.healCooldown = GameConstants.healCooldownInterval
 
                 // Healing visual effect
                 if let scene = gameScene {
@@ -408,7 +408,7 @@ class CombatSystem {
         if dist <= 6.0 {
             unit.path = []
             // Theocracy: faster conversion (3.5s instead of 5s)
-            let conversionTime: CGFloat = (unit.ownerPlayer?.researchedTechs.contains(.theocracy) == true) ? 3.5 : 5.0
+            let conversionTime: CGFloat = (unit.ownerPlayer?.researchedTechs.contains(.theocracy) == true) ? GameConstants.conversionTimeFast : GameConstants.conversionTime
             unit.conversionProgress += deltaTime / conversionTime
 
             // Visual: golden glow on target
