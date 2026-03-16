@@ -28,7 +28,6 @@ enum TechType: String, CaseIterable {
     case conscription  // Units train 33% faster
     case murder_holes  // Buildings no min range
     case sappers       // Infantry +15 vs buildings
-    // New technologies
     case heresy        // Converted units die instead
     case theocracy     // Monks regen faith faster
     case siegeEngineers // Siege +1 range, +20% vs buildings

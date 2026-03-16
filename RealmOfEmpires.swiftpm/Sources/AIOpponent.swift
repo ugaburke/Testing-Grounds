@@ -16,8 +16,6 @@ class AIOpponent {
     var wonderAwareness: Bool = false
     var navalTimer: CGFloat = 0
 
-    // --- Batch 1: New AI Intelligence Properties ---
-
     // Scouting: track whether we found the enemy base
     var scoutedEnemyBase: GridPosition?
     var scoutSentImmediately: Bool = false

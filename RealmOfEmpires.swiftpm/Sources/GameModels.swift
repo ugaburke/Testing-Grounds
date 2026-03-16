@@ -427,7 +427,6 @@ enum BuildingType: CaseIterable {
     case siegeWorkshop
     case monastery
     case dock
-    // New buildings
     case university
     case wonder
     case outpost
@@ -744,7 +743,6 @@ enum UnitType: CaseIterable {
     case trebuchet
     case fishingBoat
     case tradeCart
-    // New units
     case warGalley
     case fireShip
     case petard
@@ -1253,7 +1251,6 @@ class Unit {
     var bodyNode: SKNode?
     var healthBarNode: SKNode?
     var isSelected: Bool = false
-    var lastAttackTime: TimeInterval = 0
     var lastDirection: CGFloat = 0
     var gatherAccumulator: CGFloat = 0
     var attackMoveDestination: GridPosition?
