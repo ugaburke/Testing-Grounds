@@ -16,6 +16,35 @@ class AIOpponent {
     var wonderAwareness: Bool = false
     var navalTimer: CGFloat = 0
 
+    // --- Batch 1: New AI Intelligence Properties ---
+
+    // Scouting: track whether we found the enemy base
+    var scoutedEnemyBase: GridPosition?
+    var scoutSentImmediately: Bool = false
+    var scoutTargetIndex: Int = 0
+
+    // Adaptive strategy: detect enemy playstyle
+    enum EnemyPlaystyle {
+        case unknown
+        case turtle   // Many towers/walls, few military
+        case rush     // Early aggression with many units
+        case boom     // Heavy economy focus
+    }
+    var enemyPlaystyle: EnemyPlaystyle = .unknown
+
+    // Counter-unit composition tracking to prevent flip-flopping
+    var lastEnemyComposition: (cavalry: Int, ranged: Int, infantry: Int, siege: Int, monks: Int) = (0, 0, 0, 0, 0)
+    var compositionSampleCount: Int = 0
+
+    // Army rally system
+    var rallyPoint: GridPosition?
+    var rallyTimer: CGFloat = 0
+    let rallyTimeout: CGFloat = 15.0  // Don't wait longer than 15 seconds
+    var isRallying: Bool = false
+
+    // Monk management
+    var monkTargetCount: Int = 0
+
     var decisionInterval: CGFloat {
         switch difficulty {
         case .easy: return 5.0
@@ -74,8 +103,21 @@ class AIOpponent {
             }
         }
 
+        // Dark Age immediate scouting - send scout right away
+        if !scoutSentImmediately && player.currentAge == .darkAge {
+            sendInitialScout()
+        }
+
+        // Update rally timer if rallying
+        if isRallying {
+            rallyTimer += deltaTime
+        }
+
         guard decisionTimer >= decisionInterval else { return }
         decisionTimer = 0
+
+        // Check for enemy buildings near our scout (scouting intelligence)
+        updateScoutIntelligence()
 
         updateStrategy()
 
@@ -100,6 +142,9 @@ class AIOpponent {
             handleDefense()
         }
 
+        // Monk micro-management
+        handleMonkBehavior()
+
         // Naval strategy
         navalTimer += decisionInterval
         if navalTimer >= 10.0 {
@@ -113,6 +158,56 @@ class AIOpponent {
         // Build outposts for vision
         buildOutpostsForVision()
     }
+
+    // MARK: - Scouting Intelligence
+
+    /// In Dark Age, immediately send the starting scout to explore
+    private func sendInitialScout() {
+        guard let scene = gameScene else { return }
+
+        if let scout = player.units.first(where: { $0.type == .scout }) {
+            scoutSentImmediately = true
+
+            // Send scout toward likely enemy positions (opposite corners first)
+            guard let tc = player.buildings.first(where: { $0.type == .townCenter }) else { return }
+            let mapW = scene.gameMap.width
+            let mapH = scene.gameMap.height
+
+            // Head to the corner furthest from our TC (most likely enemy location)
+            let corners = [
+                GridPosition(x: mapW / 4, y: mapH / 4),
+                GridPosition(x: mapW * 3 / 4, y: mapH / 4),
+                GridPosition(x: mapW / 4, y: mapH * 3 / 4),
+                GridPosition(x: mapW * 3 / 4, y: mapH * 3 / 4),
+            ]
+            let furthestCorner = corners.max(by: {
+                $0.distance(to: tc.gridPosition) < $1.distance(to: tc.gridPosition)
+            }) ?? corners[0]
+
+            scene.unitSystem.moveUnit(scout, to: furthestCorner, pathfinder: scene.pathfinder)
+        }
+    }
+
+    /// Check if any scout has discovered enemy buildings
+    private func updateScoutIntelligence() {
+        guard let scene = gameScene else { return }
+        guard scoutedEnemyBase == nil else { return }
+
+        let scouts = player.units.filter { $0.type == .scout }
+        for scout in scouts {
+            for enemy in scene.players where enemy.id != player.id {
+                for building in enemy.buildings {
+                    let dist = scout.gridPosition.distance(to: building.gridPosition)
+                    if dist < 12 {
+                        scoutedEnemyBase = building.gridPosition
+                        return
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Defense (Enhanced Retreat + Monk Healing)
 
     private func handleDefense() {
         guard let scene = gameScene else { return }
@@ -128,10 +223,15 @@ class AIOpponent {
 
         guard !threatPositions.isEmpty else { return }
 
-        // Retreat behavior: pull back wounded units
-        for unit in player.units where unit.type != .villager {
-            if CGFloat(unit.hp) < CGFloat(unit.maxHP) * 0.25 {
-                // Critically wounded, retreat to TC
+        // Enhanced retreat behavior: pull back wounded units
+        let monks = player.units.filter { $0.type == .monk }
+        let hasMonks = !monks.isEmpty
+
+        for unit in player.units where unit.type != .villager && unit.type != .monk {
+            let hpPercent = CGFloat(unit.hp) / CGFloat(unit.maxHP)
+
+            // Retreat attacking units at 25% HP
+            if hpPercent < 0.25 {
                 if let tc = player.buildings.first(where: { $0.type == .townCenter }) {
                     let distToTC = unit.gridPosition.distance(to: tc.gridPosition)
                     if distToTC > 5 {
@@ -141,9 +241,41 @@ class AIOpponent {
                     }
                 }
             }
+            // Also retreat non-attacking units at 30% HP
+            else if hpPercent < 0.30 {
+                if let tc = player.buildings.first(where: { $0.type == .townCenter }) {
+                    let distToTC = unit.gridPosition.distance(to: tc.gridPosition)
+                    if distToTC > 5 {
+                        let shouldRetreat: Bool
+                        switch unit.state {
+                        case .idle, .moving(_):
+                            shouldRetreat = true
+                        default:
+                            shouldRetreat = false
+                        }
+                        if shouldRetreat {
+                            scene.unitSystem.moveUnit(unit, to: tc.gridPosition, pathfinder: scene.pathfinder)
+                        }
+                    }
+                }
+            }
+
+            // Monk healing: send monks to heal damaged units near TC
+            if hasMonks && hpPercent < 0.60 && unit.hp > 0 {
+                if let tc = player.buildings.first(where: { $0.type == .townCenter }) {
+                    let distToTC = unit.gridPosition.distance(to: tc.gridPosition)
+                    if distToTC < 10 {
+                        // Find an idle monk to heal this unit
+                        if let monk = monks.first(where: { isIdle($0) }) {
+                            monk.state = .healing(targetUnitID: unit.id)
+                            monk.path = scene.pathfinder.findPath(from: monk.gridPosition, to: unit.gridPosition)
+                        }
+                    }
+                }
+            }
         }
 
-        let idleMilitary = player.units.filter { $0.type != .villager && isIdle($0) }
+        let idleMilitary = player.units.filter { $0.type != .villager && $0.type != .monk && isIdle($0) }
         guard !idleMilitary.isEmpty else { return }
 
         let threatPos = threatPositions[0]
@@ -164,21 +296,75 @@ class AIOpponent {
         }
     }
 
+    // MARK: - Strategy (Enhanced with Adaptive Detection)
+
     private func updateStrategy() {
         let villagerCount = player.units.filter { $0.type == .villager }.count
-        let militaryCount = player.units.filter { $0.type != .villager }.count
+        let militaryCount = player.units.filter { $0.type != .villager && $0.type != .monk }.count
         let hasBarracks = player.buildings.contains { $0.type == .barracks && $0.isConstructed }
+
+        // Detect enemy playstyle
+        detectEnemyPlaystyle()
+
+        // Adapt strategy based on detected enemy playstyle
+        if enemyPlaystyle == .rush && rushTimer < 120 {
+            // Prioritize defense: build towers and defensive units
+            if militaryCount < 4 {
+                strategy = .military
+                return
+            }
+        }
 
         if villagerCount < 8 || !hasBarracks {
             strategy = .economy
         } else if militaryCount < 6 {
             strategy = .military
         } else if rushTimer > attackTimerThreshold || militaryCount >= militaryThreshold {
+            // If rallying, stay in attack mode but don't send yet
             strategy = .attack
         } else {
             strategy = .military
         }
     }
+
+    /// Detect whether enemy is turtling, rushing, or booming
+    private func detectEnemyPlaystyle() {
+        guard let scene = gameScene else { return }
+
+        for enemy in scene.players where enemy.id != player.id {
+            let enemyMilitary = enemy.units.filter { $0.type != .villager && $0.type != .monk }.count
+            let enemyTowers = enemy.buildings.filter { $0.type == .tower && $0.isConstructed }.count
+            let enemyWalls = enemy.buildings.filter { $0.type == .wall && $0.isConstructed }.count
+            let enemyVillagers = enemy.units.filter { $0.type == .villager }.count
+
+            let defensiveStructures = enemyTowers + enemyWalls / 3
+
+            // Turtle detection: many towers/walls but few military
+            if defensiveStructures >= 4 && enemyMilitary < 5 {
+                enemyPlaystyle = .turtle
+                return
+            }
+
+            // Rush detection: early aggression (before 120s) with significant military
+            if rushTimer < 120 && enemyMilitary >= 5 {
+                enemyPlaystyle = .rush
+                return
+            }
+
+            // Boom detection: lots of villagers, few military
+            if enemyVillagers > 15 && enemyMilitary < 4 {
+                enemyPlaystyle = .boom
+                return
+            }
+        }
+
+        // Keep existing detection if nothing clear
+        if enemyPlaystyle == .unknown {
+            enemyPlaystyle = .unknown
+        }
+    }
+
+    // MARK: - Economy (Enhanced Scouting)
 
     private func handleEconomy() {
         guard let scene = gameScene else { return }
@@ -196,18 +382,24 @@ class AIOpponent {
             }
         }
 
-        // Send scout to explore
+        // Send scout to explore (enhanced: prioritize unexplored areas, track enemy)
         let scouts = player.units.filter { $0.type == .scout && isIdle($0) }
         if let scout = scouts.first {
-            let mapCenter = GridPosition(x: scene.gameMap.width / 2, y: scene.gameMap.height / 2)
+            let mapW = scene.gameMap.width
+            let mapH = scene.gameMap.height
             let scoutTargets = [
-                GridPosition(x: scene.gameMap.width / 4, y: scene.gameMap.height / 4),
-                GridPosition(x: scene.gameMap.width * 3 / 4, y: scene.gameMap.height / 4),
-                GridPosition(x: scene.gameMap.width / 4, y: scene.gameMap.height * 3 / 4),
-                GridPosition(x: scene.gameMap.width * 3 / 4, y: scene.gameMap.height * 3 / 4),
-                mapCenter
+                GridPosition(x: mapW / 4, y: mapH / 4),
+                GridPosition(x: mapW * 3 / 4, y: mapH / 4),
+                GridPosition(x: mapW / 4, y: mapH * 3 / 4),
+                GridPosition(x: mapW * 3 / 4, y: mapH * 3 / 4),
+                GridPosition(x: mapW / 2, y: mapH / 2),
+                GridPosition(x: mapW / 6, y: mapH / 2),
+                GridPosition(x: mapW * 5 / 6, y: mapH / 2),
             ]
-            let target = scoutTargets.randomElement() ?? mapCenter
+
+            // Cycle through targets sequentially rather than randomly for better coverage
+            let target = scoutTargets[scoutTargetIndex % scoutTargets.count]
+            scoutTargetIndex += 1
             scene.unitSystem.moveUnit(scout, to: target, pathfinder: scene.pathfinder)
         }
 
@@ -256,6 +448,14 @@ class AIOpponent {
             if !player.buildings.contains(where: { $0.type == .blacksmith }) && player.resources.wood >= 150 {
                 buildNearTC(.blacksmith)
             }
+
+            // Counter rush: build towers if enemy is rushing
+            if enemyPlaystyle == .rush {
+                let towerCount = player.buildings.filter { $0.type == .tower }.count
+                if towerCount < 2 && player.resources.stone >= 125 && player.resources.wood >= 50 {
+                    buildNearTC(.tower)
+                }
+            }
         }
 
         // Castle age buildings
@@ -269,6 +469,10 @@ class AIOpponent {
             if !player.buildings.contains(where: { $0.type == .university }) && player.resources.wood >= 200 {
                 buildNearTC(.university)
             }
+            // Build monastery in Castle Age for monks
+            if !player.buildings.contains(where: { $0.type == .monastery }) && player.resources.wood >= 175 && player.resources.gold >= 100 {
+                buildNearTC(.monastery)
+            }
         }
 
         // Build walls around base
@@ -280,24 +484,46 @@ class AIOpponent {
         }
     }
 
-    private func analyzeEnemyComposition() -> (cavalry: Int, ranged: Int, infantry: Int) {
-        guard let scene = gameScene else { return (0, 0, 0) }
-        var cav = 0, ranged = 0, inf = 0
+    // MARK: - Enemy Composition Analysis (Enhanced)
+
+    private func analyzeEnemyComposition() -> (cavalry: Int, ranged: Int, infantry: Int, siege: Int, monks: Int) {
+        guard let scene = gameScene else { return (0, 0, 0, 0, 0) }
+        var cav = 0, ranged = 0, inf = 0, siege = 0, monks = 0
         for enemy in scene.players where enemy.id != player.id {
             for unit in enemy.units where unit.type != .villager {
                 if unit.type.isCavalry { cav += 1 }
                 if unit.type.isRanged { ranged += 1 }
                 if unit.type.isInfantry { inf += 1 }
+                if unit.type.isSiege { siege += 1 }
+                if unit.type == .monk { monks += 1 }
             }
         }
-        return (cav, ranged, inf)
+
+        // Smooth composition tracking to prevent flip-flopping
+        // Blend new observation with historical data
+        if compositionSampleCount > 0 {
+            let weight: CGFloat = 0.7  // Weight toward new observation
+            let oldWeight: CGFloat = 1.0 - weight
+            cav = Int(CGFloat(cav) * weight + CGFloat(lastEnemyComposition.cavalry) * oldWeight)
+            ranged = Int(CGFloat(ranged) * weight + CGFloat(lastEnemyComposition.ranged) * oldWeight)
+            inf = Int(CGFloat(inf) * weight + CGFloat(lastEnemyComposition.infantry) * oldWeight)
+            siege = Int(CGFloat(siege) * weight + CGFloat(lastEnemyComposition.siege) * oldWeight)
+            monks = Int(CGFloat(monks) * weight + CGFloat(lastEnemyComposition.monks) * oldWeight)
+        }
+
+        lastEnemyComposition = (cav, ranged, inf, siege, monks)
+        compositionSampleCount += 1
+
+        return (cav, ranged, inf, siege, monks)
     }
+
+    // MARK: - Military (Enhanced with Counter-Units, Monks, Siege Counters)
 
     private func handleMilitary() {
         guard let scene = gameScene else { return }
 
         let enemy = analyzeEnemyComposition()
-        let totalEnemy = enemy.cavalry + enemy.ranged + enemy.infantry
+        let totalEnemy = enemy.cavalry + enemy.ranged + enemy.infantry + enemy.siege + enemy.monks
 
         for building in player.buildings where building.isConstructed {
             guard building.trainingQueue.count < 2 else { continue }
@@ -312,18 +538,36 @@ class AIOpponent {
                 } else {
                     _ = scene.buildingSystem.trainUnit(type: .militia, at: building, player: player)
                 }
+
             case .archeryRange:
+                // If enemy has monks, prioritize ranged units to keep distance
+                if totalEnemy > 0 && enemy.monks >= 2 {
+                    if player.currentAge.rawValue >= Age.castleAge.rawValue {
+                        _ = scene.buildingSystem.trainUnit(type: .crossbowman, at: building, player: player)
+                    } else {
+                        _ = scene.buildingSystem.trainUnit(type: .archer, at: building, player: player)
+                    }
+                }
                 // Counter-build: skirmishers if enemy is 40%+ ranged
-                if totalEnemy > 0 && enemy.ranged * 100 / max(totalEnemy, 1) > 40 {
+                else if totalEnemy > 0 && enemy.ranged * 100 / max(totalEnemy, 1) > 40 {
                     _ = scene.buildingSystem.trainUnit(type: .skirmisher, at: building, player: player)
                 } else if player.currentAge.rawValue >= Age.castleAge.rawValue {
                     _ = scene.buildingSystem.trainUnit(type: .crossbowman, at: building, player: player)
                 } else {
                     _ = scene.buildingSystem.trainUnit(type: .archer, at: building, player: player)
                 }
+
             case .stable:
+                // If enemy has lots of siege, train cavalry to rush siege
+                if totalEnemy > 0 && enemy.siege >= 2 {
+                    if player.currentAge.rawValue >= Age.castleAge.rawValue && player.resources.gold >= 75 {
+                        _ = scene.buildingSystem.trainUnit(type: .knight, at: building, player: player)
+                    } else {
+                        _ = scene.buildingSystem.trainUnit(type: .lightCavalry, at: building, player: player)
+                    }
+                }
                 // Knights crush infantry-heavy compositions
-                if totalEnemy > 0 && enemy.infantry * 100 / max(totalEnemy, 1) > 50 {
+                else if totalEnemy > 0 && enemy.infantry * 100 / max(totalEnemy, 1) > 50 {
                     if player.currentAge.rawValue >= Age.castleAge.rawValue && player.resources.gold >= 75 {
                         _ = scene.buildingSystem.trainUnit(type: .knight, at: building, player: player)
                     } else {
@@ -336,35 +580,195 @@ class AIOpponent {
                         _ = scene.buildingSystem.trainUnit(type: .scout, at: building, player: player)
                     }
                 }
+
             case .siegeWorkshop:
-                if player.resources.wood >= 200 && player.resources.gold >= 200 {
-                    _ = scene.buildingSystem.trainUnit(type: .trebuchet, at: building, player: player)
-                } else if player.resources.wood >= 160 && player.resources.gold >= 75 {
-                    _ = scene.buildingSystem.trainUnit(type: .batteringRam, at: building, player: player)
+                // Counter turtle play: prioritize siege when enemy is turtling
+                if enemyPlaystyle == .turtle {
+                    if player.resources.wood >= 200 && player.resources.gold >= 200 {
+                        _ = scene.buildingSystem.trainUnit(type: .trebuchet, at: building, player: player)
+                    } else if player.resources.wood >= 160 && player.resources.gold >= 75 {
+                        _ = scene.buildingSystem.trainUnit(type: .batteringRam, at: building, player: player)
+                    }
+                } else {
+                    if player.resources.wood >= 200 && player.resources.gold >= 200 {
+                        _ = scene.buildingSystem.trainUnit(type: .trebuchet, at: building, player: player)
+                    } else if player.resources.wood >= 160 && player.resources.gold >= 75 {
+                        _ = scene.buildingSystem.trainUnit(type: .batteringRam, at: building, player: player)
+                    }
                 }
+
             case .monastery:
-                if player.resources.gold >= 100 {
+                // Train 2-3 monks in Castle Age
+                let monkCount = player.units.filter { $0.type == .monk }.count
+                let desiredMonks = difficulty == .hard ? 3 : 2
+                if monkCount < desiredMonks && player.resources.gold >= 100 {
                     _ = scene.buildingSystem.trainUnit(type: .monk, at: building, player: player)
                 }
+
             default:
                 break
             }
         }
+
+        // If enemy is rushing, train defensive units quickly
+        if enemyPlaystyle == .rush {
+            for building in player.buildings where building.isConstructed && building.type == .barracks {
+                if building.trainingQueue.count < 2 {
+                    _ = scene.buildingSystem.trainUnit(type: .spearman, at: building, player: player)
+                }
+            }
+        }
     }
+
+    // MARK: - Monk Behavior
+
+    private func handleMonkBehavior() {
+        guard let scene = gameScene else { return }
+
+        let monks = player.units.filter { $0.type == .monk }
+        guard !monks.isEmpty else { return }
+
+        for monk in monks {
+            guard isIdle(monk) else { continue }
+
+            // Priority 1: Heal wounded friendly units near TC
+            let woundedFriendlies = player.units.filter {
+                $0.type != .monk && $0.type != .villager &&
+                $0.hp < $0.maxHP && $0.hp > 0
+            }.sorted(by: { $0.hp < $1.hp })  // Heal most damaged first
+
+            if let wounded = woundedFriendlies.first {
+                let dist = monk.gridPosition.distance(to: wounded.gridPosition)
+                if dist < 15 {
+                    monk.state = .healing(targetUnitID: wounded.id)
+                    monk.path = scene.pathfinder.findPath(from: monk.gridPosition, to: wounded.gridPosition)
+                    continue
+                }
+            }
+
+            // Priority 2: During attack, attempt conversion on expensive enemy units
+            if strategy == .attack {
+                var bestTarget: Unit?
+                var bestDist: CGFloat = .infinity
+
+                for enemy in scene.players where enemy.id != player.id {
+                    for enemyUnit in enemy.units {
+                        // Target expensive units: knights, cataphracts, war elephants
+                        let isHighValue = enemyUnit.type == .knight ||
+                                          enemyUnit.type == .cataphract ||
+                                          enemyUnit.type == .warElephant ||
+                                          enemyUnit.type == .mangudai ||
+                                          enemyUnit.type == .trebuchet
+                        if isHighValue {
+                            let dist = monk.gridPosition.distance(to: enemyUnit.gridPosition)
+                            if dist < bestDist && dist < 20 {
+                                bestDist = dist
+                                bestTarget = enemyUnit
+                            }
+                        }
+                    }
+                }
+
+                if let target = bestTarget {
+                    monk.state = .converting(targetUnitID: target.id)
+                    monk.path = scene.pathfinder.findPath(from: monk.gridPosition, to: target.gridPosition)
+                    continue
+                }
+            }
+        }
+    }
+
+    // MARK: - Army Rally System
+
+    /// Gather military units at a rally point before attacking
+    private func rallyArmy(target: GridPosition) -> Bool {
+        guard let scene = gameScene else { return false }
+        guard let tc = player.buildings.first(where: { $0.type == .townCenter }) else { return false }
+
+        let militaryUnits = player.units.filter { $0.type != .villager && $0.type != .monk }
+        guard !militaryUnits.isEmpty else { return false }
+
+        // Calculate rally point: midpoint between TC and target
+        if rallyPoint == nil {
+            rallyPoint = GridPosition(
+                x: (tc.gridPosition.x + target.x) / 2,
+                y: (tc.gridPosition.y + target.y) / 2
+            )
+            isRallying = true
+            rallyTimer = 0
+        }
+
+        guard let rally = rallyPoint else { return false }
+
+        // Send idle units to rally point
+        for unit in militaryUnits {
+            if isIdle(unit) {
+                let distToRally = unit.gridPosition.distance(to: rally)
+                if distToRally > 5 {
+                    scene.unitSystem.moveUnit(unit, to: rally, pathfinder: scene.pathfinder)
+                }
+            }
+        }
+
+        // Check if 70% of army has arrived (within 5 tiles of rally)
+        let arrivedCount = militaryUnits.filter { $0.gridPosition.distance(to: rally) <= 5 }.count
+        let arrivalRatio = CGFloat(arrivedCount) / CGFloat(max(militaryUnits.count, 1))
+
+        // Attack once 70% assembled or timer expires
+        if arrivalRatio >= 0.7 || rallyTimer >= rallyTimeout {
+            isRallying = false
+            rallyPoint = nil
+            rallyTimer = 0
+            return true  // Ready to attack
+        }
+
+        return false  // Still rallying
+    }
+
+    // MARK: - Attack (Enhanced with Rally)
 
     private func handleAttack() {
         guard let scene = gameScene else { return }
         guard let humanPlayer = scene.players.first(where: { $0.isHuman }) else { return }
 
-        let militaryUnits = player.units.filter { $0.type != .villager }
+        let militaryUnits = player.units.filter { $0.type != .villager && $0.type != .monk }
         guard !militaryUnits.isEmpty else {
             strategy = .military
             return
         }
 
+        // Determine attack target
+        let attackTarget: GridPosition
+        if let knownBase = scoutedEnemyBase {
+            // Use scouted enemy base location
+            attackTarget = knownBase
+        } else if let enemyTC = humanPlayer.buildings.first(where: { $0.type == .townCenter }) {
+            attackTarget = enemyTC.gridPosition
+        } else if let enemyBuilding = humanPlayer.buildings.first {
+            attackTarget = enemyBuilding.gridPosition
+        } else if let enemyUnit = humanPlayer.units.first {
+            attackTarget = enemyUnit.gridPosition
+        } else {
+            return
+        }
+
+        // Rally army before attacking (skip for first few scouts)
+        if militaryUnits.count >= 5 && !isRallying && rallyPoint == nil {
+            // Start rally
+            _ = rallyArmy(target: attackTarget)
+            return
+        }
+
+        if isRallying {
+            let ready = rallyArmy(target: attackTarget)
+            if !ready {
+                return  // Still gathering
+            }
+        }
+
         // Split fast units for harassment if we have enough
         let fastUnits = militaryUnits.filter { $0.type == .scout || $0.type == .lightCavalry }
-        let mainArmy = militaryUnits.filter { $0.type != .scout && $0.type != .lightCavalry }
+        let mainArmy = militaryUnits.filter { $0.type != .scout && $0.type != .lightCavalry && $0.type != .monk }
 
         // Harass: send scouts to raid villagers (even with just 1 scout)
         if fastUnits.count >= 1 {
@@ -401,6 +805,18 @@ class AIOpponent {
             target = enemyUnit.gridPosition
         } else {
             return
+        }
+
+        // Send monks to follow army and heal during attack
+        let monks = player.units.filter { $0.type == .monk && isIdle($0) }
+        for monk in monks {
+            // Move monks toward army center
+            if let frontUnit = mainArmy.first {
+                let monkDist = monk.gridPosition.distance(to: frontUnit.gridPosition)
+                if monkDist > 8 {
+                    scene.unitSystem.moveUnit(monk, to: frontUnit.gridPosition, pathfinder: scene.pathfinder)
+                }
+            }
         }
 
         // Coordinated attack: split army into groups for multi-prong attack (hard AI)
@@ -536,6 +952,8 @@ class AIOpponent {
         }
     }
 
+    // MARK: - Age Advance (Enhanced with Economy Check)
+
     private func advanceAgeIfPossible() {
         guard !player.isAdvancingAge else { return }
         guard player.currentAge != .imperialAge else { return }
@@ -543,13 +961,31 @@ class AIOpponent {
         let nextAge = Age(rawValue: player.currentAge.rawValue + 1)!
         if player.canAfford(nextAge.advanceCost) {
             let villagerCount = player.units.filter { $0.type == .villager }.count
-            if villagerCount >= (player.currentAge.rawValue * 3 + 5) {
+            let baseMinVillagers = player.currentAge.rawValue * 3 + 5
+
+            // Require at least 3 more villagers than the base minimum before aging up
+            // On hard difficulty, age up more aggressively (only 1 extra needed)
+            let extraVillagersNeeded: Int
+            switch difficulty {
+            case .hard:
+                extraVillagersNeeded = 1
+            case .normal:
+                extraVillagersNeeded = 3
+            case .easy:
+                extraVillagersNeeded = 3
+            }
+
+            let requiredVillagers = baseMinVillagers + extraVillagersNeeded
+
+            if villagerCount >= requiredVillagers {
                 player.spend(nextAge.advanceCost)
                 player.isAdvancingAge = true
                 player.ageAdvanceProgress = 0
             }
         }
     }
+
+    // MARK: - Utility Methods
 
     private func isIdle(_ unit: Unit) -> Bool {
         if case .idle = unit.state { return true }
