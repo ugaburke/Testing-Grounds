@@ -89,7 +89,7 @@ class AIOpponent {
         }
 
         // Dynamic difficulty: adjust based on score differential
-        if let scene = gameScene, let human = scene.players.first(where: { $0.isHuman }) {
+        if let human = gameScene?.players.first(where: { $0.isHuman }) {
             let humanScore = human.units.count + human.buildings.count * 2
             let aiScore = player.units.count + player.buildings.count * 2
             if aiScore > humanScore * 2 {

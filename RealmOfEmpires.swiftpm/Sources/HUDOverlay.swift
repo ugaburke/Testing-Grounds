@@ -500,10 +500,11 @@ class HUDOverlay {
     }
 
     func updateIdleMilitaryCount(player: Player) {
-        let militaryTypes: Set<UnitType> = [.militia, .manAtArms, .longSwordsman, .knight, .crossbowman,
+        let militaryTypes: Set<UnitType> = [.militia, .manAtArms, .spearman, .knight, .crossbowman,
                                              .skirmisher, .scout, .lightCavalry, .batteringRam, .mangonel,
-                                             .scorpion, .monk, .trebuchet, .warGalley, .fireShip,
-                                             .petard, .camelRider, .handCannoneer, .samurai, .warElephant, .mangudai]
+                                             .archer, .monk, .trebuchet, .warGalley, .fireShip,
+                                             .petard, .camelRider, .handCannoneer, .samurai, .warElephant, .mangudai,
+                                             .uniqueUnit, .longbowman, .throwingAxeman, .cataphract, .chuKoNu, .berserk]
         let idleMilCount = player.units.filter { unit in
             guard militaryTypes.contains(unit.type) else { return false }
             if case .idle = unit.state { return true }

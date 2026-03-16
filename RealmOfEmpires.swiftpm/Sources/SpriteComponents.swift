@@ -497,7 +497,6 @@ class SpriteFactory {
                 unit.node?.addChild(bg)
             } else if let bar = unit.node?.childNode(withName: healthBarName) as? SKShapeNode {
                 // Update existing
-                let barWidth: CGFloat = tileSize * 0.8
                 let hpRatio = CGFloat(unit.hp) / CGFloat(unit.maxHP)
                 if let fg = bar.childNode(withName: "hpFill") as? SKShapeNode {
                     fg.xScale = hpRatio
