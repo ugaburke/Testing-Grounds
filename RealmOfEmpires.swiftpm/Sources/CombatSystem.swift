@@ -95,7 +95,7 @@ class CombatSystem {
         case .mangonel: minRange = 2.0
         default: minRange = 0
         }
-        if minRange > 0 && dist < minRange && dist <= unit.type.attackRange {
+        if minRange > 0 && dist < minRange && dist <= unit.effectiveAttackRange {
             // Too close, try to move away
             let awayX = unit.gridPosition.x + (unit.gridPosition.x - target.gridPosition.x)
             let awayY = unit.gridPosition.y + (unit.gridPosition.y - target.gridPosition.y)

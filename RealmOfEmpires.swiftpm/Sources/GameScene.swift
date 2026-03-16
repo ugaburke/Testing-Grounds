@@ -1331,6 +1331,13 @@ class GameScene: SKScene {
                 }
             }
 
+        case .cancelResearch:
+            if let building = selectedBuilding {
+                if buildingSystem.cancelResearch(at: building, player: humanPlayer) {
+                    hud.showStatus("Research cancelled (50% refunded)")
+                }
+            }
+
         case .cycleStance:
             let selected = unitSystem.selectedUnits(for: humanPlayer).filter { $0.type != .villager }
             for unit in selected {

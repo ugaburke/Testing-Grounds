@@ -1529,7 +1529,7 @@ class HUDOverlay {
             SKAction.fadeIn(withDuration: 0.15)
         ]))
 
-        let bg = SKShapeNode(rectOf: CGSize(width: 420, height: 380), cornerRadius: 8)
+        let bg = SKShapeNode(rectOf: CGSize(width: 420, height: 440), cornerRadius: 8)
         bg.fillColor = SKColor(red: 0.1, green: 0.08, blue: 0.05, alpha: 0.95)
         bg.strokeColor = SKColor(red: 0.5, green: 0.4, blue: 0.2, alpha: 1.0)
         bg.lineWidth = 2
@@ -1596,10 +1596,23 @@ class HUDOverlay {
             nameLabel.name = "tech_\(tech)"
             container.addChild(nameLabel)
 
-            let effectLabel = SKLabelNode(text: researched ? "Done" : tech.effectDescription)
+            let effectText: String
+            let effectColor: SKColor
+            if researched {
+                effectText = "Done"
+                effectColor = .green
+            } else if !hasPrereqs {
+                let prereqNames = tech.prerequisites.filter { !player.researchedTechs.contains($0) }.map { $0.displayName }
+                effectText = "Needs: \(prereqNames.joined(separator: ", "))"
+                effectColor = .orange
+            } else {
+                effectText = tech.effectDescription
+                effectColor = .gray
+            }
+            let effectLabel = SKLabelNode(text: effectText)
             effectLabel.fontSize = 7
             effectLabel.fontName = "Helvetica"
-            effectLabel.fontColor = researched ? .green : .gray
+            effectLabel.fontColor = effectColor
             effectLabel.verticalAlignmentMode = .center
             effectLabel.position = CGPoint(x: 0, y: -14)
             effectLabel.name = "tech_\(tech)"
@@ -1879,6 +1892,7 @@ class HUDOverlay {
             if name == "btn_patrol" { return .patrolMode }
             if name == "btn_stance" { return .cycleStance }
             if name == "btn_cancelTrain" { return .cancelTraining }
+            if name == "btn_cancelResearch" { return .cancelResearch }
             if name == "btn_guard" { return .guardMode }
             if name == "btn_garrison" { return .garrison }
             if name == "btn_ungarrison" { return .ungarrison }
@@ -2015,6 +2029,7 @@ enum HUDAction {
     case patrolMode
     case selectIdleVillager
     case cancelTraining
+    case cancelResearch
     case cycleStance
     case guardMode
     case garrison
