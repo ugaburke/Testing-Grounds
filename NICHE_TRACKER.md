@@ -159,3 +159,41 @@ Kitchen/Home confirmed as primary niche with second product (K-Cup holder) compl
 - More under-cabinet products (utensil holder, wrap dispenser)
 - Drawer organization products (utensil drawer, junk drawer)
 - One wildcard per cycle from Pet or Desk backlog
+
+---
+
+## Cycle 5 — 2026-03-16 (Focused Mode — Kitchen/Home Primary)
+
+| Category | Subs/Sources Scanned | Candidates Found | Avg Score | Top Candidate | Notes |
+|----------|---------------------|------------------|-----------|---------------|-------|
+| **Kitchen/Home** (Primary) | Etsy, Amazon, Printables, MakerWorld, Cults3D, Thingiverse, Yeggi | 6 (Tablet holder, Wrap dispenser, Utensil organizer, Cabinet door pocket, Measuring cup holder, Pantry organizer) | 3.03 | Under-Cabinet Tablet Holder (4.0) | Third under-cabinet product. Device presets continue parametric pattern. |
+| **Kitchen/Home — LED** | Amazon | 1 (LED diffuser) | 2.4 | Under-Cabinet LED Diffuser (2.4) | Can't compete with aluminum channels. Killed. |
+| **Pet Accessories** (Wildcard) | Cycle 2/3/4 carryover | 1 (Modular puzzle feeder) | 4.0 | Pet Puzzle Feeder (4.0) | Held for Cycle 6. |
+
+### Cycle 5 Summary
+
+- **Total candidates scanned:** 8
+- **Candidates advanced:** 1 (Under-Cabinet Tablet/Phone Holder)
+- **Key finding:** Kitchen under-cabinet is a rich sub-niche. Third product completes a bundle-ready trio.
+- **Saturated categories identified:** Utensil drawer organizers (Gridfinity dominates free market), cabinet door pockets (McMaster3D has 2,300+ reviews)
+- **Pattern confirmed:** Hook-clamp mount reuse across products creates consistent brand identity
+
+### Cross-Cycle Category Performance (All 5 Cycles)
+
+| Category | C1 Avg | C2 Avg | C3 Avg | C4 Avg | C5 Avg | Trend | Products to Stage 5 | Best Product (Score) |
+|----------|--------|--------|--------|--------|--------|-------|---------------------|---------------------|
+| **Kitchen/Home** | 3.8 | 3.9 | 4.6 | 3.52 | 3.03 | Breadth scan lowers avg; top picks strong | 3 | Spice Organizer (4.6) |
+| **Desk/Keyboard** | 3.6 | 3.9 | 3.12 | 3.8 | — | Stable (no new scan) | 2 | TPU Wrist Rest (4.4) |
+| **Pet Accessories** | — | 3.3 | 4.0 | 4.0 | 4.0 | Holding steady | 0 | Pet Puzzle Feeder (4.0) |
+
+### Convergence Status: FOCUSED (Cycle 5 of 6)
+
+Kitchen under-cabinet sub-line now has **three products** enabling bundle strategy:
+1. Spice Drawer Organizer (C3)
+2. K-Cup Pod Holder (C4)
+3. Tablet/Phone Recipe Holder (C5)
+
+Cycle 6 should:
+- Explore the Pet Puzzle Feeder wildcard (carried 3 cycles)
+- Or add a 4th kitchen product (pantry/fridge category)
+- Prepare for Cycle 7+ primary niche operation mode
