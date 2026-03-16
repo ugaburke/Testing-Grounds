@@ -359,6 +359,7 @@ class GameScene: SKScene {
                     player.currentAge = nextAge
                     if player.isHuman {
                         hud.showStatus("Advanced to \(nextAge.displayName)!")
+                        hud.addEventLog("Advanced to \(nextAge.displayName)")
                     }
                 }
             }
@@ -479,6 +480,33 @@ class GameScene: SKScene {
             for building in player.buildings {
                 let tile = gameMap.tile(at: building.gridPosition)
                 building.node?.isHidden = !(tile?.isExplored ?? false)
+            }
+        }
+    }
+
+    private func checkAttackAlerts() {
+        guard gameTime - lastAttackAlertTime > 10.0 else { return }
+
+        for unit in humanPlayer.units {
+            if unit.hp < unit.maxHP && unit.hp > 0 {
+                if case .idle = unit.state {
+                    // Unit being attacked while idle
+                    lastAttackAlertTime = gameTime
+                    attackAlertPosition = unit.position
+                    hud.showStatus("Units under attack!")
+                    hud.addEventLog("Under attack at (\(unit.gridPosition.x),\(unit.gridPosition.y))")
+                    return
+                }
+            }
+        }
+
+        for building in humanPlayer.buildings {
+            if building.hp < building.maxHP && building.hp > 0 && building.isConstructed {
+                lastAttackAlertTime = gameTime
+                attackAlertPosition = building.node?.position
+                hud.showStatus("\(building.type.displayName) under attack!")
+                hud.addEventLog("\(building.type.displayName) under attack!")
+                return
             }
         }
     }
@@ -809,6 +837,29 @@ class GameScene: SKScene {
             return
         }
 
+        // Guard mode
+        if case .guardMode = actionMode {
+            // Find friendly unit at tap position to guard
+            let tapRadius: CGFloat = gameMap.tileSize
+            for unit in humanPlayer.units {
+                let dist = sqrt(pow(unit.position.x - worldPos.x, 2) + pow(unit.position.y - worldPos.y, 2))
+                if dist < tapRadius {
+                    let selectedUnits = unitSystem.selectedUnits(for: humanPlayer)
+                    for selected in selectedUnits where selected.id != unit.id {
+                        selected.state = .guarding(targetUnitID: unit.id)
+                        selected.guardTargetID = unit.id
+                    }
+                    actionMode = .normal
+                    hud.updateModeIndicator(mode: .normal)
+                    hud.showStatus("Guarding \(unit.type.displayName)")
+                    return
+                }
+            }
+            actionMode = .normal
+            hud.updateModeIndicator(mode: .normal)
+            return
+        }
+
         // Check what was tapped
         let selectedUnits = unitSystem.selectedUnits(for: humanPlayer)
 
@@ -1043,6 +1094,7 @@ class GameScene: SKScene {
             if let building = selectedBuilding {
                 if buildingSystem.trainUnit(type: type, at: building, player: humanPlayer) {
                     hud.showStatus("Training \(type.displayName)")
+                    hud.addEventLog("Training \(type.displayName)")
                     totalUnitsTrainedHuman += 1
                 } else {
                     if !humanPlayer.canAfford(type.cost) {
@@ -1155,6 +1207,46 @@ class GameScene: SKScene {
                 case .standGround: stanceName = "Stand Ground"
                 }
                 hud.showStatus("Stance: \(stanceName)")
+            }
+
+        case .guardMode:
+            actionMode = .guardMode
+            hud.updateModeIndicator(mode: .guardMode)
+            hud.showStatus("Click unit to guard")
+
+        case .garrison:
+            if let building = selectedBuilding {
+                let selectedUnits = unitSystem.selectedUnits(for: humanPlayer)
+                var garrisoned = 0
+                for unit in selectedUnits {
+                    if unitSystem.garrisonUnit(unit, into: building, player: humanPlayer) {
+                        garrisoned += 1
+                    }
+                }
+                if garrisoned > 0 {
+                    hud.showStatus("\(garrisoned) units garrisoned")
+                } else {
+                    // Try to garrison nearby units
+                    let nearbyUnits = humanPlayer.units.filter {
+                        $0.gridPosition.distance(to: building.gridPosition) < 5.0 && $0.type != .villager
+                    }
+                    for unit in nearbyUnits.prefix(building.garrisonCapacity - building.garrisonedUnits.count) {
+                        let _ = unitSystem.garrisonUnit(unit, into: building, player: humanPlayer)
+                    }
+                    hud.showStatus("Units garrisoned")
+                }
+            }
+
+        case .ungarrison:
+            if let building = selectedBuilding {
+                unitSystem.ungarrisonAll(building: building, player: humanPlayer, map: gameMap)
+                hud.showStatus("Units ungarrisoned")
+            }
+
+        case .toggleAutoReseed:
+            if let building = selectedBuilding {
+                buildingSystem.toggleAutoReseed(building: building)
+                hud.showStatus(building.autoReseed ? "Auto-reseed ON" : "Auto-reseed OFF")
             }
         }
     }

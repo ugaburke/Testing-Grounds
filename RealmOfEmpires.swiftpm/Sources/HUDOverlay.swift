@@ -461,6 +461,16 @@ class HUDOverlay {
         hudNode.addChild(villagerAllocLabel)
     }
 
+    private func setupEventLog() {
+        eventLogBg = SKShapeNode(rectOf: CGSize(width: 250, height: 80), cornerRadius: 4)
+        eventLogBg.fillColor = SKColor.black.withAlphaComponent(0.4)
+        eventLogBg.strokeColor = .clear
+        eventLogBg.position = CGPoint(x: viewSize.width - 135, y: viewSize.height - 130 - safeAreaTop)
+        eventLogBg.zPosition = 99
+        eventLogBg.alpha = 0
+        hudNode.addChild(eventLogBg)
+    }
+
     private func createHUDButton(text: String, x: CGFloat, y: CGFloat, name: String, width: CGFloat = 44) -> SKNode {
         let container = SKNode()
         container.position = CGPoint(x: x, y: y)
@@ -516,6 +526,70 @@ class HUDOverlay {
         case .normal:
             modeIndicatorLabel.isHidden = true
             modeIndicatorBg.isHidden = true
+        }
+    }
+
+    func addEventLog(_ message: String) {
+        let label = SKLabelNode(text: message)
+        label.fontSize = 11
+        label.fontName = "Helvetica"
+        label.fontColor = SKColor(red: 0.9, green: 0.8, blue: 0.6, alpha: 0.9)
+        label.horizontalAlignmentMode = .right
+        label.position = CGPoint(x: viewSize.width - 20, y: viewSize.height - 110 - safeAreaTop)
+        label.zPosition = 100
+        hudNode.addChild(label)
+
+        // Shift existing entries up
+        for entry in eventLogEntries {
+            entry.position.y += 16
+        }
+        eventLogEntries.append(label)
+
+        // Remove old entries
+        while eventLogEntries.count > 4 {
+            eventLogEntries[0].removeFromParent()
+            eventLogEntries.removeFirst()
+        }
+
+        eventLogBg.alpha = 0.5
+
+        // Fade out after delay
+        label.run(SKAction.sequence([
+            SKAction.wait(forDuration: 8.0),
+            SKAction.fadeOut(withDuration: 1.0),
+            SKAction.removeFromParent()
+        ]))
+    }
+
+    func updateIdleMilitaryAlert(player: Player) {
+        let idleMilitary = player.units.filter { unit in
+            guard unit.type != .villager && unit.type != .monk else { return false }
+            if case .idle = unit.state { return true }
+            return false
+        }
+
+        if idleMilitary.count >= 3 {
+            if hudNode.childNode(withName: "idleMilitaryAlert") == nil {
+                let alert = SKLabelNode(text: "! \(idleMilitary.count) idle military")
+                alert.fontSize = 12
+                alert.fontName = "Helvetica-Bold"
+                alert.fontColor = SKColor(red: 1.0, green: 0.6, blue: 0.2, alpha: 1.0)
+                alert.position = CGPoint(x: viewSize.width - 420, y: viewSize.height - 36 - safeAreaTop)
+                alert.horizontalAlignmentMode = .center
+                alert.zPosition = 101
+                alert.name = "idleMilitaryAlert"
+
+                let pulse = SKAction.repeatForever(SKAction.sequence([
+                    SKAction.fadeAlpha(to: 0.5, duration: 0.5),
+                    SKAction.fadeAlpha(to: 1.0, duration: 0.5)
+                ]))
+                alert.run(pulse)
+                hudNode.addChild(alert)
+            } else if let alert = hudNode.childNode(withName: "idleMilitaryAlert") as? SKLabelNode {
+                alert.text = "! \(idleMilitary.count) idle military"
+            }
+        } else {
+            hudNode.childNode(withName: "idleMilitaryAlert")?.removeFromParent()
         }
     }
 
@@ -823,6 +897,12 @@ class HUDOverlay {
             queueLabel.text = "Building: \(progress)%"
         } else {
             queueLabel.text = ""
+        }
+
+        // Show garrison info
+        if building.garrisonCapacity > 0 && !building.garrisonedUnits.isEmpty {
+            let garrisonText = "Garrisoned: \(building.garrisonedUnits.count)/\(building.garrisonCapacity)"
+            selectionCountLabel.text = garrisonText
         }
 
         updateActionButtons(for: nil, building: building, player: player)
