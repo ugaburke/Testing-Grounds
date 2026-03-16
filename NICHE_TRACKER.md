@@ -125,3 +125,37 @@ No niche commitment yet. Next cycle should explore:
 - Board Games (doesn't scale)
 - Personal Care (saturated)
 - Plants/Garden (dominated by free iconic designs)
+
+---
+
+## Cycle 4 — 2026-03-16 (Focused Mode — Kitchen/Home Primary)
+
+| Category | Subs/Sources Scanned | Candidates Found | Avg Score | Top Candidate | Notes |
+|----------|---------------------|------------------|-----------|---------------|-------|
+| **Kitchen/Home** (Primary) | Etsy, Amazon, Printables, MakerWorld, Cults3D, Yeggi, STLFinder | 5 (K-Cup holder, Can dispenser, Trash bag dispenser, Paper towel holder, Under-sink organizer) | 3.52 | Under-Cabinet K-Cup Holder (4.2) | First focused-mode cycle. Pod-type presets continue brand-specific pattern. |
+| **Desk Accessories** (Secondary) | Etsy, Amazon | 1 (Webcam mount + privacy shutter) | 3.8 | Webcam Mount + Privacy Shutter (3.8) | Held for future desk cycle. Uncontested niche. |
+| **Pet Accessories** (Wildcard) | Cycle 2/3 carryover | 1 (Modular puzzle feeder) | 4.0 | Pet Puzzle Feeder (4.0) | Held for Cycle 5+. Recurring-revenue model. |
+| **Coffee Storage** (Sub-niche) | Etsy | 1 (Nespresso Vertuo drawer insert) | 3.8 | Nespresso Vertuo Drawer (3.8) | Could become product-line extension of K-Cup holder. |
+
+### Cycle 4 Summary
+
+- **Total candidates scanned:** 8
+- **Candidates advanced:** 1 (Under-Cabinet K-Cup/Pod Holder)
+- **Mode:** Focused — Kitchen/Home primary, Desk secondary, Pet wildcard
+- **Pattern continuation:** Pod-type presets (K-Cup, Nespresso Vertuo, Nespresso Original) mirror brand-specific jar presets from spice organizer
+- **Key insight:** "Under-cabinet" mounting is an emerging sub-category — mechanical hook/clamp beats adhesive every time
+
+### Cross-Cycle Category Performance (All 4 Cycles)
+
+| Category | C1 Avg | C2 Avg | C3 Avg | C4 Avg | Trend | Products to Stage 5 | Best Product (Score) |
+|----------|--------|--------|--------|--------|-------|---------------------|---------------------|
+| **Kitchen/Home** | 3.8 | 3.9 | 4.6 | 3.52 | ↑↑↓ Strong base, breadth scan lowers avg | 2 | Spice Organizer (4.6) |
+| **Desk/Keyboard** | 3.6 | 3.9 | 3.12 | 3.8 | Stable | 2 | TPU Wrist Rest (4.4) |
+| **Pet Accessories** | — | 3.3 | 4.0 | 4.0 | ↑ Holding | 0 | Pet Puzzle Feeder (4.0) |
+
+### Convergence Status: FOCUSED (Cycle 4 of 6)
+
+Kitchen/Home confirmed as primary niche with second product (K-Cup holder) completing pipeline. The "kitchen under-cabinet" sub-line now has two products (spice organizer + K-Cup holder). Next cycles should explore:
+- More under-cabinet products (utensil holder, wrap dispenser)
+- Drawer organization products (utensil drawer, junk drawer)
+- One wildcard per cycle from Pet or Desk backlog
