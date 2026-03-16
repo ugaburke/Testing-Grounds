@@ -1115,6 +1115,18 @@ class HUDOverlay {
                     y: startY - (buttonSize + padding), size: buttonSize)
                 actionPanel.addChild(techBtn)
                 actionButtons.append(techBtn)
+
+                // Cancel research button (shown when researching)
+                if building.currentResearch != nil {
+                    let cancelResBtn = createActionButton(
+                        text: "CxRes", icon: "XR",
+                        color: SKColor(red: 0.6, green: 0.15, blue: 0.15, alpha: 1.0),
+                        name: "btn_cancelResearch",
+                        x: startX + CGFloat(cols - 2) * (buttonSize + padding),
+                        y: startY - (buttonSize + padding), size: buttonSize)
+                    actionPanel.addChild(cancelResBtn)
+                    actionButtons.append(cancelResBtn)
+                }
             }
 
             // Garrison button for buildings with capacity
@@ -1549,7 +1561,8 @@ class HUDOverlay {
             let affordable = player.canAfford(tech.cost)
             let hasBuilding = player.buildings.contains { $0.type == tech.researchedAt && $0.isConstructed }
             let alreadyResearching = player.buildings.contains { $0.currentResearch == tech }
-            let enabled = !researched && hasAge && affordable && hasBuilding && !alreadyResearching
+            let hasPrereqs = tech.prerequisites.allSatisfy { player.researchedTechs.contains($0) }
+            let enabled = !researched && hasAge && affordable && hasBuilding && !alreadyResearching && hasPrereqs
 
             let container = SKNode()
             container.position = CGPoint(x: x, y: y)
