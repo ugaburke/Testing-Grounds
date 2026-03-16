@@ -420,6 +420,9 @@ class SpriteFactory {
                 bodyNode.removeAction(forKey: "idleBob")
             }
         }
+
+        // Update carry indicator for villagers
+        updateCarryIndicator(unit: unit)
     }
 
     // MARK: - Unit Facing
@@ -438,6 +441,61 @@ class SpriteFactory {
         while diff > .pi { diff -= .pi * 2 }
         while diff < -.pi { diff += .pi * 2 }
         bodyNode.zRotation += diff * 0.15
+    }
+
+    // MARK: - Carry Indicator
+
+    func updateCarryIndicator(unit: Unit) {
+        guard let container = unit.node else { return }
+
+        // Remove existing carry indicator if present
+        container.childNode(withName: "carryIndicator")?.removeFromParent()
+
+        // Only show for villagers carrying resources
+        guard unit.type == .villager, let resource = unit.carriedResource, unit.carriedAmount > 0 else { return }
+
+        let dotRadius: CGFloat = tileSize * 0.1
+        let dot = SKShapeNode(circleOfRadius: dotRadius)
+        dot.strokeColor = .clear
+        dot.name = "carryIndicator"
+        dot.zPosition = 15
+
+        switch resource {
+        case .food:
+            dot.fillColor = SKColor(red: 0.2, green: 0.8, blue: 0.2, alpha: 0.9)
+        case .wood:
+            dot.fillColor = SKColor(red: 0.55, green: 0.35, blue: 0.15, alpha: 0.9)
+        case .gold:
+            dot.fillColor = SKColor(red: 0.95, green: 0.85, blue: 0.2, alpha: 0.9)
+        case .stone:
+            dot.fillColor = SKColor(red: 0.6, green: 0.6, blue: 0.6, alpha: 0.9)
+        }
+
+        let bodySize = tileSize * 0.85
+        dot.position = CGPoint(x: bodySize * 0.3, y: -bodySize * 0.3)
+        container.addChild(dot)
+    }
+
+    // MARK: - Movement Dust
+
+    func createMovementDust(at position: CGPoint) -> SKNode {
+        let dust = SKShapeNode(circleOfRadius: tileSize * 0.15)
+        dust.fillColor = SKColor(red: 0.55, green: 0.45, blue: 0.3, alpha: 0.35)
+        dust.strokeColor = .clear
+        dust.position = CGPoint(x: position.x + CGFloat.random(in: -3...3),
+                                y: position.y + CGFloat.random(in: -3...3))
+        dust.zPosition = 1
+        dust.name = "movementDust"
+
+        dust.run(SKAction.sequence([
+            SKAction.group([
+                SKAction.fadeOut(withDuration: 0.4),
+                SKAction.scale(to: 1.8, duration: 0.4)
+            ]),
+            SKAction.removeFromParent()
+        ]))
+
+        return dust
     }
 
     // MARK: - Building Sprites

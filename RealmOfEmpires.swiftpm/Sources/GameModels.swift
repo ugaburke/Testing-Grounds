@@ -1173,6 +1173,9 @@ class Unit {
     var hasRelic: Bool = false
     var autoScoutIndex: Int = 0
     var isExploding: Bool = false  // For petard
+    var velocity: CGPoint = .zero
+    var targetVelocity: CGPoint = .zero
+    var dustTimer: CGFloat = 0  // Timer for movement dust particles
     weak var ownerPlayer: Player?
 
     init(type: UnitType, ownerID: Int, position: GridPosition, hpBonus: CGFloat = 1.0, speedBonus: CGFloat = 1.0) {

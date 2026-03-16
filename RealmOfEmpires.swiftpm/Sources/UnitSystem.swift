@@ -119,9 +119,12 @@ class UnitSystem {
         let dy = targetWorldPos.y - unit.position.y
         let dist = sqrt(dx * dx + dy * dy)
 
-        // Track facing direction
+        // Smooth turning: interpolate facing direction instead of snapping
         if dist > 0.5 {
-            unit.lastDirection = atan2(dy, dx)
+            let targetAngle = atan2(dy, dx)
+            let angleDiff = targetAngle - unit.lastDirection
+            let normalizedDiff = atan2(sin(angleDiff), cos(angleDiff))
+            unit.lastDirection += normalizedDiff * min(1.0, deltaTime * 8.0)
         }
 
         let speedMultiplier: CGFloat = unit.type.isCavalry ? player.civilization.cavalrySpeedBonus : 1.0
@@ -131,16 +134,82 @@ class UnitSystem {
             unit.position = targetWorldPos
             unit.gridPosition = nextPos
             unit.path.removeFirst()
+            unit.velocity = .zero
             unit.node?.position = unit.position
         } else {
-            let moveX = (dx / dist) * speed * deltaTime
-            let moveY = (dy / dist) * speed * deltaTime
-            unit.position.x += moveX
-            unit.position.y += moveY
+            // Smooth movement using velocity interpolation
+            let desiredVelX = (dx / dist) * speed
+            let desiredVelY = (dy / dist) * speed
+            unit.targetVelocity = CGPoint(x: desiredVelX, y: desiredVelY)
+
+            // Lerp current velocity toward desired velocity (acceleration/deceleration)
+            let lerpFactor: CGFloat = 0.15
+            unit.velocity.x += (unit.targetVelocity.x - unit.velocity.x) * lerpFactor
+            unit.velocity.y += (unit.targetVelocity.y - unit.velocity.y) * lerpFactor
+
+            unit.position.x += unit.velocity.x * deltaTime
+            unit.position.y += unit.velocity.y * deltaTime
             unit.node?.position = unit.position
 
             // Update grid position based on nearest tile
             unit.gridPosition = map.worldToGrid(unit.position)
+        }
+
+        // Apply separation force from nearby units
+        if let scene = gameScene {
+            applySeparation(unit: unit, allPlayers: scene.players, map: map)
+        }
+
+        // Spawn movement dust particles on land
+        unit.dustTimer += deltaTime
+        if unit.dustTimer >= 0.3 {
+            unit.dustTimer = 0
+            let tile = map.worldToGrid(unit.position)
+            if map.isValid(tile) && map.tiles[tile.y][tile.x].terrain.isPassable {
+                if let scene = gameScene {
+                    let dust = scene.spriteFactory.createMovementDust(at: unit.position)
+                    scene.gameWorld.addChild(dust)
+                }
+            }
+        }
+    }
+
+    private func applySeparation(unit: Unit, allPlayers: [Player], map: GameMap) {
+        let separationRadius: CGFloat = 1.5 * map.tileSize
+        var pushX: CGFloat = 0
+        var pushY: CGFloat = 0
+
+        for player in allPlayers {
+            for other in player.units {
+                guard other.id != unit.id else { continue }
+                let dx = unit.position.x - other.position.x
+                let dy = unit.position.y - other.position.y
+                let dist = sqrt(dx * dx + dy * dy)
+                if dist < separationRadius && dist > 0.1 {
+                    // Weighted repulsion: closer units push harder
+                    let strength = (separationRadius - dist) / separationRadius
+                    pushX += (dx / dist) * strength
+                    pushY += (dy / dist) * strength
+                }
+            }
+        }
+
+        let pushMag = sqrt(pushX * pushX + pushY * pushY)
+        if pushMag > 0.01 {
+            // Cap separation offset at 30% of move speed per frame
+            let maxPush: CGFloat = unit.type.moveSpeed * map.tileSize * 0.3
+            let cappedMag = min(pushMag, maxPush)
+            let finalX = (pushX / pushMag) * cappedMag
+            let finalY = (pushY / pushMag) * cappedMag
+
+            let newPos = CGPoint(x: unit.position.x + finalX, y: unit.position.y + finalY)
+            let newGrid = map.worldToGrid(newPos)
+
+            // Only apply if the resulting position is passable
+            if map.isPassable(newGrid) {
+                unit.position = newPos
+                unit.node?.position = unit.position
+            }
         }
     }
 
@@ -162,25 +231,35 @@ class UnitSystem {
             for (i, unit) in units.enumerated() {
                 let row = i / cols
                 let col = i % cols
-                let offsetX = col - cols / 2
-                let offsetY = row - cols / 2
-                let dest = GridPosition(x: target.x + offsetX, y: target.y + offsetY)
+                let offsetX = (col - cols / 2) * 2  // 2-tile spacing between units
+                let offsetY = (row - cols / 2) * 2  // 2-tile spacing between units
+                var dest = GridPosition(x: target.x + offsetX, y: target.y + offsetY)
+                // Nudge to nearest passable tile if destination is impassable
+                if !pathfinder.map.isPassable(dest) {
+                    dest = nearestPassable(to: dest, map: pathfinder.map) ?? target
+                }
                 moveUnit(unit, to: dest, pathfinder: pathfinder)
             }
         case .line:
             let halfCount = count / 2
             for (i, unit) in units.enumerated() {
-                let offset = i - halfCount
-                let dest = GridPosition(x: target.x + offset, y: target.y)
+                let offset = (i - halfCount) * 2  // 2-tile spacing between units
+                var dest = GridPosition(x: target.x + offset, y: target.y)
+                if !pathfinder.map.isPassable(dest) {
+                    dest = nearestPassable(to: dest, map: pathfinder.map) ?? target
+                }
                 moveUnit(unit, to: dest, pathfinder: pathfinder)
             }
         case .spread:
-            let radius = max(2, count / 3)
+            let radius = max(3, count / 2)  // Wider spread radius
             for (i, unit) in units.enumerated() {
                 let angle = CGFloat(i) * (2.0 * .pi / CGFloat(count))
                 let dx = Int(CGFloat(radius) * cos(angle))
                 let dy = Int(CGFloat(radius) * sin(angle))
-                let dest = GridPosition(x: target.x + dx, y: target.y + dy)
+                var dest = GridPosition(x: target.x + dx, y: target.y + dy)
+                if !pathfinder.map.isPassable(dest) {
+                    dest = nearestPassable(to: dest, map: pathfinder.map) ?? target
+                }
                 moveUnit(unit, to: dest, pathfinder: pathfinder)
             }
         }
@@ -340,6 +419,23 @@ class UnitSystem {
             }
         }
         building.garrisonedUnits.removeAll()
+    }
+
+    private func nearestPassable(to pos: GridPosition, map: GameMap) -> GridPosition? {
+        // Search in expanding rings for a passable tile
+        for radius in 1...5 {
+            for dx in -radius...radius {
+                for dy in -radius...radius {
+                    if abs(dx) == radius || abs(dy) == radius {
+                        let candidate = GridPosition(x: pos.x + dx, y: pos.y + dy)
+                        if map.isPassable(candidate) {
+                            return candidate
+                        }
+                    }
+                }
+            }
+        }
+        return nil
     }
 
     private func findSpawnPosition(near building: Building, map: GameMap) -> GridPosition? {
