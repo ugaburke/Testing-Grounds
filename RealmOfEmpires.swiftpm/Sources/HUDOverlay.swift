@@ -1105,7 +1105,7 @@ class HUDOverlay {
             }
 
             // Tech button for buildings that have researchable techs
-            let techBuildings: [BuildingType] = [.blacksmith, .lumberCamp, .miningCamp, .townCenter, .stable, .monastery, .castle]
+            let techBuildings: [BuildingType] = [.blacksmith, .lumberCamp, .miningCamp, .townCenter, .stable, .monastery, .castle, .university, .barracks, .market]
             if techBuildings.contains(building.type) {
                 let techBtn = createActionButton(
                     text: "Tech", icon: "T",

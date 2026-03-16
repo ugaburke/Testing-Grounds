@@ -122,7 +122,12 @@ class ResourceSystem {
             if let tile = tile, tile.resourceRemaining <= 0 && building.autoReseed {
                 if player.resources.wood >= 30 {
                     player.resources.wood -= 30
-                    tile.resourceRemaining = TerrainType.farm.resourceAmount
+                    var farmFood = TerrainType.farm.resourceAmount
+                    // Crop Rotation: +175 farm food
+                    if player.researchedTechs.contains(.cropRotation) {
+                        farmFood += 175
+                    }
+                    tile.resourceRemaining = farmFood
                     if let scene = gameScene {
                         scene.hud.showStatus("Farm auto-reseeded")
                     }
