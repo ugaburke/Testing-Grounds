@@ -89,6 +89,7 @@ class GameScene: SKScene {
     // Victory conditions
     var victoryCondition: VictoryCondition = .conquest
     var wonderVictoryTimer: CGFloat = 0
+    var relicVictoryTimer: CGFloat = 0
     let wonderVictoryTime: CGFloat = 200.0  // 200 seconds to win with wonder
 
     // Double-click tracking
@@ -621,7 +622,7 @@ class GameScene: SKScene {
 
         // Relic victory: collect all relics for 200 seconds
         let totalRelics = gameMap.relics.count
-        if totalRelics > 0 && humanPlayer.relicsCollected >= totalRelics && wonderVictoryTimer >= wonderVictoryTime {
+        if totalRelics > 0 && humanPlayer.relicsCollected >= totalRelics && relicVictoryTimer >= wonderVictoryTime {
             gameState = .victory
             hud.showStatus("Relic Victory!")
             hud.showGameOver(victory: true, player: humanPlayer)
@@ -670,6 +671,20 @@ class GameScene: SKScene {
                     }
                 }
             }
+        }
+
+        // Relic victory timer: track independently
+        let totalRelics = gameMap.relics.count
+        if totalRelics > 0 && humanPlayer.relicsCollected >= totalRelics {
+            relicVictoryTimer += deltaTime
+            if Int(relicVictoryTimer) % 30 == 0 && Int(relicVictoryTimer) > 0 {
+                let remaining = Int(wonderVictoryTime - relicVictoryTimer)
+                if remaining > 0 {
+                    hud.showStatus("Relic Victory in \(remaining)s")
+                }
+            }
+        } else {
+            relicVictoryTimer = 0
         }
     }
 

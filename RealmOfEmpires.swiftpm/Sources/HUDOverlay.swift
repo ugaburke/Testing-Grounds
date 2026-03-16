@@ -689,8 +689,27 @@ class HUDOverlay {
         applyResourceWarning(label: goldLabel, value: player.resources.gold)
         applyResourceWarning(label: stoneLabel, value: player.resources.stone)
 
-        popLabel.text = "\(player.population)/\(player.populationCap)"
-        popLabel.fontColor = player.population >= player.populationCap ? .red : .white
+        popLabel.text = "Pop: \(player.population)/\(player.populationCap)"
+        let popRatio = player.populationCap > 0 ? CGFloat(player.population) / CGFloat(player.populationCap) : 0
+        if player.population >= player.populationCap {
+            popLabel.fontColor = .red
+            // Pulse when at cap
+            if popLabel.action(forKey: "popPulse") == nil {
+                let pulse = SKAction.repeatForever(SKAction.sequence([
+                    SKAction.run { [weak self] in self?.popLabel.fontColor = .red },
+                    SKAction.wait(forDuration: 0.4),
+                    SKAction.run { [weak self] in self?.popLabel.fontColor = SKColor(red: 0.6, green: 0, blue: 0, alpha: 1) },
+                    SKAction.wait(forDuration: 0.4)
+                ]))
+                popLabel.run(pulse, withKey: "popPulse")
+            }
+        } else if popRatio >= 0.9 {
+            popLabel.removeAction(forKey: "popPulse")
+            popLabel.fontColor = SKColor(red: 1.0, green: 0.5, blue: 0.2, alpha: 1.0) // Orange warning
+        } else {
+            popLabel.removeAction(forKey: "popPulse")
+            popLabel.fontColor = .white
+        }
 
         ageLabel.text = player.currentAge.displayName
 
@@ -953,10 +972,49 @@ class HUDOverlay {
         infoIcon.fillColor = building.type.color
         selectionCountLabel.text = ""
 
+        // Remove old queue icons
+        infoPanel.children.filter { $0.name == "queueIcon" }.forEach { $0.removeFromParent() }
+
         if !building.trainingQueue.isEmpty {
             let queueText = building.trainingQueue.map { $0.icon }.joined(separator: " ")
             let progress = Int(building.trainingProgress * 100)
-            queueLabel.text = "Training: \(queueText) (\(progress)%)"
+            queueLabel.text = "Queue [\(building.trainingQueue.count)/5]: \(queueText) (\(progress)%)"
+
+            // Visual queue slots
+            let panelWidth: CGFloat = 220
+            let slotSize: CGFloat = 18
+            let slotPadding: CGFloat = 3
+            let slotsStartX = -panelWidth / 2 + 10
+            let slotsY: CGFloat = -38
+
+            for (i, unitType) in building.trainingQueue.enumerated() {
+                let slot = SKShapeNode(rectOf: CGSize(width: slotSize, height: slotSize), cornerRadius: 2)
+                slot.fillColor = unitType.color.withAlphaComponent(i == 0 ? 0.9 : 0.5)
+                slot.strokeColor = i == 0 ? .white : .gray
+                slot.lineWidth = i == 0 ? 1.5 : 0.5
+                slot.position = CGPoint(x: slotsStartX + CGFloat(i) * (slotSize + slotPadding) + slotSize / 2, y: slotsY)
+                slot.name = "queueIcon"
+                infoPanel.addChild(slot)
+
+                let iconLabel = SKLabelNode(text: unitType.icon)
+                iconLabel.fontSize = 10
+                iconLabel.fontName = "Helvetica-Bold"
+                iconLabel.fontColor = .white
+                iconLabel.verticalAlignmentMode = .center
+                iconLabel.name = "queueIcon"
+                slot.addChild(iconLabel)
+
+                // Progress bar on first item
+                if i == 0 {
+                    let progressWidth = slotSize * building.trainingProgress
+                    let progressBar = SKShapeNode(rectOf: CGSize(width: progressWidth, height: 2))
+                    progressBar.fillColor = .green
+                    progressBar.strokeColor = .clear
+                    progressBar.position = CGPoint(x: (progressWidth - slotSize) / 2, y: -slotSize / 2 - 2)
+                    progressBar.name = "queueIcon"
+                    slot.addChild(progressBar)
+                }
+            }
         } else if let tech = building.currentResearch {
             let progress = Int(building.researchProgress * 100)
             queueLabel.text = "Researching: \(tech.displayName) (\(progress)%)"

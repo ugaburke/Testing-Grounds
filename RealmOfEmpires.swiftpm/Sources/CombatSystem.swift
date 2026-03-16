@@ -402,7 +402,9 @@ class CombatSystem {
         let dist = unit.gridPosition.distance(to: target.gridPosition)
         if dist <= 6.0 {
             unit.path = []
-            unit.conversionProgress += deltaTime / 5.0  // 5 seconds to convert
+            // Theocracy: faster conversion (3.5s instead of 5s)
+            let conversionTime: CGFloat = (unit.ownerPlayer?.researchedTechs.contains(.theocracy) == true) ? 3.5 : 5.0
+            unit.conversionProgress += deltaTime / conversionTime
 
             // Visual: golden glow on target
             if let scene = gameScene, Int(unit.conversionProgress * 10) % 3 == 0 {
