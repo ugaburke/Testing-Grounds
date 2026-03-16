@@ -28,6 +28,11 @@ class UnitSystem {
                 handleAutoScout(unit: unit, player: player, map: map, pathfinder: pathfinder)
             }
 
+            // Reset tilesMoved when unit is idle (not moving)
+            if case .idle = unit.state, unit.path.isEmpty {
+                unit.tilesMoved = 0
+            }
+
             // Auto-attack nearby enemies if idle or moving
             let shouldAutoAttack: Bool
             switch unit.state {
@@ -225,6 +230,11 @@ class UnitSystem {
     }
 
     func moveUnit(_ unit: Unit, to target: GridPosition, pathfinder: Pathfinder) {
+        // Trebuchet must pack up before moving
+        if unit.type == .trebuchet && !unit.isPackedSiege {
+            unit.isPackedSiege = true
+            unit.packTimer = 0
+        }
         unit.path = pathfinder.findPath(from: unit.gridPosition, to: target)
         unit.state = .moving(to: target)
     }

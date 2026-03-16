@@ -356,6 +356,19 @@ class BuildingSystem {
         player.buildings.removeAll { $0.id == building.id }
     }
 
+    func cancelResearch(at building: Building, player: Player) -> Bool {
+        guard let tech = building.currentResearch else { return false }
+        // Refund 50% of cost
+        let cost = tech.cost
+        player.resources.food += Int(Double(cost.food) * 0.5)
+        player.resources.wood += Int(Double(cost.wood) * 0.5)
+        player.resources.gold += Int(Double(cost.gold) * 0.5)
+        player.resources.stone += Int(Double(cost.stone) * 0.5)
+        building.currentResearch = nil
+        building.researchProgress = 0
+        return true
+    }
+
     func toggleAutoReseed(building: Building) {
         guard building.type == .farm else { return }
         building.autoReseed = !building.autoReseed

@@ -35,6 +35,7 @@ class ResourceSystem {
     }
 
     var marketFluctuationTimer: CGFloat = 0
+    var depletionWarningTimer: CGFloat = 0
 
     func update(deltaTime: CGFloat, player: Player, map: GameMap, pathfinder: Pathfinder) {
         for unit in player.units {
@@ -101,6 +102,13 @@ class ResourceSystem {
         if marketFluctuationTimer >= 60.0 {
             marketFluctuationTimer = 0
             fluctuateMarketPrices(player: player)
+        }
+
+        // Resource depletion warnings (every 5 seconds)
+        depletionWarningTimer += deltaTime
+        if depletionWarningTimer >= 5.0 {
+            depletionWarningTimer = 0
+            checkResourceWarnings(player: player, map: map)
         }
 
         // Farm auto-gathering and auto-reseed
@@ -337,7 +345,11 @@ class ResourceSystem {
         } else {
             // Returning to home market
             if distToHome <= 2.0 {
-                player.resources.gold += unit.tradeGold
+                var goldEarned = unit.tradeGold
+                if player.researchedTechs.contains(.guilds) {
+                    goldEarned = Int(CGFloat(goldEarned) * 1.15)
+                }
+                player.resources.gold += goldEarned
                 if let scene = gameScene {
                     let feedback = scene.spriteFactory.createDepositFeedback(
                         at: map.gridToWorld(marketPos), amount: unit.tradeGold, resourceType: .gold)
@@ -367,8 +379,18 @@ class ResourceSystem {
                     case .stone: resourceName = "Stone"
                     }
                     scene.hud.showStatus("\(resourceName) running low nearby!")
+                    return // Only show one warning per cycle
                 }
             }
+        }
+
+        // Warn about critically low total resources
+        if player.resources.food < 30 && player.resources.food > 0 {
+            scene.hud.showStatus("Food reserves critically low!")
+        } else if player.resources.wood < 30 && player.resources.wood > 0 {
+            scene.hud.showStatus("Wood reserves critically low!")
+        } else if player.resources.gold < 20 && player.resources.gold > 0 {
+            scene.hud.showStatus("Gold reserves critically low!")
         }
     }
 
