@@ -28,6 +28,15 @@ enum TechType: String, CaseIterable {
     case conscription  // Units train 33% faster
     case murder_holes  // Buildings no min range
     case sappers       // Infantry +15 vs buildings
+    // New technologies
+    case heresy        // Converted units die instead
+    case theocracy     // Monks regen faith faster
+    case siegeEngineers // Siege +1 range, +20% vs buildings
+    case architecture  // Buildings +10% HP
+    case arrowslits    // Towers +3 attack
+    case heatedShot    // Towers +4 vs ships
+    case masonry       // Buildings +10% HP
+    case townWatch     // Buildings +2 LOS
 
     var displayName: String {
         switch self {
@@ -58,6 +67,14 @@ enum TechType: String, CaseIterable {
         case .conscription: return "Conscription"
         case .murder_holes: return "Murder Holes"
         case .sappers: return "Sappers"
+        case .heresy: return "Heresy"
+        case .theocracy: return "Theocracy"
+        case .siegeEngineers: return "Siege Engineers"
+        case .architecture: return "Architecture"
+        case .arrowslits: return "Arrowslits"
+        case .heatedShot: return "Heated Shot"
+        case .masonry: return "Masonry"
+        case .townWatch: return "Town Watch"
         }
     }
 
@@ -90,6 +107,14 @@ enum TechType: String, CaseIterable {
         case .conscription: return Resources(food: 150, gold: 150)
         case .murder_holes: return Resources(food: 200, stone: 100)
         case .sappers: return Resources(food: 400, gold: 200)
+        case .heresy: return Resources(food: 0, gold: 250)
+        case .theocracy: return Resources(food: 0, gold: 200)
+        case .siegeEngineers: return Resources(food: 200, wood: 200)
+        case .architecture: return Resources(food: 150, wood: 200)
+        case .arrowslits: return Resources(food: 150, wood: 150)
+        case .heatedShot: return Resources(food: 0, gold: 200)
+        case .masonry: return Resources(food: 150, stone: 175)
+        case .townWatch: return Resources(food: 75)
         }
     }
 
@@ -105,6 +130,13 @@ enum TechType: String, CaseIterable {
             return .castleAge
         case .redemption, .fervor, .sanctity: return .castleAge
         case .conscription, .murder_holes, .sappers: return .imperialAge
+        case .heresy, .theocracy: return .castleAge
+        case .siegeEngineers: return .imperialAge
+        case .architecture: return .castleAge
+        case .arrowslits: return .castleAge
+        case .heatedShot: return .castleAge
+        case .masonry: return .feudalAge
+        case .townWatch: return .feudalAge
         }
     }
 
@@ -122,6 +154,13 @@ enum TechType: String, CaseIterable {
         case .conscription: return .castle
         case .murder_holes: return .castle
         case .sappers: return .castle
+        case .heresy, .theocracy: return .monastery
+        case .siegeEngineers: return .university
+        case .architecture: return .university
+        case .arrowslits: return .university
+        case .heatedShot: return .university
+        case .masonry: return .university
+        case .townWatch: return .townCenter
         }
     }
 
@@ -147,6 +186,14 @@ enum TechType: String, CaseIterable {
         case .conscription: return "📯"
         case .murder_holes: return "🕳"
         case .sappers: return "⛏"
+        case .heresy: return "💀"
+        case .theocracy: return "🙏"
+        case .siegeEngineers: return "🔧"
+        case .architecture: return "🏛"
+        case .arrowslits: return "↗"
+        case .heatedShot: return "🔥"
+        case .masonry: return "🧱"
+        case .townWatch: return "👁"
         }
     }
 
@@ -179,6 +226,14 @@ enum TechType: String, CaseIterable {
         case .conscription: return "Units train 33% faster"
         case .murder_holes: return "No minimum attack range"
         case .sappers: return "+15 Infantry vs buildings"
+        case .heresy: return "Converted units die"
+        case .theocracy: return "Monks regen faster"
+        case .siegeEngineers: return "+1 Siege range, +20% vs bldg"
+        case .architecture: return "+10% Building HP"
+        case .arrowslits: return "+3 Tower ATK"
+        case .heatedShot: return "+4 Tower ATK vs ships"
+        case .masonry: return "+10% Building HP"
+        case .townWatch: return "+2 Building LOS"
         }
     }
 
@@ -189,6 +244,8 @@ enum TechType: String, CaseIterable {
              .fletching, .forging, .scaleMailArmor, .scaleBardingArmor, .paddedArcherArmor,
              .bloodlines:
             return 12
+        case .townWatch: return 8
+        case .masonry: return 12
         default: return 18
         }
     }

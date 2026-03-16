@@ -7,6 +7,7 @@ class GameMap {
     let tileSize: CGFloat
     var tiles: [[MapTile]]
     let mapNode: SKNode
+    var relics: [Relic] = []
 
     init(width: Int = 80, height: Int = 80, tileSize: CGFloat = 32) {
         self.width = width
@@ -23,6 +24,7 @@ class GameMap {
         }
 
         generateTerrain()
+        generateRelics()
     }
 
     // MARK: - Terrain Generation
@@ -193,6 +195,34 @@ class GameMap {
                 }
             }
         }
+    }
+
+    private func generateRelics() {
+        // Place 3-5 relics on the map in random passable locations
+        let relicCount = Int.random(in: 3...5)
+        for _ in 0..<relicCount {
+            for _ in 0..<50 {  // Max attempts
+                let x = Int.random(in: 10..<(width - 10))
+                let y = Int.random(in: 10..<(height - 10))
+                let pos = GridPosition(x: x, y: y)
+                if tiles[y][x].terrain == .grass && tiles[y][x].building == nil {
+                    let relic = Relic(position: pos)
+                    relics.append(relic)
+                    break
+                }
+            }
+        }
+    }
+
+    func isWater(_ pos: GridPosition) -> Bool {
+        guard isValid(pos) else { return false }
+        let terrain = tiles[pos.y][pos.x].terrain
+        return terrain == .water || terrain == .deepWater
+    }
+
+    func canPlaceFishTrap(at pos: GridPosition) -> Bool {
+        guard isValid(pos) else { return false }
+        return isWater(pos) && tiles[pos.y][pos.x].building == nil
     }
 
     // MARK: - Rendering

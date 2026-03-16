@@ -57,6 +57,10 @@ class HUDOverlay {
     private var idleVillagerBtn: SKNode!
     private var idleVillagerCountLabel: SKLabelNode!
 
+    // Idle military button
+    private var idleMilitaryBtn: SKNode!
+    private var idleMilitaryCountLabel: SKLabelNode!
+
     // Game status
     private var statusLabel: SKLabelNode!
     private var statusBg: SKShapeNode!
@@ -402,6 +406,51 @@ class HUDOverlay {
         idleVillagerBtn.addChild(idleVillagerCountLabel)
 
         hudNode.addChild(idleVillagerBtn)
+
+        // Idle military button (next to idle villager)
+        idleMilitaryBtn = SKNode()
+        idleMilitaryBtn.position = CGPoint(x: viewSize.width - 280, y: viewSize.height - 36 - safeAreaTop)
+        idleMilitaryBtn.name = "btn_selectIdleMilitary"
+        idleMilitaryBtn.isHidden = true
+
+        let milBg = SKShapeNode(rectOf: CGSize(width: 60, height: 34), cornerRadius: 5)
+        milBg.fillColor = SKColor(red: 0.5, green: 0.15, blue: 0.1, alpha: 0.9)
+        milBg.strokeColor = SKColor(red: 0.8, green: 0.3, blue: 0.2, alpha: 1.0)
+        milBg.lineWidth = 1.5
+        milBg.name = "btn_selectIdleMilitary"
+        idleMilitaryBtn.addChild(milBg)
+
+        idleMilitaryCountLabel = SKLabelNode(text: "Mil: 0")
+        idleMilitaryCountLabel.fontSize = 12
+        idleMilitaryCountLabel.fontName = "Helvetica-Bold"
+        idleMilitaryCountLabel.fontColor = SKColor(red: 1.0, green: 0.6, blue: 0.5, alpha: 1.0)
+        idleMilitaryCountLabel.verticalAlignmentMode = .center
+        idleMilitaryCountLabel.name = "btn_selectIdleMilitary"
+        idleMilitaryBtn.addChild(idleMilitaryCountLabel)
+
+        hudNode.addChild(idleMilitaryBtn)
+
+        // Scoreboard button
+        let scoreBtn = SKNode()
+        scoreBtn.position = CGPoint(x: viewSize.width - 210, y: viewSize.height - 36 - safeAreaTop)
+        scoreBtn.name = "btn_showScoreboard"
+
+        let scoreBg = SKShapeNode(rectOf: CGSize(width: 24, height: 24), cornerRadius: 4)
+        scoreBg.fillColor = SKColor(red: 0.2, green: 0.2, blue: 0.35, alpha: 0.9)
+        scoreBg.strokeColor = SKColor(red: 0.4, green: 0.4, blue: 0.6, alpha: 1.0)
+        scoreBg.lineWidth = 1
+        scoreBg.name = "btn_showScoreboard"
+        scoreBtn.addChild(scoreBg)
+
+        let scoreIcon = SKLabelNode(text: "\u{2630}")
+        scoreIcon.fontSize = 14
+        scoreIcon.fontName = "Helvetica"
+        scoreIcon.fontColor = .white
+        scoreIcon.verticalAlignmentMode = .center
+        scoreIcon.name = "btn_showScoreboard"
+        scoreBtn.addChild(scoreIcon)
+
+        hudNode.addChild(scoreBtn)
     }
 
     func updateIdleVillagerCount(player: Player) {
@@ -425,6 +474,25 @@ class HUDOverlay {
             idleVillagerBtn.isHidden = true
             idleVillagerBtn.removeAction(forKey: "pulse")
             idleVillagerBtn.alpha = 1.0
+        }
+    }
+
+    func updateIdleMilitaryCount(player: Player) {
+        let militaryTypes: Set<UnitType> = [.militia, .manAtArms, .longSwordsman, .knight, .crossbowman,
+                                             .skirmisher, .scout, .lightCavalry, .batteringRam, .mangonel,
+                                             .scorpion, .monk, .trebuchet, .warGalley, .fireShip,
+                                             .petard, .camelRider, .handCannoneer, .samurai, .warElephant, .mangudai]
+        let idleMilCount = player.units.filter { unit in
+            guard militaryTypes.contains(unit.type) else { return false }
+            if case .idle = unit.state { return true }
+            return false
+        }.count
+
+        if idleMilCount > 0 {
+            idleMilitaryBtn.isHidden = false
+            idleMilitaryCountLabel.text = "Mil: \(idleMilCount)"
+        } else {
+            idleMilitaryBtn.isHidden = true
         }
     }
 
@@ -1061,7 +1129,42 @@ class HUDOverlay {
                     x: startX + 3 * (buttonSize + padding), y: startY, size: buttonSize)
                 actionPanel.addChild(guardBtn)
                 actionButtons.append(guardBtn)
+
+                // Auto-scout button for scout/light cavalry
+                let hasScout = selected.contains { $0.type == .scout || $0.type == .lightCavalry }
+                if hasScout {
+                    let scoutBtn = createActionButton(
+                        text: "Auto", icon: "AS",
+                        color: SKColor(red: 0.4, green: 0.5, blue: 0.3, alpha: 1.0),
+                        name: "btn_autoScout",
+                        x: startX + 4 * (buttonSize + padding), y: startY, size: buttonSize)
+                    actionPanel.addChild(scoutBtn)
+                    actionButtons.append(scoutBtn)
+                }
+
+                // Collect relic button for monks
+                let hasMonk = selected.contains { $0.type == .monk }
+                if hasMonk {
+                    let relicBtn = createActionButton(
+                        text: "Relic", icon: "RL",
+                        color: SKColor(red: 0.7, green: 0.6, blue: 0.2, alpha: 1.0),
+                        name: "btn_collectRelic",
+                        x: startX + (hasScout ? 5 : 4) * (buttonSize + padding), y: startY, size: buttonSize)
+                    actionPanel.addChild(relicBtn)
+                    actionButtons.append(relicBtn)
+                }
             }
+        }
+
+        // Repair button when a damaged building is selected
+        if let b = building, b.hp < b.maxHP {
+            let repairBtn = createActionButton(
+                text: "Repair", icon: "RP",
+                color: SKColor(red: 0.3, green: 0.5, blue: 0.3, alpha: 1.0),
+                name: "btn_repair",
+                x: startX + CGFloat(actionButtons.count) * (buttonSize + padding), y: startY, size: buttonSize)
+            actionPanel.addChild(repairBtn)
+            actionButtons.append(repairBtn)
         }
     }
 
@@ -1467,6 +1570,83 @@ class HUDOverlay {
         }
     }
 
+    func showScoreboard(players: [Player], gameTime: CGFloat = 0) {
+        // Remove existing scoreboard if any
+        hudNode.childNode(withName: "scoreboardOverlay")?.removeFromParent()
+
+        let overlay = SKShapeNode(rectOf: CGSize(width: 400, height: 300))
+        overlay.fillColor = SKColor.black.withAlphaComponent(0.85)
+        overlay.strokeColor = SKColor(red: 0.5, green: 0.4, blue: 0.2, alpha: 1.0)
+        overlay.lineWidth = 2
+        overlay.position = CGPoint(x: viewSize.width / 2, y: viewSize.height / 2)
+        overlay.zPosition = 180
+        overlay.name = "scoreboardOverlay"
+        hudNode.addChild(overlay)
+
+        let title = SKLabelNode(text: "SCOREBOARD")
+        title.fontSize = 20
+        title.fontName = "Helvetica-Bold"
+        title.fontColor = .yellow
+        title.position = CGPoint(x: 0, y: 120)
+        overlay.addChild(title)
+
+        let minutes = Int(gameTime) / 60
+        let seconds = Int(gameTime) % 60
+        let timeLabel = SKLabelNode(text: String(format: "Game Time: %d:%02d", minutes, seconds))
+        timeLabel.fontSize = 12
+        timeLabel.fontName = "Helvetica"
+        timeLabel.fontColor = SKColor(white: 0.6, alpha: 1.0)
+        timeLabel.position = CGPoint(x: 0, y: 104)
+        overlay.addChild(timeLabel)
+
+        // Header row
+        let header = SKLabelNode(text: "Player    Units  Kills  Lost   Food  Wood  Gold  Stone")
+        header.fontSize = 11
+        header.fontName = "Courier"
+        header.fontColor = SKColor(white: 0.7, alpha: 1.0)
+        header.position = CGPoint(x: 0, y: 90)
+        overlay.addChild(header)
+
+        for (index, player) in players.enumerated() {
+            let color = SpriteFactory.playerColors[player.id % SpriteFactory.playerColors.count]
+            let unitCount = player.units.count
+            let kills = player.totalKills
+            let lost = player.totalUnitsLost
+            let res = player.resources
+
+            let row = SKLabelNode(text: String(format: "P%d        %3d    %3d    %3d   %4d  %4d  %4d  %4d",
+                                               player.id + 1, unitCount, kills, lost,
+                                               res.food, res.wood, res.gold, res.stone))
+            row.fontSize = 12
+            row.fontName = "Courier"
+            row.fontColor = color
+            row.position = CGPoint(x: 0, y: 60 - CGFloat(index) * 30)
+            overlay.addChild(row)
+
+            // Age indicator
+            let ageLabel = SKLabelNode(text: player.currentAge.displayName)
+            ageLabel.fontSize = 9
+            ageLabel.fontName = "Helvetica"
+            ageLabel.fontColor = color.withAlphaComponent(0.7)
+            ageLabel.position = CGPoint(x: 0, y: 48 - CGFloat(index) * 30)
+            overlay.addChild(ageLabel)
+        }
+
+        let hint = SKLabelNode(text: "Tap to close")
+        hint.fontSize = 10
+        hint.fontName = "Helvetica"
+        hint.fontColor = SKColor(white: 0.5, alpha: 1.0)
+        hint.position = CGPoint(x: 0, y: -130)
+        overlay.addChild(hint)
+
+        // Auto-dismiss after 8 seconds or on tap
+        overlay.run(SKAction.sequence([
+            SKAction.wait(forDuration: 8.0),
+            SKAction.fadeOut(withDuration: 0.3),
+            SKAction.removeFromParent()
+        ]))
+    }
+
     func showGameOver(victory: Bool, player: Player? = nil) {
         let overlay = SKShapeNode(rectOf: CGSize(width: viewSize.width, height: viewSize.height))
         overlay.fillColor = SKColor.black.withAlphaComponent(0.8)
@@ -1558,6 +1738,11 @@ class HUDOverlay {
             if name == "btn_garrison" { return .garrison }
             if name == "btn_ungarrison" { return .ungarrison }
             if name == "btn_autoReseed" { return .toggleAutoReseed }
+            if name == "btn_autoScout" { return .autoScout }
+            if name == "btn_collectRelic" { return .collectRelic }
+            if name == "btn_repair" { return .repairBuilding }
+            if name == "btn_selectIdleMilitary" { return .selectIdleMilitary }
+            if name == "btn_showScoreboard" { return .showScoreboard }
             if name == "idleVillagerBtn" { return .selectIdleVillager }
 
             if name.hasPrefix("build_") {
@@ -1690,4 +1875,9 @@ enum HUDAction {
     case garrison
     case ungarrison
     case toggleAutoReseed
+    case repairBuilding
+    case autoScout
+    case selectIdleMilitary
+    case showScoreboard
+    case collectRelic
 }

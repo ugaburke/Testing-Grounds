@@ -27,14 +27,12 @@ class FogOfWar {
             revealArea(around: unit.gridPosition, range: unitRange)
         }
 
-        // Reveal around buildings
+        // Reveal around buildings (use building-specific sight ranges)
+        let hasTownWatch = player.researchedTechs.contains(.townWatch)
         for building in player.buildings {
-            let buildingRange: Int
-            switch building.type {
-            case .tower: buildingRange = sightRange + 3
-            case .castle: buildingRange = sightRange + 2
-            default: buildingRange = sightRange
-            }
+            var buildingRange = building.type.sightRange
+            // Town Watch: +2 LOS for all buildings
+            if hasTownWatch { buildingRange += 2 }
             revealArea(around: building.gridPosition, range: buildingRange)
         }
     }

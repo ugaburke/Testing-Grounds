@@ -193,6 +193,94 @@ class SpriteFactory {
             weight.strokeColor = .clear
             weight.position = CGPoint(x: -bodySize * 0.15, y: bodySize * 0.3)
             bodyContainer.addChild(weight)
+        } else if unit.type == .warGalley {
+            // War Galley: larger boat shape with ram
+            let path = CGMutablePath()
+            path.addEllipse(in: CGRect(x: -bodySize * 0.5, y: -bodySize * 0.25,
+                                        width: bodySize, height: bodySize * 0.5))
+            body = SKShapeNode(path: path)
+            let ram = SKShapeNode(rectOf: CGSize(width: bodySize * 0.2, height: 3))
+            ram.fillColor = SKColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0)
+            ram.strokeColor = .clear
+            ram.position = CGPoint(x: bodySize * 0.5, y: 0)
+            bodyContainer.addChild(ram)
+            let mast = SKShapeNode(rectOf: CGSize(width: 2, height: bodySize * 0.4))
+            mast.fillColor = SKColor.brown
+            mast.strokeColor = .clear
+            mast.position = CGPoint(x: 0, y: bodySize * 0.2)
+            bodyContainer.addChild(mast)
+        } else if unit.type == .fireShip {
+            // Fire Ship: boat with flame indicator
+            let path = CGMutablePath()
+            path.addEllipse(in: CGRect(x: -bodySize * 0.4, y: -bodySize * 0.2,
+                                        width: bodySize * 0.8, height: bodySize * 0.4))
+            body = SKShapeNode(path: path)
+            let flame = SKShapeNode(circleOfRadius: bodySize * 0.15)
+            flame.fillColor = SKColor(red: 1.0, green: 0.4, blue: 0.1, alpha: 0.8)
+            flame.strokeColor = .clear
+            flame.position = CGPoint(x: bodySize * 0.2, y: bodySize * 0.1)
+            bodyContainer.addChild(flame)
+        } else if unit.type == .petard {
+            // Petard: small circle with fuse
+            body = SKShapeNode(circleOfRadius: bodySize * 0.3)
+            let fuse = SKShapeNode(rectOf: CGSize(width: 1.5, height: bodySize * 0.25))
+            fuse.fillColor = SKColor(red: 0.9, green: 0.6, blue: 0.1, alpha: 1.0)
+            fuse.strokeColor = .clear
+            fuse.position = CGPoint(x: 0, y: bodySize * 0.3)
+            bodyContainer.addChild(fuse)
+        } else if unit.type == .camelRider {
+            // Camel: tall ellipse
+            let path = CGMutablePath()
+            path.addEllipse(in: CGRect(x: -bodySize * 0.4, y: -bodySize * 0.35,
+                                        width: bodySize * 0.8, height: bodySize * 0.7))
+            body = SKShapeNode(path: path)
+            let hump = SKShapeNode(circleOfRadius: bodySize * 0.12)
+            hump.fillColor = playerColor.darker(by: 0.1)
+            hump.strokeColor = .clear
+            hump.position = CGPoint(x: 0, y: bodySize * 0.2)
+            bodyContainer.addChild(hump)
+        } else if unit.type == .handCannoneer {
+            // Hand Cannoneer: diamond with cannon tube
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: 0, y: bodySize * 0.4))
+            path.addLine(to: CGPoint(x: -bodySize * 0.35, y: 0))
+            path.addLine(to: CGPoint(x: 0, y: -bodySize * 0.4))
+            path.addLine(to: CGPoint(x: bodySize * 0.35, y: 0))
+            path.closeSubpath()
+            body = SKShapeNode(path: path)
+            let cannon = SKShapeNode(rectOf: CGSize(width: bodySize * 0.4, height: 3))
+            cannon.fillColor = SKColor(red: 0.3, green: 0.3, blue: 0.35, alpha: 0.9)
+            cannon.strokeColor = .clear
+            cannon.position = CGPoint(x: bodySize * 0.15, y: 0)
+            bodyContainer.addChild(cannon)
+        } else if unit.type == .samurai {
+            // Samurai: shield shape with katana
+            let path = CGMutablePath()
+            path.addRoundedRect(in: CGRect(x: -bodySize * 0.32, y: -bodySize * 0.32,
+                                            width: bodySize * 0.64, height: bodySize * 0.64),
+                                cornerWidth: bodySize * 0.12, cornerHeight: bodySize * 0.12)
+            body = SKShapeNode(path: path)
+            let katana = SKShapeNode(rectOf: CGSize(width: 2, height: bodySize * 0.5))
+            katana.fillColor = SKColor(red: 0.9, green: 0.9, blue: 0.95, alpha: 0.9)
+            katana.strokeColor = .clear
+            katana.position = CGPoint(x: bodySize * 0.25, y: bodySize * 0.05)
+            katana.zRotation = -0.2
+            bodyContainer.addChild(katana)
+        } else if unit.type == .warElephant {
+            // War Elephant: large circle
+            body = SKShapeNode(circleOfRadius: bodySize * 0.5)
+            let tusk1 = SKShapeNode(rectOf: CGSize(width: 2, height: bodySize * 0.2))
+            tusk1.fillColor = SKColor(red: 0.9, green: 0.9, blue: 0.85, alpha: 0.9)
+            tusk1.strokeColor = .clear
+            tusk1.position = CGPoint(x: bodySize * 0.2, y: bodySize * 0.25)
+            tusk1.zRotation = 0.3
+            bodyContainer.addChild(tusk1)
+            let tusk2 = SKShapeNode(rectOf: CGSize(width: 2, height: bodySize * 0.2))
+            tusk2.fillColor = SKColor(red: 0.9, green: 0.9, blue: 0.85, alpha: 0.9)
+            tusk2.strokeColor = .clear
+            tusk2.position = CGPoint(x: bodySize * 0.2, y: -bodySize * 0.25)
+            tusk2.zRotation = -0.3
+            bodyContainer.addChild(tusk2)
         } else {
             // Melee infantry — rounded shield shape
             let path = CGMutablePath()
@@ -1109,6 +1197,261 @@ class SpriteFactory {
         ghost.run(pulse)
 
         return ghost
+    }
+
+    // MARK: - Relic Sprite
+
+    func createRelicNode(at position: CGPoint) -> SKNode {
+        let container = SKNode()
+        container.position = position
+        container.zPosition = 4
+        container.name = "relic"
+
+        let glow = SKShapeNode(circleOfRadius: tileSize * 0.4)
+        glow.fillColor = SKColor(red: 0.9, green: 0.8, blue: 0.2, alpha: 0.3)
+        glow.strokeColor = .clear
+        container.addChild(glow)
+
+        let body = SKShapeNode(rectOf: CGSize(width: tileSize * 0.3, height: tileSize * 0.4), cornerRadius: 2)
+        body.fillColor = SKColor(red: 0.85, green: 0.7, blue: 0.1, alpha: 1.0)
+        body.strokeColor = SKColor(red: 0.6, green: 0.5, blue: 0.1, alpha: 1.0)
+        body.lineWidth = 1.5
+        container.addChild(body)
+
+        let cross = SKLabelNode(text: "\u{271A}")
+        cross.fontSize = tileSize * 0.25
+        cross.fontColor = SKColor(red: 0.95, green: 0.85, blue: 0.3, alpha: 1.0)
+        cross.verticalAlignmentMode = .center
+        cross.horizontalAlignmentMode = .center
+        container.addChild(cross)
+
+        // Shimmer animation
+        let shimmer = SKAction.repeatForever(SKAction.sequence([
+            SKAction.fadeAlpha(to: 0.5, duration: 1.0),
+            SKAction.fadeAlpha(to: 1.0, duration: 1.0)
+        ]))
+        glow.run(shimmer)
+
+        return container
+    }
+
+    // MARK: - Building Smoke Effect
+
+    func createBuildingSmokeEffect(at position: CGPoint) -> SKNode {
+        let container = SKNode()
+        container.position = position
+        container.zPosition = 16
+        container.name = "buildingSmoke"
+
+        let smokeAction = SKAction.repeatForever(SKAction.sequence([
+            SKAction.run { [weak container] in
+                guard let container = container else { return }
+                let smoke = SKShapeNode(circleOfRadius: CGFloat.random(in: 3...6))
+                smoke.fillColor = SKColor(red: 0.3, green: 0.3, blue: 0.3, alpha: 0.4)
+                smoke.strokeColor = .clear
+                smoke.position = CGPoint(x: CGFloat.random(in: -8...8), y: 0)
+
+                let rise = SKAction.sequence([
+                    SKAction.group([
+                        SKAction.moveBy(x: CGFloat.random(in: -5...5), y: CGFloat.random(in: 12...20), duration: 1.0),
+                        SKAction.fadeOut(withDuration: 1.0),
+                        SKAction.scale(to: 2.0, duration: 1.0)
+                    ]),
+                    SKAction.removeFromParent()
+                ])
+                smoke.run(rise)
+                container.addChild(smoke)
+            },
+            SKAction.wait(forDuration: 0.3)
+        ]))
+        container.run(smokeAction)
+
+        return container
+    }
+
+    // MARK: - Impact/Hit Effect
+
+    func createImpactEffect(at position: CGPoint) -> SKNode {
+        let container = SKNode()
+        container.position = position
+        container.zPosition = 15
+
+        for _ in 0..<4 {
+            let particle = SKShapeNode(circleOfRadius: 2)
+            particle.fillColor = SKColor(red: 0.8, green: 0.6, blue: 0.2, alpha: 0.8)
+            particle.strokeColor = .clear
+            let angle = CGFloat.random(in: 0...(2 * .pi))
+            let dist = CGFloat.random(in: 5...12)
+            let dx = cos(angle) * dist
+            let dy = sin(angle) * dist
+            let scatter = SKAction.sequence([
+                SKAction.group([
+                    SKAction.moveBy(x: dx, y: dy, duration: 0.3),
+                    SKAction.fadeOut(withDuration: 0.3)
+                ]),
+                SKAction.removeFromParent()
+            ])
+            particle.run(scatter)
+            container.addChild(particle)
+        }
+
+        let removeContainer = SKAction.sequence([
+            SKAction.wait(forDuration: 0.4),
+            SKAction.removeFromParent()
+        ])
+        container.run(removeContainer)
+        return container
+    }
+
+    // MARK: - Building Rubble
+
+    func createRubbleNode(at position: CGPoint, size: CGSize) -> SKNode {
+        let container = SKNode()
+        container.position = position
+        container.zPosition = 3
+        container.name = "rubble"
+
+        for _ in 0..<5 {
+            let rubble = SKShapeNode(rectOf: CGSize(
+                width: CGFloat.random(in: 4...8),
+                height: CGFloat.random(in: 3...6)
+            ))
+            rubble.fillColor = SKColor(red: 0.45, green: 0.4, blue: 0.35, alpha: 0.7)
+            rubble.strokeColor = .clear
+            rubble.position = CGPoint(
+                x: CGFloat.random(in: -size.width/3...size.width/3),
+                y: CGFloat.random(in: -size.height/3...size.height/3)
+            )
+            rubble.zRotation = CGFloat.random(in: 0...(.pi * 2))
+            container.addChild(rubble)
+        }
+
+        // Fade out rubble after 15 seconds
+        container.run(SKAction.sequence([
+            SKAction.wait(forDuration: 15.0),
+            SKAction.fadeOut(withDuration: 2.0),
+            SKAction.removeFromParent()
+        ]))
+
+        return container
+    }
+
+    // MARK: - Rally Point Flag
+
+    func createRallyFlagNode(at position: CGPoint, playerColor: SKColor) -> SKNode {
+        let container = SKNode()
+        container.position = position
+        container.zPosition = 6
+        container.name = "rallyFlag"
+
+        let pole = SKShapeNode(rectOf: CGSize(width: 1.5, height: tileSize * 0.5))
+        pole.fillColor = SKColor(red: 0.4, green: 0.3, blue: 0.2, alpha: 1.0)
+        pole.strokeColor = .clear
+        pole.position = CGPoint(x: 0, y: tileSize * 0.15)
+        container.addChild(pole)
+
+        let flag = SKShapeNode(rectOf: CGSize(width: tileSize * 0.25, height: tileSize * 0.15))
+        flag.fillColor = playerColor
+        flag.strokeColor = .clear
+        flag.position = CGPoint(x: tileSize * 0.13, y: tileSize * 0.35)
+        container.addChild(flag)
+
+        // Flag waving
+        let wave = SKAction.repeatForever(SKAction.sequence([
+            SKAction.moveBy(x: 2, y: 0, duration: 0.4),
+            SKAction.moveBy(x: -2, y: 0, duration: 0.4)
+        ]))
+        flag.run(wave)
+
+        return container
+    }
+
+    // MARK: - Explosion Effect (for Petard)
+
+    func createExplosionEffect(at position: CGPoint) -> SKNode {
+        let container = SKNode()
+        container.position = position
+        container.zPosition = 20
+
+        // Central flash
+        let flash = SKShapeNode(circleOfRadius: tileSize * 0.6)
+        flash.fillColor = SKColor(red: 1.0, green: 0.8, blue: 0.2, alpha: 0.9)
+        flash.strokeColor = .clear
+        container.addChild(flash)
+
+        // Expanding ring
+        let ring = SKShapeNode(circleOfRadius: tileSize * 0.3)
+        ring.fillColor = .clear
+        ring.strokeColor = SKColor(red: 1.0, green: 0.5, blue: 0.1, alpha: 0.8)
+        ring.lineWidth = 3
+        container.addChild(ring)
+
+        // Particles
+        for _ in 0..<8 {
+            let particle = SKShapeNode(circleOfRadius: CGFloat.random(in: 2...4))
+            particle.fillColor = [SKColor.orange, SKColor.red, SKColor.yellow].randomElement()!
+            particle.strokeColor = .clear
+            let angle = CGFloat.random(in: 0...(2 * .pi))
+            let dist = CGFloat.random(in: 15...30)
+            particle.run(SKAction.sequence([
+                SKAction.group([
+                    SKAction.moveBy(x: cos(angle) * dist, y: sin(angle) * dist, duration: 0.5),
+                    SKAction.fadeOut(withDuration: 0.5)
+                ]),
+                SKAction.removeFromParent()
+            ]))
+            container.addChild(particle)
+        }
+
+        container.run(SKAction.sequence([
+            SKAction.group([
+                SKAction.sequence([
+                    SKAction.scale(to: 2.0, duration: 0.3),
+                    SKAction.scale(to: 0.5, duration: 0.2)
+                ]),
+                SKAction.fadeOut(withDuration: 0.5)
+            ]),
+            SKAction.removeFromParent()
+        ]))
+
+        return container
+    }
+
+    // MARK: - Day/Night Overlay
+
+    func createDayNightOverlay(viewSize: CGSize) -> SKShapeNode {
+        let overlay = SKShapeNode(rectOf: CGSize(width: viewSize.width * 2, height: viewSize.height * 2))
+        overlay.fillColor = .clear
+        overlay.strokeColor = .clear
+        overlay.zPosition = 75
+        overlay.name = "dayNightOverlay"
+        overlay.isUserInteractionEnabled = false
+        return overlay
+    }
+
+    // MARK: - Fish Trap Sprite
+
+    func createFishTrapNode(at position: CGPoint) -> SKNode {
+        let container = SKNode()
+        container.position = position
+        container.zPosition = 3
+
+        let net = SKShapeNode(circleOfRadius: tileSize * 0.35)
+        net.fillColor = SKColor(red: 0.3, green: 0.45, blue: 0.5, alpha: 0.5)
+        net.strokeColor = SKColor(red: 0.5, green: 0.4, blue: 0.3, alpha: 0.7)
+        net.lineWidth = 1.5
+        container.addChild(net)
+
+        // Net lines
+        for i in 0..<4 {
+            let line = SKShapeNode(rectOf: CGSize(width: 1, height: tileSize * 0.6))
+            line.fillColor = SKColor(red: 0.5, green: 0.4, blue: 0.3, alpha: 0.5)
+            line.strokeColor = .clear
+            line.zRotation = CGFloat(i) * .pi / 4.0
+            container.addChild(line)
+        }
+
+        return container
     }
 }
 

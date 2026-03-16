@@ -57,6 +57,26 @@ class BuildingSystem {
             if building.type.attackDamage > 0 {
                 handleBuildingAttack(building: building, map: map)
             }
+
+            // Smoke effect for damaged buildings (below 50% HP)
+            if let scene = gameScene {
+                let hpRatio = CGFloat(building.hp) / CGFloat(building.maxHP)
+                if hpRatio < 0.5 && building.smokeNode == nil {
+                    if let pos = building.node?.position {
+                        let smoke = scene.spriteFactory.createBuildingSmokeEffect(at: pos)
+                        scene.gameWorld.addChild(smoke)
+                        building.smokeNode = smoke
+                    }
+                } else if hpRatio >= 0.5 && building.smokeNode != nil {
+                    building.smokeNode?.removeFromParent()
+                    building.smokeNode = nil
+                }
+            }
+
+            // Wonder timer tracking
+            if building.type == .wonder {
+                player.wonderBuilt = true
+            }
         }
 
         // Update population cap
@@ -68,7 +88,12 @@ class BuildingSystem {
 
     func placeBuilding(type: BuildingType, at gridPos: GridPosition, player: Player,
                         map: GameMap, spriteFactory: SpriteFactory) -> Building? {
-        guard map.canPlaceBuilding(type: type, at: gridPos) else { return nil }
+        // Fish traps go on water
+        if type == .fishTrap {
+            guard map.canPlaceFishTrap(at: gridPos) else { return nil }
+        } else {
+            guard map.canPlaceBuilding(type: type, at: gridPos) else { return nil }
+        }
         guard player.canAfford(type.cost) else { return nil }
         guard player.currentAge.rawValue >= type.requiredAge.rawValue else { return nil }
 
@@ -225,9 +250,16 @@ class BuildingSystem {
     private func handleBuildingAttack(building: Building, map: GameMap) {
         guard let scene = gameScene else { return }
 
+        let ownerPlayer = scene.players.first { $0.id == building.ownerID }
         let range = building.type.attackRange
         let garrisonBonus = building.garrisonedUnits.count
-        let damage = building.type.attackDamage + garrisonBonus
+        var damage = building.type.attackDamage + garrisonBonus
+        // Arrowslits: towers get +3 attack
+        if building.type == .tower, let p = ownerPlayer, p.researchedTechs.contains(.arrowslits) {
+            damage += 3
+        }
+        // Heated Shot: towers do +4 vs naval units
+        let hasHeatedShot = ownerPlayer?.researchedTechs.contains(.heatedShot) ?? false
 
         // Find nearest enemy unit in range
         for player in scene.players {
@@ -239,7 +271,9 @@ class BuildingSystem {
                     let buildingKey = "building_attack_\(building.id)"
                     let lastAttack = scene.lastBuildingAttackTimes[buildingKey] ?? 0
                     if currentTime - lastAttack >= 2.0 {
-                        unit.hp -= damage
+                        var finalDamage = damage
+                        if hasHeatedShot && unit.type.isNaval { finalDamage += 4 }
+                        unit.hp -= finalDamage
                         scene.lastBuildingAttackTimes[buildingKey] = currentTime
 
                         // Visual effect
@@ -261,6 +295,25 @@ class BuildingSystem {
 
     func destroyBuilding(_ building: Building, player: Player, map: GameMap) {
         let size = building.type.size
+
+        // Leave rubble behind
+        if let scene = gameScene, let pos = building.node?.position, building.type != .wall && building.type != .farm {
+            let rubbleSize = CGSize(width: CGFloat(size.width) * map.tileSize,
+                                     height: CGFloat(size.height) * map.tileSize)
+            let rubble = scene.spriteFactory.createRubbleNode(at: pos, size: rubbleSize)
+            scene.gameWorld.addChild(rubble)
+        }
+
+        // Remove smoke effect
+        building.smokeNode?.removeFromParent()
+        building.smokeNode = nil
+
+        // Track wonder destruction
+        if building.type == .wonder {
+            player.wonderBuilt = false
+            player.wonderTimer = 0
+        }
+
         for dy in 0..<size.height {
             for dx in 0..<size.width {
                 let tilePos = GridPosition(x: building.gridPosition.x + dx, y: building.gridPosition.y + dy)

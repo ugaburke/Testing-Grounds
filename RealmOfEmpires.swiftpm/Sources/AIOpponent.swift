@@ -12,6 +12,9 @@ class AIOpponent {
     var defenseTimer: CGFloat = 0
     let defenseInterval: CGFloat = 2.0
     var techTree = TechTree()
+    var dynamicDifficultyAdjust: CGFloat = 1.0  // Scales AI gather/build rate
+    var wonderAwareness: Bool = false
+    var navalTimer: CGFloat = 0
 
     var decisionInterval: CGFloat {
         switch difficulty {
@@ -52,10 +55,23 @@ class AIOpponent {
         decisionTimer += deltaTime
         rushTimer += deltaTime
 
-        // Hard AI gets hidden gather bonus
+        // Hard AI gets hidden gather bonus (scaled by dynamic difficulty)
         if difficulty == .hard {
-            player.resources.food += Int(deltaTime * 0.5)
-            player.resources.wood += Int(deltaTime * 0.3)
+            player.resources.food += Int(deltaTime * 0.5 * dynamicDifficultyAdjust)
+            player.resources.wood += Int(deltaTime * 0.3 * dynamicDifficultyAdjust)
+        }
+
+        // Dynamic difficulty: adjust based on score differential
+        if let scene = gameScene, let human = scene.players.first(where: { $0.isHuman }) {
+            let humanScore = human.units.count + human.buildings.count * 2
+            let aiScore = player.units.count + player.buildings.count * 2
+            if aiScore > humanScore * 2 {
+                dynamicDifficultyAdjust = 0.7  // AI is way ahead, slow down
+            } else if humanScore > aiScore * 2 {
+                dynamicDifficultyAdjust = 1.5  // AI is behind, catch up
+            } else {
+                dynamicDifficultyAdjust = 1.0
+            }
         }
 
         guard decisionTimer >= decisionInterval else { return }
@@ -83,6 +99,19 @@ class AIOpponent {
             defenseTimer = 0
             handleDefense()
         }
+
+        // Naval strategy
+        navalTimer += decisionInterval
+        if navalTimer >= 10.0 {
+            navalTimer = 0
+            handleNavalStrategy()
+        }
+
+        // Wonder awareness: if enemy is building/has wonder, rush them
+        checkWonderThreat()
+
+        // Build outposts for vision
+        buildOutpostsForVision()
     }
 
     private func handleDefense() {
@@ -236,6 +265,9 @@ class AIOpponent {
             }
             if !player.buildings.contains(where: { $0.type == .siegeWorkshop }) && player.resources.wood >= 200 {
                 buildNearTC(.siegeWorkshop)
+            }
+            if !player.buildings.contains(where: { $0.type == .university }) && player.resources.wood >= 200 {
+                buildNearTC(.university)
             }
         }
 
@@ -433,9 +465,9 @@ class AIOpponent {
 
         if player.currentAge.rawValue >= Age.castleAge.rawValue {
             desiredTechs.append(contentsOf: [.bowSaw, .wheelbarrow, .ironCasting, .bodkinArrow,
-                                              .chainMailArmor, .chainBardingArmor])
+                                              .chainMailArmor, .chainBardingArmor, .masonry, .architecture])
             if difficulty == .hard {
-                desiredTechs.append(contentsOf: [.heavyPlow, .goldMining, .ballistics])
+                desiredTechs.append(contentsOf: [.heavyPlow, .goldMining, .ballistics, .arrowslits, .townWatch])
             }
         }
 
@@ -614,6 +646,106 @@ class AIOpponent {
             if scene.gameMap.canPlaceBuilding(type: .wall, at: pos) {
                 if let building = scene.buildingSystem.placeBuilding(
                     type: .wall, at: pos, player: player,
+                    map: scene.gameMap, spriteFactory: scene.spriteFactory) {
+                    building.isConstructed = true
+                    building.hp = building.maxHP
+                    building.constructionProgress = 1.0
+                    scene.gameWorld.addChild(building.node!)
+                    scene.spriteFactory.updateBuildingNode(building)
+                    return
+                }
+            }
+        }
+    }
+
+    // MARK: - Naval Strategy
+
+    private func handleNavalStrategy() {
+        guard let scene = gameScene else { return }
+        guard player.currentAge.rawValue >= Age.castleAge.rawValue else { return }
+
+        let hasDock = player.buildings.contains { $0.type == .dock && $0.isConstructed }
+
+        // Build dock if near water
+        if !hasDock && player.resources.wood >= 150 {
+            // Find water-adjacent position
+            if let tc = player.buildings.first(where: { $0.type == .townCenter }) {
+                for radius in 5...15 {
+                    for attempt in 0..<8 {
+                        let angle = CGFloat(attempt) * .pi / 4.0
+                        let dx = Int(CGFloat(radius) * cos(angle))
+                        let dy = Int(CGFloat(radius) * sin(angle))
+                        let pos = GridPosition(x: tc.gridPosition.x + dx, y: tc.gridPosition.y + dy)
+                        if scene.gameMap.canPlaceBuilding(type: .dock, at: pos) {
+                            if let building = scene.buildingSystem.placeBuilding(
+                                type: .dock, at: pos, player: player,
+                                map: scene.gameMap, spriteFactory: scene.spriteFactory) {
+                                building.isConstructed = true
+                                building.hp = building.maxHP
+                                building.constructionProgress = 1.0
+                                scene.gameWorld.addChild(building.node!)
+                                scene.spriteFactory.updateBuildingNode(building)
+                                return
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Train fishing boats for economy
+        if hasDock {
+            let fishingBoats = player.units.filter { $0.type == .fishingBoat }.count
+            if fishingBoats < 3 {
+                if let dock = player.buildings.first(where: { $0.type == .dock && $0.isConstructed }) {
+                    _ = scene.buildingSystem.trainUnit(type: .fishingBoat, at: dock, player: player)
+                }
+            }
+        }
+    }
+
+    // MARK: - Wonder Awareness
+
+    private func checkWonderThreat() {
+        guard let scene = gameScene else { return }
+
+        for enemy in scene.players where enemy.id != player.id {
+            if enemy.wonderBuilt {
+                wonderAwareness = true
+                // Rush the wonder!
+                if let wonder = enemy.buildings.first(where: { $0.type == .wonder }) {
+                    strategy = .attack
+                    for unit in player.units where unit.type != .villager && isIdle(unit) {
+                        scene.unitSystem.attackBuilding(unit: unit, targetBuildingID: wonder.id, pathfinder: scene.pathfinder)
+                    }
+                }
+                return
+            }
+        }
+        wonderAwareness = false
+    }
+
+    // MARK: - Outpost Building
+
+    private func buildOutpostsForVision() {
+        guard let scene = gameScene else { return }
+        guard player.currentAge.rawValue >= Age.feudalAge.rawValue else { return }
+
+        let outpostCount = player.buildings.filter { $0.type == .outpost }.count
+        guard outpostCount < 3 else { return }
+        guard player.resources.wood >= 25 && player.resources.stone >= 5 else { return }
+
+        // Place outposts at map quadrant centers for vision
+        let positions = [
+            GridPosition(x: scene.gameMap.width / 4, y: scene.gameMap.height / 4),
+            GridPosition(x: scene.gameMap.width * 3 / 4, y: scene.gameMap.height / 4),
+            GridPosition(x: scene.gameMap.width / 4, y: scene.gameMap.height * 3 / 4),
+        ]
+
+        for pos in positions {
+            if scene.gameMap.canPlaceBuilding(type: .outpost, at: pos) {
+                if let building = scene.buildingSystem.placeBuilding(
+                    type: .outpost, at: pos, player: player,
                     map: scene.gameMap, spriteFactory: scene.spriteFactory) {
                     building.isConstructed = true
                     building.hp = building.maxHP

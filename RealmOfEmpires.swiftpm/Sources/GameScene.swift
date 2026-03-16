@@ -78,6 +78,20 @@ class GameScene: SKScene {
     // Idle villager cycling
     var lastIdleVillagerIndex: Int = 0
     var lastAttackAlertTime: TimeInterval = 0
+
+    // Day/Night cycle
+    var dayNightOverlay: SKShapeNode?
+    var dayNightTimer: CGFloat = 0
+    let dayLength: CGFloat = 120.0  // 2 minutes per full day cycle
+
+    // Victory conditions
+    var victoryCondition: VictoryCondition = .conquest
+    var wonderVictoryTimer: CGFloat = 0
+    let wonderVictoryTime: CGFloat = 200.0  // 200 seconds to win with wonder
+
+    // Double-click tracking
+    var lastClickTime: TimeInterval = 0
+    var lastClickedUnitType: UnitType?
     var attackAlertPosition: CGPoint?
     var weatherTimer: CGFloat = 0
     var currentWeather: WeatherType = .clear
@@ -205,6 +219,14 @@ class GameScene: SKScene {
         pathfinder = Pathfinder(map: gameMap)
         spriteFactory = SpriteFactory(tileSize: gameMap.tileSize)
         fogOfWar = FogOfWar(map: gameMap)
+
+        // Spawn relics on map
+        for relic in gameMap.relics {
+            let worldPos = gameMap.gridToWorld(relic.gridPosition)
+            let node = spriteFactory.createRelicNode(at: worldPos)
+            relic.node = node
+            gameWorld.addChild(node)
+        }
     }
 
     private func setupPlayers() {
@@ -411,10 +433,22 @@ class GameScene: SKScene {
             }
         }
 
+        // Day/Night cycle
+        dayNightTimer += deltaTime
+        if dayNightTimer >= dayLength { dayNightTimer = 0 }
+        updateDayNightCycle()
+
+        // Wonder victory timer
+        updateWonderVictory(deltaTime: deltaTime)
+
+        // Relic collection updates
+        updateRelicCollection()
+
         // HUD
         hud.update(player: humanPlayer)
         hud.updateIncomeRates(player: humanPlayer, deltaTime: deltaTime)
         hud.updateIdleVillagerCount(player: humanPlayer)
+        hud.updateIdleMilitaryCount(player: humanPlayer)
         hud.updateIdleMilitaryAlert(player: humanPlayer)
         if let building = selectedBuilding {
             hud.showBuildingInfo(building: building, player: humanPlayer)
@@ -551,13 +585,93 @@ class GameScene: SKScene {
             hud.showGameOver(victory: false, player: humanPlayer)
         }
 
-        // Check if all AI players are eliminated
+        // Conquest victory: all AI eliminated
         let aiEliminated = players.filter { !$0.isHuman }.allSatisfy {
             $0.buildings.isEmpty && $0.units.isEmpty
         }
         if aiEliminated && players.count > 1 {
             gameState = .victory
             hud.showGameOver(victory: true, player: humanPlayer)
+            return
+        }
+
+        // Wonder victory
+        if humanPlayer.wonderBuilt && humanPlayer.wonderTimer >= wonderVictoryTime {
+            gameState = .victory
+            hud.showStatus("Wonder Victory!")
+            hud.showGameOver(victory: true, player: humanPlayer)
+            return
+        }
+
+        // Relic victory: collect all relics for 200 seconds
+        let totalRelics = gameMap.relics.count
+        if totalRelics > 0 && humanPlayer.relicsCollected >= totalRelics && wonderVictoryTimer >= wonderVictoryTime {
+            gameState = .victory
+            hud.showStatus("Relic Victory!")
+            hud.showGameOver(victory: true, player: humanPlayer)
+            return
+        }
+
+        // AI wonder victory (defeat for player)
+        for p in players where !p.isHuman {
+            if p.wonderBuilt && p.wonderTimer >= wonderVictoryTime {
+                gameState = .defeat
+                hud.showStatus("Enemy achieved Wonder Victory!")
+                hud.showGameOver(victory: false, player: humanPlayer)
+                return
+            }
+        }
+    }
+
+    // MARK: - Day/Night Cycle
+
+    private func updateDayNightCycle() {
+        let progress = dayNightTimer / dayLength
+        let timeOfDay: TimeOfDay
+        if progress < 0.2 { timeOfDay = .dawn }
+        else if progress < 0.5 { timeOfDay = .day }
+        else if progress < 0.7 { timeOfDay = .dusk }
+        else { timeOfDay = .night }
+
+        if dayNightOverlay == nil {
+            dayNightOverlay = spriteFactory.createDayNightOverlay(viewSize: size)
+            hudCamera.addChild(dayNightOverlay!)
+        }
+        dayNightOverlay?.fillColor = timeOfDay.ambientColor.withAlphaComponent(timeOfDay.ambientAlpha)
+    }
+
+    // MARK: - Wonder Victory Timer
+
+    private func updateWonderVictory(deltaTime: CGFloat) {
+        for player in players {
+            if player.wonderBuilt {
+                player.wonderTimer += deltaTime
+                // Status updates every 30 seconds
+                if player.isHuman && Int(player.wonderTimer) % 30 == 0 && Int(player.wonderTimer) > 0 {
+                    let remaining = Int(wonderVictoryTime - player.wonderTimer)
+                    if remaining > 0 {
+                        hud.showStatus("Wonder Victory in \(remaining)s")
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Relic Collection
+
+    private func updateRelicCollection() {
+        for player in players {
+            for unit in player.units where unit.type == .monk {
+                if case .collectingRelic(let relicPos) = unit.state {
+                    if let relic = gameMap.relics.first(where: { $0.gridPosition.x == relicPos.x && $0.gridPosition.y == relicPos.y && !$0.isCollected }) {
+                        if unitSystem.handleRelicCollection(unit: unit, relic: relic, player: player, map: gameMap) {
+                            if player.isHuman {
+                                hud.showStatus("Relic collected! (\(player.relicsCollected)/\(gameMap.relics.count))")
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -1196,6 +1310,8 @@ class GameScene: SKScene {
                 case .defensive:
                     unit.stance = .standGround
                 case .standGround:
+                    unit.stance = .noAttack
+                case .noAttack:
                     unit.stance = .aggressive
                 }
             }
@@ -1205,6 +1321,7 @@ class GameScene: SKScene {
                 case .aggressive: stanceName = "Aggressive"
                 case .defensive: stanceName = "Defensive"
                 case .standGround: stanceName = "Stand Ground"
+                case .noAttack: stanceName = "No Attack"
                 }
                 hud.showStatus("Stance: \(stanceName)")
             }
@@ -1247,6 +1364,61 @@ class GameScene: SKScene {
             if let building = selectedBuilding {
                 buildingSystem.toggleAutoReseed(building: building)
                 hud.showStatus(building.autoReseed ? "Auto-reseed ON" : "Auto-reseed OFF")
+            }
+
+        case .repairBuilding:
+            if let building = selectedBuilding, building.hp < building.maxHP {
+                // Send nearest idle villager to repair
+                let idleVillagers = humanPlayer.units.filter { $0.type == .villager && { if case .idle = $0.state { return true }; return false }() }
+                if let nearestVil = idleVillagers.min(by: { $0.gridPosition.distance(to: building.gridPosition) < $1.gridPosition.distance(to: building.gridPosition) }) {
+                    resourceSystem.sendVillagerToRepair(unit: nearestVil, building: building, pathfinder: pathfinder)
+                    hud.showStatus("Villager repairing \(building.type.displayName)")
+                } else {
+                    hud.showStatus("No idle villagers to repair!")
+                }
+            }
+
+        case .autoScout:
+            let selected = unitSystem.selectedUnits(for: humanPlayer).filter { $0.type == .scout || $0.type == .lightCavalry }
+            if let scout = selected.first {
+                unitSystem.startAutoScout(scout)
+                hud.showStatus("Auto-scouting enabled")
+            } else {
+                hud.showStatus("Select a scout first!")
+            }
+
+        case .selectIdleMilitary:
+            let idleMilitary = unitSystem.idleMilitaryUnits(for: humanPlayer)
+            guard !idleMilitary.isEmpty else {
+                hud.showStatus("No idle military units")
+                return
+            }
+            unitSystem.deselectAll(player: humanPlayer)
+            selectedBuilding = nil
+            if let unit = idleMilitary.first {
+                unit.isSelected = true
+                cameraPosition = unit.position
+                updateCamera()
+                renderTiles()
+            }
+
+        case .showScoreboard:
+            hud.showScoreboard(players: players, gameTime: gameTime)
+
+        case .collectRelic:
+            let selectedMonks = unitSystem.selectedUnits(for: humanPlayer).filter { $0.type == .monk }
+            guard let monk = selectedMonks.first else {
+                hud.showStatus("Select a monk first!")
+                return
+            }
+            // Find nearest uncollected relic
+            if let nearestRelic = gameMap.relics.filter({ !$0.isCollected }).min(by: {
+                $0.gridPosition.distance(to: monk.gridPosition) < $1.gridPosition.distance(to: monk.gridPosition)
+            }) {
+                unitSystem.sendMonkToCollectRelic(unit: monk, relic: nearestRelic, pathfinder: pathfinder)
+                hud.showStatus("Monk collecting relic...")
+            } else {
+                hud.showStatus("No relics available!")
             }
         }
     }

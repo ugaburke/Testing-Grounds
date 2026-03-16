@@ -23,11 +23,16 @@ class UnitSystem {
                 unit.attackCooldown -= deltaTime
             }
 
+            // Auto-scout behavior
+            if case .autoScouting = unit.state {
+                handleAutoScout(unit: unit, player: player, map: map, pathfinder: pathfinder)
+            }
+
             // Auto-attack nearby enemies if idle or moving
             let shouldAutoAttack: Bool
             switch unit.state {
-            case .idle: shouldAutoAttack = true
-            case .moving: shouldAutoAttack = (unit.stance != .standGround)
+            case .idle: shouldAutoAttack = (unit.stance != .noAttack)
+            case .moving: shouldAutoAttack = (unit.stance != .standGround && unit.stance != .noAttack)
             default: shouldAutoAttack = false
             }
             if shouldAutoAttack && unit.type != .villager {
@@ -211,7 +216,8 @@ class UnitSystem {
     private func autoAttackNearby(unit: Unit, player: Player, pathfinder: Pathfinder, range: CGFloat = 6.0) {
         guard let scene = gameScene else { return }
 
-        // Stand ground melee units don't auto-engage (can't reach without moving)
+        // Stand ground melee units don't auto-engage; noAttack never engages
+        if unit.stance == .noAttack { return }
         if unit.stance == .standGround && unit.type.attackRange <= 1.2 { return }
 
         let effectiveRange = unit.stance == .standGround ? unit.type.attackRange : range
@@ -368,5 +374,79 @@ class UnitSystem {
         // Clean up dead units from group
         player.controlGroups[group] = units.map { $0.id }
         return units
+    }
+
+    // MARK: - Auto-Scout
+
+    func handleAutoScout(unit: Unit, player: Player, map: GameMap, pathfinder: Pathfinder) {
+        guard unit.path.isEmpty else { return }
+
+        // Generate scout waypoints that explore unexplored areas
+        let scoutTargets = [
+            GridPosition(x: map.width / 4, y: map.height / 4),
+            GridPosition(x: map.width * 3 / 4, y: map.height / 4),
+            GridPosition(x: map.width / 2, y: map.height / 2),
+            GridPosition(x: map.width / 4, y: map.height * 3 / 4),
+            GridPosition(x: map.width * 3 / 4, y: map.height * 3 / 4),
+            GridPosition(x: map.width / 6, y: map.height / 2),
+            GridPosition(x: map.width * 5 / 6, y: map.height / 2),
+            GridPosition(x: map.width / 2, y: map.height / 6),
+            GridPosition(x: map.width / 2, y: map.height * 5 / 6),
+        ]
+
+        // Pick next unexplored target
+        var bestTarget = scoutTargets[unit.autoScoutIndex % scoutTargets.count]
+        for i in 0..<scoutTargets.count {
+            let idx = (unit.autoScoutIndex + i) % scoutTargets.count
+            let target = scoutTargets[idx]
+            if map.isValid(target) && !map.tiles[target.y][target.x].isExplored {
+                bestTarget = target
+                unit.autoScoutIndex = idx + 1
+                break
+            }
+        }
+        unit.autoScoutIndex += 1
+
+        if map.isPassable(bestTarget) {
+            unit.path = pathfinder.findPath(from: unit.gridPosition, to: bestTarget)
+        }
+    }
+
+    func startAutoScout(_ unit: Unit) {
+        unit.state = .autoScouting
+        unit.autoScoutIndex = 0
+    }
+
+    // MARK: - Select All Same Type
+
+    func selectAllOfType(_ type: UnitType, player: Player) -> [Unit] {
+        deselectAll(player: player)
+        let matching = player.units.filter { $0.type == type }
+        for unit in matching { unit.isSelected = true }
+        return matching
+    }
+
+    // MARK: - Relic Collection
+
+    func sendMonkToCollectRelic(unit: Unit, relic: Relic, pathfinder: Pathfinder) {
+        guard unit.type == .monk else { return }
+        guard !relic.isCollected else { return }
+        unit.state = .collectingRelic(relicPos: relic.gridPosition)
+        unit.path = pathfinder.findPath(from: unit.gridPosition, to: relic.gridPosition)
+    }
+
+    func handleRelicCollection(unit: Unit, relic: Relic, player: Player, map: GameMap) -> Bool {
+        guard unit.type == .monk else { return false }
+        let dist = unit.gridPosition.distance(to: relic.gridPosition)
+        if dist <= 1.5 {
+            relic.isCollected = true
+            relic.collectedByPlayerID = player.id
+            relic.node?.removeFromParent()
+            unit.hasRelic = true
+            player.relicsCollected += 1
+            unit.state = .idle
+            return true
+        }
+        return false
     }
 }

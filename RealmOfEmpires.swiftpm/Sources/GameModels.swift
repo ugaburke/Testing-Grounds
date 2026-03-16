@@ -8,6 +8,8 @@ enum Civilization: String, CaseIterable {
     case franks
     case mongols
     case byzantines
+    case japanese
+    case persians
 
     var displayName: String {
         switch self {
@@ -15,6 +17,8 @@ enum Civilization: String, CaseIterable {
         case .franks: return "Franks"
         case .mongols: return "Mongols"
         case .byzantines: return "Byzantines"
+        case .japanese: return "Japanese"
+        case .persians: return "Persians"
         }
     }
 
@@ -24,6 +28,8 @@ enum Civilization: String, CaseIterable {
         case .franks: return "\u{2694}\u{FE0F}"
         case .mongols: return "\u{1F3F9}"
         case .byzantines: return "\u{1F6E1}\u{FE0F}"
+        case .japanese: return "\u{2328}\u{FE0F}"
+        case .persians: return "\u{1F451}"
         }
     }
 
@@ -33,6 +39,8 @@ enum Civilization: String, CaseIterable {
         case .franks: return "+20% Knight HP\n+10% Farm Output"
         case .mongols: return "+30% Cavalry Speed\n+15% Hunt Bonus"
         case .byzantines: return "+25% Building HP\n+10% All Defense"
+        case .japanese: return "+15% Infantry ATK Speed\n+10% Fishing"
+        case .persians: return "+20% TC Work Rate\n+15% Cavalry HP"
         }
     }
 
@@ -41,7 +49,11 @@ enum Civilization: String, CaseIterable {
     }
 
     var cavalryHPBonus: CGFloat {
-        self == .franks ? 1.2 : 1.0
+        switch self {
+        case .franks: return 1.2
+        case .persians: return 1.15
+        default: return 1.0
+        }
     }
 
     var cavalrySpeedBonus: CGFloat {
@@ -68,12 +80,26 @@ enum Civilization: String, CaseIterable {
         self == .byzantines ? 1.1 : 1.0
     }
 
+    var infantryAttackSpeedBonus: CGFloat {
+        self == .japanese ? 0.85 : 1.0  // Lower = faster attacks
+    }
+
+    var tcWorkRateBonus: CGFloat {
+        self == .persians ? 1.2 : 1.0
+    }
+
+    var fishingBonus: CGFloat {
+        self == .japanese ? 1.1 : 1.0
+    }
+
     var uniqueUnitType: UnitType {
         switch self {
         case .britons: return .longbowman
         case .franks: return .throwingAxeman
         case .mongols: return .mangudai
         case .byzantines: return .cataphract
+        case .japanese: return .samurai
+        case .persians: return .warElephant
         }
     }
 }
@@ -281,6 +307,12 @@ class Player {
     var isHuman: Bool
     var controlGroups: [[Int]] = Array(repeating: [], count: 10)
     var relicsCollected: Int = 0
+    var wonderBuilt: Bool = false
+    var wonderTimer: CGFloat = 0  // Countdown to wonder victory
+    var totalKills: Int = 0
+    var totalUnitsLost: Int = 0
+    var totalResourcesGathered: Resources = Resources()
+    var marketPrices: [ResourceType: CGFloat] = [.food: 1.0, .wood: 1.0, .gold: 1.0, .stone: 1.0]
 
     var population: Int { units.count }
 
@@ -321,6 +353,11 @@ enum BuildingType: CaseIterable {
     case siegeWorkshop
     case monastery
     case dock
+    // New buildings
+    case university
+    case wonder
+    case outpost
+    case fishTrap
 
     var displayName: String {
         switch self {
@@ -341,6 +378,10 @@ enum BuildingType: CaseIterable {
         case .gate: return "Gate"
         case .monastery: return "Monastery"
         case .dock: return "Dock"
+        case .university: return "University"
+        case .wonder: return "Wonder"
+        case .outpost: return "Outpost"
+        case .fishTrap: return "Fish Trap"
         }
     }
 
@@ -363,6 +404,10 @@ enum BuildingType: CaseIterable {
         case .gate: return "GT"
         case .monastery: return "MO"
         case .dock: return "DK"
+        case .university: return "UN"
+        case .wonder: return "WD"
+        case .outpost: return "OP"
+        case .fishTrap: return "FT"
         }
     }
 
@@ -379,6 +424,10 @@ enum BuildingType: CaseIterable {
         case .gate: return (1, 1)
         case .monastery: return (2, 2)
         case .dock: return (2, 2)
+        case .university: return (3, 3)
+        case .wonder: return (5, 5)
+        case .outpost: return (1, 1)
+        case .fishTrap: return (1, 1)
         }
     }
 
@@ -401,6 +450,10 @@ enum BuildingType: CaseIterable {
         case .gate: return Resources(food: 0, wood: 0, gold: 0, stone: 30)
         case .monastery: return Resources(food: 0, wood: 175, gold: 0, stone: 0)
         case .dock: return Resources(food: 0, wood: 150, gold: 0, stone: 0)
+        case .university: return Resources(food: 0, wood: 200, gold: 0, stone: 0)
+        case .wonder: return Resources(food: 1000, wood: 1000, gold: 1000, stone: 1000)
+        case .outpost: return Resources(food: 0, wood: 25, stone: 5)
+        case .fishTrap: return Resources(food: 0, wood: 100)
         }
     }
 
@@ -423,6 +476,10 @@ enum BuildingType: CaseIterable {
         case .gate: return 1800
         case .monastery: return 1200
         case .dock: return 1200
+        case .university: return 1200
+        case .wonder: return 6000
+        case .outpost: return 400
+        case .fishTrap: return 300
         }
     }
 
@@ -445,6 +502,10 @@ enum BuildingType: CaseIterable {
         case .gate: return 3
         case .monastery: return 10
         case .dock: return 10
+        case .university: return 12
+        case .wonder: return 60
+        case .outpost: return 3
+        case .fishTrap: return 4
         }
     }
 
@@ -462,19 +523,23 @@ enum BuildingType: CaseIterable {
         case .townCenter, .house, .farm, .lumberCamp, .miningCamp, .barracks: return .darkAge
         case .archeryRange, .stable, .blacksmith, .market, .wall, .gate, .tower: return .feudalAge
         case .castle, .siegeWorkshop, .monastery, .dock: return .castleAge
+        case .university: return .castleAge
+        case .wonder: return .imperialAge
+        case .outpost: return .feudalAge
+        case .fishTrap: return .feudalAge
         }
     }
 
     var trainableUnits: [UnitType] {
         switch self {
         case .townCenter: return [.villager]
-        case .barracks: return [.militia, .manAtArms, .spearman]
-        case .archeryRange: return [.archer, .crossbowman, .skirmisher]
-        case .stable: return [.scout, .knight, .lightCavalry]
+        case .barracks: return [.militia, .manAtArms, .spearman, .petard]
+        case .archeryRange: return [.archer, .crossbowman, .skirmisher, .handCannoneer]
+        case .stable: return [.scout, .knight, .lightCavalry, .camelRider]
         case .castle: return [.uniqueUnit]
         case .siegeWorkshop: return [.batteringRam, .mangonel]
         case .monastery: return [.monk]
-        case .dock: return [.fishingBoat, .tradeCart]
+        case .dock: return [.fishingBoat, .tradeCart, .warGalley, .fireShip]
         default: return []
         }
     }
@@ -498,6 +563,10 @@ enum BuildingType: CaseIterable {
         case .gate: return SKColor(red: 0.55, green: 0.55, blue: 0.55, alpha: 1.0)
         case .monastery: return SKColor(red: 0.6, green: 0.45, blue: 0.55, alpha: 1.0)
         case .dock: return SKColor(red: 0.4, green: 0.45, blue: 0.55, alpha: 1.0)
+        case .university: return SKColor(red: 0.45, green: 0.35, blue: 0.55, alpha: 1.0)
+        case .wonder: return SKColor(red: 0.75, green: 0.65, blue: 0.4, alpha: 1.0)
+        case .outpost: return SKColor(red: 0.5, green: 0.5, blue: 0.45, alpha: 1.0)
+        case .fishTrap: return SKColor(red: 0.35, green: 0.5, blue: 0.55, alpha: 1.0)
         }
     }
 
@@ -506,6 +575,7 @@ enum BuildingType: CaseIterable {
         case .townCenter: return 5
         case .tower: return 8
         case .castle: return 12
+        case .outpost: return 0
         default: return 0
         }
     }
@@ -515,6 +585,7 @@ enum BuildingType: CaseIterable {
         case .townCenter: return 5.0
         case .tower: return 7.0
         case .castle: return 9.0
+        case .outpost: return 0
         default: return 0
         }
     }
@@ -525,6 +596,15 @@ enum BuildingType: CaseIterable {
         case .castle: return 20
         case .tower: return 5
         default: return 0
+        }
+    }
+
+    var sightRange: Int {
+        switch self {
+        case .outpost: return 14
+        case .tower: return 11
+        case .castle: return 10
+        default: return 8
         }
     }
 }
@@ -552,6 +632,8 @@ class Building {
     var garrisonedUnits: [Int] = []  // unit IDs
     var garrisonCapacity: Int { type.garrisonCapacity }
     var autoReseed: Bool = false
+    var smokeNode: SKNode?
+    var healthBarNode: SKNode?
 
     init(type: BuildingType, ownerID: Int, position: GridPosition, civilizationBonus: CGFloat = 1.0) {
         self.id = Building.nextID
@@ -588,6 +670,14 @@ enum UnitType: CaseIterable {
     case trebuchet
     case fishingBoat
     case tradeCart
+    // New units
+    case warGalley
+    case fireShip
+    case petard
+    case camelRider
+    case handCannoneer
+    case samurai
+    case warElephant
 
     var displayName: String {
         switch self {
@@ -612,6 +702,13 @@ enum UnitType: CaseIterable {
         case .trebuchet: return "Trebuchet"
         case .fishingBoat: return "Fishing Boat"
         case .tradeCart: return "Trade Cart"
+        case .warGalley: return "War Galley"
+        case .fireShip: return "Fire Ship"
+        case .petard: return "Petard"
+        case .camelRider: return "Camel Rider"
+        case .handCannoneer: return "Hand Cannoneer"
+        case .samurai: return "Samurai"
+        case .warElephant: return "War Elephant"
         }
     }
 
@@ -638,6 +735,13 @@ enum UnitType: CaseIterable {
         case .trebuchet: return "TB"
         case .fishingBoat: return "FB"
         case .tradeCart: return "TC"
+        case .warGalley: return "WG"
+        case .fireShip: return "FS"
+        case .petard: return "PT"
+        case .camelRider: return "CR"
+        case .handCannoneer: return "HC"
+        case .samurai: return "SM"
+        case .warElephant: return "WE"
         }
     }
 
@@ -664,6 +768,13 @@ enum UnitType: CaseIterable {
         case .trebuchet: return Resources(food: 0, wood: 200, gold: 200)
         case .fishingBoat: return Resources(food: 0, wood: 75)
         case .tradeCart: return Resources(food: 100, gold: 50)
+        case .warGalley: return Resources(food: 0, wood: 135, gold: 60)
+        case .fireShip: return Resources(food: 0, wood: 135, gold: 50)
+        case .petard: return Resources(food: 65, gold: 20)
+        case .camelRider: return Resources(food: 55, gold: 60)
+        case .handCannoneer: return Resources(food: 45, gold: 50)
+        case .samurai: return Resources(food: 60, gold: 30)
+        case .warElephant: return Resources(food: 200, gold: 75)
         }
     }
 
@@ -690,6 +801,13 @@ enum UnitType: CaseIterable {
         case .trebuchet: return 70
         case .fishingBoat: return 60
         case .tradeCart: return 70
+        case .warGalley: return 120
+        case .fireShip: return 100
+        case .petard: return 25
+        case .camelRider: return 70
+        case .handCannoneer: return 40
+        case .samurai: return 80
+        case .warElephant: return 600
         }
     }
 
@@ -716,6 +834,13 @@ enum UnitType: CaseIterable {
         case .trebuchet: return 20
         case .fishingBoat: return 0
         case .tradeCart: return 0
+        case .warGalley: return 8
+        case .fireShip: return 3
+        case .petard: return 50
+        case .camelRider: return 6
+        case .handCannoneer: return 7
+        case .samurai: return 8
+        case .warElephant: return 15
         }
     }
 
@@ -742,6 +867,13 @@ enum UnitType: CaseIterable {
         case .trebuchet: return 1
         case .fishingBoat: return 0
         case .tradeCart: return 0
+        case .warGalley: return 3
+        case .fireShip: return 1
+        case .petard: return 0
+        case .camelRider: return 2
+        case .handCannoneer: return 1
+        case .samurai: return 3
+        case .warElephant: return 5
         }
     }
 
@@ -765,6 +897,13 @@ enum UnitType: CaseIterable {
         case .trebuchet: return 0.5
         case .fishingBoat: return 1.2
         case .tradeCart: return 1.0
+        case .warGalley: return 1.3
+        case .fireShip: return 1.4
+        case .petard: return 1.2
+        case .camelRider: return 1.4
+        case .handCannoneer: return 0.85
+        case .samurai: return 1.0
+        case .warElephant: return 0.6
         }
     }
 
@@ -778,6 +917,9 @@ enum UnitType: CaseIterable {
         case .longbowman: return 7.0
         case .throwingAxeman: return 3.0
         case .mangudai: return 4.0
+        case .warGalley: return 6.0
+        case .fireShip: return 2.0
+        case .handCannoneer: return 5.0
         default: return 1.2
         }
     }
@@ -809,6 +951,13 @@ enum UnitType: CaseIterable {
         case .trebuchet: return 15.0
         case .fishingBoat: return 8.0
         case .tradeCart: return 10.0
+        case .warGalley: return 10.0
+        case .fireShip: return 10.0
+        case .petard: return 6.0
+        case .camelRider: return 8.0
+        case .handCannoneer: return 10.0
+        case .samurai: return 10.0
+        case .warElephant: return 15.0
         }
     }
 
@@ -822,12 +971,17 @@ enum UnitType: CaseIterable {
         case .longbowman, .throwingAxeman, .mangudai, .cataphract: return .castleAge
         case .monk, .trebuchet: return .castleAge
         case .fishingBoat, .tradeCart: return .castleAge
+        case .warGalley, .fireShip: return .castleAge
+        case .petard: return .castleAge
+        case .camelRider: return .castleAge
+        case .handCannoneer: return .imperialAge
+        case .samurai, .warElephant: return .castleAge
         }
     }
 
     var isCavalry: Bool {
         switch self {
-        case .scout, .knight, .lightCavalry, .mangudai, .cataphract: return true
+        case .scout, .knight, .lightCavalry, .mangudai, .cataphract, .camelRider, .warElephant: return true
         default: return false
         }
     }
@@ -835,6 +989,7 @@ enum UnitType: CaseIterable {
     var bonusVsCavalry: Int {
         switch self {
         case .spearman: return 15
+        case .camelRider: return 10
         default: return 0
         }
     }
@@ -848,7 +1003,7 @@ enum UnitType: CaseIterable {
 
     var isInfantry: Bool {
         switch self {
-        case .militia, .manAtArms, .spearman, .throwingAxeman: return true
+        case .militia, .manAtArms, .spearman, .throwingAxeman, .samurai: return true
         default: return false
         }
     }
@@ -860,11 +1015,26 @@ enum UnitType: CaseIterable {
         }
     }
 
+    var isNaval: Bool {
+        switch self {
+        case .fishingBoat, .tradeCart, .warGalley, .fireShip: return true
+        default: return false
+        }
+    }
+
     var bonusVsBuilding: Int {
         switch self {
         case .batteringRam: return 40
         case .mangonel: return 15
         case .trebuchet: return 60
+        case .petard: return 80
+        default: return 0
+        }
+    }
+
+    var bonusVsNaval: Int {
+        switch self {
+        case .fireShip: return 15
         default: return 0
         }
     }
@@ -876,6 +1046,10 @@ enum UnitType: CaseIterable {
         case .militia: return 0
         case .batteringRam: return 5
         case .trebuchet: return 1
+        case .warGalley: return 3
+        case .fireShip: return 2
+        case .warElephant: return 4
+        case .camelRider: return 1
         default: return 0
         }
     }
@@ -888,6 +1062,11 @@ enum UnitType: CaseIterable {
         case .batteringRam: return 3
         case .trebuchet: return 1
         case .scout, .lightCavalry: return 1
+        case .warGalley: return 3
+        case .fireShip: return 1
+        case .camelRider: return 2
+        case .samurai: return 3
+        case .warElephant: return 5
         default: return 0
         }
     }
@@ -912,6 +1091,13 @@ enum UnitType: CaseIterable {
         case .trebuchet: return SKColor(red: 0.5, green: 0.4, blue: 0.25, alpha: 1.0)
         case .fishingBoat: return SKColor(red: 0.3, green: 0.5, blue: 0.6, alpha: 1.0)
         case .tradeCart: return SKColor(red: 0.6, green: 0.55, blue: 0.3, alpha: 1.0)
+        case .warGalley: return SKColor(red: 0.3, green: 0.35, blue: 0.55, alpha: 1.0)
+        case .fireShip: return SKColor(red: 0.7, green: 0.3, blue: 0.15, alpha: 1.0)
+        case .petard: return SKColor(red: 0.65, green: 0.5, blue: 0.2, alpha: 1.0)
+        case .camelRider: return SKColor(red: 0.6, green: 0.5, blue: 0.35, alpha: 1.0)
+        case .handCannoneer: return SKColor(red: 0.4, green: 0.4, blue: 0.45, alpha: 1.0)
+        case .samurai: return SKColor(red: 0.7, green: 0.2, blue: 0.2, alpha: 1.0)
+        case .warElephant: return SKColor(red: 0.5, green: 0.45, blue: 0.4, alpha: 1.0)
         }
     }
 }
@@ -934,6 +1120,9 @@ enum UnitState {
     case guarding(targetUnitID: Int)
     case fishing(tilePos: GridPosition)
     case trading(marketPos: GridPosition, targetMarketPos: GridPosition)
+    case repairing(buildingID: Int)
+    case collectingRelic(relicPos: GridPosition)
+    case autoScouting
 }
 
 // MARK: - Unit Stance
@@ -942,6 +1131,7 @@ enum UnitStance {
     case aggressive  // Auto-attack and chase enemies
     case defensive   // Attack enemies in range, return to anchor if they flee
     case standGround // Don't move, attack only enemies in weapon range
+    case noAttack    // Never auto-attack, only move
 }
 
 // MARK: - Unit
@@ -963,6 +1153,7 @@ class Unit {
     var attackCooldown: CGFloat = 0
     var node: SKNode?
     var bodyNode: SKNode?
+    var healthBarNode: SKNode?
     var isSelected: Bool = false
     var lastAttackTime: TimeInterval = 0
     var lastDirection: CGFloat = 0
@@ -979,6 +1170,9 @@ class Unit {
     var conversionProgress: CGFloat = 0
     var healCooldown: CGFloat = 0
     var tradeGold: Int = 0
+    var hasRelic: Bool = false
+    var autoScoutIndex: Int = 0
+    var isExploding: Bool = false  // For petard
     weak var ownerPlayer: Player?
 
     init(type: UnitType, ownerID: Int, position: GridPosition, hpBonus: CGFloat = 1.0, speedBonus: CGFloat = 1.0) {
@@ -1058,6 +1252,58 @@ enum GameState {
     case paused
     case victory
     case defeat
+}
+
+// MARK: - Victory Condition
+
+enum VictoryCondition {
+    case conquest     // Destroy all enemy buildings
+    case wonder       // Build wonder, hold for 200 seconds
+    case relic        // Collect all relics, hold for 200 seconds
+}
+
+// MARK: - Relic
+
+class Relic {
+    static var nextID: Int = 0
+    let id: Int
+    var gridPosition: GridPosition
+    var isCollected: Bool = false
+    var collectedByPlayerID: Int?
+    var node: SKNode?
+
+    init(position: GridPosition) {
+        self.id = Relic.nextID
+        Relic.nextID += 1
+        self.gridPosition = position
+    }
+}
+
+// MARK: - Day/Night Cycle
+
+enum TimeOfDay {
+    case dawn
+    case day
+    case dusk
+    case night
+
+    var ambientAlpha: CGFloat {
+        switch self {
+        case .dawn: return 0.1
+        case .day: return 0.0
+        case .dusk: return 0.15
+        case .night: return 0.35
+        }
+    }
+
+    var ambientColor: SKColor {
+        switch self {
+        case .dawn: return SKColor(red: 1.0, green: 0.8, blue: 0.5, alpha: 1.0)
+        case .day: return .clear
+        case .dusk: return SKColor(red: 1.0, green: 0.5, blue: 0.3, alpha: 1.0)
+        case .night: return SKColor(red: 0.1, green: 0.1, blue: 0.3, alpha: 1.0)
+        }
+    }
 }
 
 // MARK: - Action Mode

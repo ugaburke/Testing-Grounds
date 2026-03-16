@@ -94,12 +94,26 @@ class CombatSystem {
 
             // Attack with cooldown
             if unit.attackCooldown <= 0 {
-                let bonus = unit.bonusDamage(against: target)
+                var bonus = unit.bonusDamage(against: target)
+                // Naval bonus damage
+                if target.type.isNaval { bonus += unit.type.bonusVsNaval }
                 let armorReduction = unit.type.isRanged ? target.type.pierceArmor : target.type.meleeArmor
+                // Japanese infantry attack speed bonus
+                let effectiveInterval = unit.type.isInfantry ? attackInterval * (unit.ownerPlayer?.civilization.infantryAttackSpeedBonus ?? 1.0) : attackInterval
                 let damage = max(1, unit.effectiveAttack + bonus - (target.effectiveDefense + armorReduction) / 2 + Int.random(in: 0...1))
 
                 target.hp -= damage
-                unit.attackCooldown = attackInterval
+                unit.attackCooldown = effectiveInterval
+
+                // Petard: explode on hit (self-destruct)
+                if unit.type == .petard && !unit.isExploding {
+                    unit.isExploding = true
+                    unit.hp = 0  // Self-destruct
+                    if let scene = gameScene {
+                        let explosion = scene.spriteFactory.createExplosionEffect(at: unit.position)
+                        scene.gameWorld.addChild(explosion)
+                    }
+                }
 
                 // Track kills for veterancy
                 if target.hp <= 0 {
@@ -112,6 +126,10 @@ class CombatSystem {
                     // Damage number
                     let dmgNum = scene.spriteFactory.createDamageNumber(at: target.position, damage: damage)
                     scene.gameWorld.addChild(dmgNum)
+
+                    // Impact particles
+                    let impact = scene.spriteFactory.createImpactEffect(at: target.position)
+                    scene.gameWorld.addChild(impact)
 
                     if unit.type.isRanged {
                         // Projectile with trail
@@ -192,8 +210,27 @@ class CombatSystem {
             unit.path = []
 
             if unit.attackCooldown <= 0 {
-                let damage = max(1, unit.effectiveAttack + unit.type.bonusVsBuilding)
+                var bonusVsBuilding = unit.type.bonusVsBuilding
+                // Siege Engineers: +20% siege bonus vs buildings
+                if unit.type.isSiege, let techs = unit.ownerPlayer?.researchedTechs, techs.contains(.siegeEngineers) {
+                    bonusVsBuilding = Int(CGFloat(bonusVsBuilding) * 1.2)
+                }
+                // Sappers: infantry +15 vs buildings
+                if unit.type.isInfantry, let techs = unit.ownerPlayer?.researchedTechs, techs.contains(.sappers) {
+                    bonusVsBuilding += 15
+                }
+                let damage = max(1, unit.effectiveAttack + bonusVsBuilding)
                 target.hp -= damage
+
+                // Petard: self-destruct after hitting building
+                if unit.type == .petard && !unit.isExploding {
+                    unit.isExploding = true
+                    unit.hp = 0
+                    if let scene = gameScene {
+                        let explosion = scene.spriteFactory.createExplosionEffect(at: unit.position)
+                        scene.gameWorld.addChild(explosion)
+                    }
+                }
                 unit.attackCooldown = attackInterval
 
                 if let scene = gameScene {
@@ -279,6 +316,16 @@ class CombatSystem {
             }
 
             if unit.conversionProgress >= 1.0 {
+                // Heresy: target dies instead of converting
+                if targetPlayer.researchedTechs.contains(.heresy) {
+                    target.hp = 0
+                    unit.conversionProgress = 0
+                    unit.state = .idle
+                    if let scene = gameScene {
+                        scene.hud.showStatus("Heresy: unit died instead of converting!")
+                    }
+                    return
+                }
                 // Convert the unit!
                 let newUnit = Unit(type: target.type, ownerID: player.id, position: target.gridPosition)
                 newUnit.ownerPlayer = player

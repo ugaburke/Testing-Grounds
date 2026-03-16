@@ -34,6 +34,8 @@ class ResourceSystem {
         return speed
     }
 
+    var marketFluctuationTimer: CGFloat = 0
+
     func update(deltaTime: CGFloat, player: Player, map: GameMap, pathfinder: Pathfinder) {
         for unit in player.units {
             guard unit.type == .villager else { continue }
@@ -49,6 +51,9 @@ class ResourceSystem {
 
             case .building(let buildingID):
                 handleBuilding(unit: unit, buildingID: buildingID, player: player, deltaTime: deltaTime)
+
+            case .repairing(let buildingID):
+                handleRepairing(unit: unit, buildingID: buildingID, player: player, deltaTime: deltaTime)
 
             default:
                 break
@@ -67,6 +72,35 @@ class ResourceSystem {
             if case .trading(let marketPos, let targetMarketPos) = unit.state {
                 handleTrading(unit: unit, marketPos: marketPos, targetMarketPos: targetMarketPos, player: player, map: map, pathfinder: pathfinder)
             }
+        }
+
+        // Fish trap income
+        for building in player.buildings where building.type == .fishTrap && building.isConstructed {
+            let tile = map.tile(at: building.gridPosition)
+            if let tile = tile, tile.resourceRemaining > 0 {
+                let fishRate: CGFloat = 0.3 * player.civilization.fishingBonus * deltaTime * 10
+                let amount = Int(fishRate)
+                if amount > 0 {
+                    tile.resourceRemaining -= amount
+                    player.resources.food += amount
+                }
+            }
+        }
+
+        // Relic gold income (30 gold per relic per 30 seconds)
+        if player.relicsCollected > 0 {
+            let relicGoldRate = CGFloat(player.relicsCollected) * deltaTime * 1.0
+            let goldAmount = Int(relicGoldRate)
+            if goldAmount > 0 {
+                player.resources.gold += goldAmount
+            }
+        }
+
+        // Market price fluctuation (every 60 seconds)
+        marketFluctuationTimer += deltaTime
+        if marketFluctuationTimer >= 60.0 {
+            marketFluctuationTimer = 0
+            fluctuateMarketPrices(player: player)
         }
 
         // Farm auto-gathering and auto-reseed
@@ -358,10 +392,62 @@ class ResourceSystem {
         }
     }
 
+    // MARK: - Repair
+
+    private func handleRepairing(unit: Unit, buildingID: Int, player: Player, deltaTime: CGFloat) {
+        guard let building = player.buildings.first(where: { $0.id == buildingID }) else {
+            unit.state = .idle
+            return
+        }
+
+        if building.hp >= building.maxHP {
+            unit.state = .idle
+            return
+        }
+
+        let dist = unit.gridPosition.distance(to: building.gridPosition)
+        if dist > 2.5 {
+            return
+        }
+
+        // Repair rate: 1% of max HP per second, costs resources proportionally
+        let repairRate = CGFloat(building.maxHP) * 0.01 * deltaTime
+        let hpToRepair = min(repairRate, CGFloat(building.maxHP - building.hp))
+        let costFraction = hpToRepair / CGFloat(building.maxHP)
+        let woodCost = Int(CGFloat(building.type.cost.wood) * costFraction * 0.5)
+        let stoneCost = Int(CGFloat(building.type.cost.stone) * costFraction * 0.5)
+
+        if player.resources.wood >= max(woodCost, 1) || player.resources.stone >= max(stoneCost, 1) {
+            building.hp = min(building.maxHP, building.hp + max(1, Int(hpToRepair)))
+            player.resources.wood -= min(woodCost, player.resources.wood)
+            player.resources.stone -= min(stoneCost, player.resources.stone)
+        }
+    }
+
+    func sendVillagerToRepair(unit: Unit, building: Building, pathfinder: Pathfinder) {
+        guard unit.type == .villager else { return }
+        guard building.hp < building.maxHP else { return }
+        unit.state = .repairing(buildingID: building.id)
+        unit.path = pathfinder.findPath(from: unit.gridPosition, to: building.gridPosition)
+    }
+
+    // MARK: - Market
+
+    private func fluctuateMarketPrices(player: Player) {
+        // Prices fluctuate between 0.6 and 1.4
+        for resource in [ResourceType.food, .wood, .gold, .stone] {
+            let current = player.marketPrices[resource] ?? 1.0
+            let change = CGFloat.random(in: -0.1...0.1)
+            player.marketPrices[resource] = max(0.6, min(1.4, current + change))
+        }
+    }
+
     func marketTrade(buy: ResourceType, sell: ResourceType, player: Player, amount: Int = 100) -> Bool {
-        // Market exchange rate: sell 100 of one resource, get 80 of another (20% fee)
+        // Market exchange rate: affected by fluctuating prices
+        let sellPrice = player.marketPrices[sell] ?? 1.0
+        let buyPrice = player.marketPrices[buy] ?? 1.0
         let sellAmount = amount
-        let buyAmount = Int(Double(amount) * 0.8)
+        let buyAmount = Int(Double(amount) * 0.8 * Double(sellPrice / buyPrice))
 
         switch sell {
         case .food: guard player.resources.food >= sellAmount else { return false }
