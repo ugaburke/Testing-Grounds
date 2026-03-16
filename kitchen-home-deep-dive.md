@@ -233,6 +233,267 @@ All products target the same customer: **the home organizer who has non-standard
 
 ---
 
+---
+
+## DETAILED PRODUCT-BY-PRODUCT MARKET SCAN (Updated 2026-03-16)
+
+Below is a granular competitive analysis across Etsy, Amazon, and free STL platforms for five specific kitchen product categories.
+
+---
+
+### 1. UTENSIL DRAWER ORGANIZERS — 3D Printed / Custom-Fit
+
+#### What's Selling on Etsy
+
+| Seller / Listing | Model | Price | Reviews / Status |
+|-----------------|-------|-------|-----------------|
+| Bora — Custom Silverware Organizer | Per-square-inch pricing ($0.33/sq in) | $66 (10x20") to $95 (12x24") | 4.8+ stars, established |
+| Creations3DArantxita (Spain) | Customizable 5.5mm/7.5mm boards | Volume discounts | Star Seller, 1,236 favorites |
+| PrecisionCrafted3D | Custom top drawer divider, 2" tall | ~$50-$80 custom | Positive reviews ("Fits perfectly!") |
+| Budget Utility Divider seller | No-bottom, 1/8" walls (drawer is the floor) | Lower price point (~$30-$50) | Budget option, good reviews |
+| STL Digital Downloads | Drawer organizer STL files | $3-$8 | Separate customer base |
+
+**Key observations:**
+- The per-square-inch pricing model ($0.33/sq in) is clever and transparent — customers understand what they're paying for.
+- The "budget" no-bottom version is an underserved angle: drastically reduces print time and filament while still providing custom compartments.
+- Gridfinity-based kitchen organizers are gaining traction — Star Sellers exist for Gridfinity drawer kits.
+- IKEA-specific organizers (Alex drawers) sell well as Star Sellers — suggests brand-specific sizing is valued.
+
+**Gaps identified:**
+1. **No seller prominently offers a "utensil profile" system** — e.g., preset slot shapes for serving spoons vs. spatulas vs. whisks. Everyone does rectangular compartments only.
+2. **No tiered/angled utensil organizers** for deep drawers — everything is flat, single-layer.
+3. **No bundle pricing** — nobody offers "whole kitchen" packages (top drawer silverware + second drawer utensils + junk drawer).
+4. **Gridfinity for kitchens is emerging but nobody sells pre-configured kitchen kits** on Etsy with baseplates + kitchen-specific bins as a turnkey set.
+
+#### Free STL Alternatives (Threat Level: MODERATE)
+
+| Platform | Notable Models | Parametric? |
+|----------|---------------|-------------|
+| Printables — Parametric Utensil Drawer Organizer (trv) | OpenSCAD-based, full customization | YES — but requires OpenSCAD knowledge |
+| Printables — Modular & Parametric (DoopyWoopy) | Fusion 360 parameters, dovetail assembly | YES |
+| Printables — Parametric Bin (Tokolozi) | Simple bins, customizable dimensions | YES |
+| MakerWorld — Easy-Peasy Customizable Dividers | Built-in generator, dovetail joints | YES — easiest to use |
+| MakerWorld — Gridfinity Kitchen Drawer (Parametric) | OpenSCAD, full Gridfinity compatibility | YES |
+| MakerWorld — WAVEGRID Tray & Bin System | Integrated parametric model maker | YES — most advanced |
+| Thingiverse — Modular Drawer Organizer (wbu42) | OpenSCAD customizer | YES |
+| Pinshape — Parametric Drawer Dividers | SCAD file, full control | YES |
+
+**Free STL verdict:** Parametric options DO exist for the DIY crowd, but they require CAD software knowledge (OpenSCAD, Fusion 360). The gap is for customers who want custom-fit but do NOT own a printer or know CAD. That's the Etsy buyer.
+
+#### Competition Level: MODERATE
+- 3-5 serious 3D-printed sellers on Etsy
+- Multiple Star Sellers in adjacent Gridfinity/drawer categories
+- Free parametric STLs reduce the moat for technical users
+- Wood custom sellers ($129-$199) remain the premium tier
+
+---
+
+### 2. UNDER-CABINET WRAP/FOIL DISPENSERS
+
+#### Etsy Landscape
+
+| Seller / Listing | Product | Price | Notes |
+|-----------------|---------|-------|-------|
+| STL Digital — Modular Foil Organizer | Fits small rolls (41mm dia) + large (62mm dia) | ~$3-$8 STL | Modular, PLA/PETG recommended |
+| 3D Printed Under Cabinet Paper Towel Holder | Hooks onto 18mm shelf, no tools | ~$15-$25 | Rubber grip pads included |
+| Various non-3D-printed sellers | Wooden/metal wrap holders | $20-$45 | Etsy market page active |
+
+**Key finding: Almost NO 3D-printed physical wrap/foil dispensers on Etsy.** The category is dominated by:
+- Wooden/bamboo holders (handmade Etsy sellers)
+- Metal wire racks
+- A handful of STL-only digital downloads
+
+#### Amazon Competitors (Strong)
+
+| Product | Price | Notes |
+|---------|-------|-------|
+| SpaceAid WrapNeat 3-in-1 (Bamboo) | $25-$35 | Best seller, includes cutter + labels, 12" rolls |
+| Renexas 2-in-1 Foil & Wrap Organizer | $18-$28 | Magnetic, drawer-compatible |
+| Home Basics Wrap Organizer (Steel) | $12-$18 | Rust-resistant vinyl coating, wall-mount |
+| Various bamboo/metal 3-in-1 holders | $15-$40 | Dozens of options, well-reviewed |
+
+**Amazon is VERY competitive here** — bamboo dispensers with built-in cutters dominate. The SpaceAid WrapNeat is a clear category winner.
+
+#### Free STL Alternatives (Threat Level: HIGH)
+
+| Platform | Model | Notes |
+|----------|-------|-------|
+| Printables — Under-Cabinet Plastic Wrap Dispenser (Coss27) | Two-hand cutting, mounts under cabinet | Popular, free |
+| Printables — Plastic Wrap/Tinfoil Dispenser (Minus-designs) | Replaces falling-apart cardboard box | Free |
+| STLFinder — Multiple foil/wrap dispensers | Various designs, 18" roll compatible | Free |
+
+#### Gap Analysis
+- **The 3D printing advantage is WEAK here.** Bamboo/wood dispensers look premium and include cutters — hard to compete on aesthetics or function.
+- **Potential parametric angle:** Custom-width dispensers for non-standard roll sizes (Costco bulk rolls are wider than standard 12"). Most holders only fit 12" rolls.
+- **Under-cabinet mounting for specific cabinet thicknesses** could be a niche — current models assume 18mm (3/4") shelves, but cabinet thicknesses vary.
+
+#### Competition Level: HIGH (Amazon) / LOW (Etsy 3D-printed physical products)
+- Amazon has mature, well-reviewed bamboo/metal options at $15-$35
+- Etsy has almost zero 3D-printed physical dispensers — but unclear if that's opportunity or lack of demand
+- Free STLs are widely available
+
+#### Verdict: LOW PRIORITY — Amazon competition is too strong, and the product doesn't showcase 3D printing's parametric advantage well enough. Skip unless you identify a very specific unmet size need (e.g., Costco bulk roll holder).
+
+---
+
+### 3. KITCHEN DRAWER DIVIDERS — Adjustable / Parametric
+
+#### Etsy Landscape
+Largely overlaps with Category 1 (utensil organizers), but with some distinct products:
+
+| Seller / Listing | Product | Price | Notes |
+|-----------------|---------|-------|-------|
+| Budget Utility Divider | Bottomless dividers, 1/8" walls | ~$30-$50 | Walls-only approach saves filament |
+| Creations3DArantxita (Star Seller) | 5.5mm/7.5mm thick board system | Quantity discounts | Ships from Spain, 1,236 favorites |
+| Various custom sellers | Send-a-sketch custom layouts | $40-$90 | Manual custom process |
+
+**Key distinction from utensil organizers:** Drawer dividers are simpler — just walls/partitions, no shaped compartments. Lower filament cost, faster print, lower price point.
+
+#### Free STL Alternatives (Threat Level: HIGH)
+
+The free parametric options here are VERY strong:
+
+| Platform | Model | Why It's Good |
+|----------|-------|--------------|
+| MakerWorld — Easy-Peasy Customizable Drawer Dividers | Set dimensions + grid, auto-splits for print bed, dovetail joints | **Best-in-class free option** |
+| MakerWorld — Gridfinity Kitchen Drawer (Parametric) | Full Gridfinity ecosystem | Enormous community support |
+| Printables — Drawer Divider Set (raphi) | Two heights (50/70mm), 200-520mm lengths, connector system | Simple and effective |
+| Printables — Kitchen Drawer Brackets (JeremyKMac) | 3D printed brackets + wood planks hybrid | Clever material mix |
+
+**The MakerWorld "Easy-Peasy" generator is particularly threatening** — it handles arbitrary drawer sizes, auto-splits for bed constraints, and adds dovetail joints. A non-technical user with a Bambu printer could use this directly.
+
+#### Gap Analysis
+1. **The "bracket + wood plank" hybrid approach** (JeremyKMac on Printables) is underexplored on Etsy — 3D printed connectors with wood dividers look higher-end than all-plastic.
+2. **Snap-together adjustable dividers** — no Etsy seller offers dividers that the customer can rearrange after purchase without reprinting.
+3. **Drawer-specific kits** (IKEA Kallax, specific Sterilite containers) sell well on Etsy as Star Sellers — the brand-specific angle works.
+
+#### Competition Level: HIGH
+- Free parametric tools are excellent and accessible
+- Multiple Etsy sellers already serve this space
+- Simple geometry = low differentiation
+- Price sensitivity is high (these are "just dividers")
+
+#### Verdict: LOW PRIORITY AS STANDALONE — Better to include drawer dividers as part of a full custom drawer organizer service. The divider-only market is too commoditized and too well-served by free STLs.
+
+---
+
+### 4. PANTRY SHELF RISERS / ORGANIZERS (Canned Goods, Bottles)
+
+#### Etsy Landscape
+
+| Seller / Listing | Product | Price | Notes |
+|-----------------|---------|-------|-------|
+| Rolling Can Storage Rack (STL digital) | FIFO gravity-fed, STL files | ~$3-$8 | Good reviews, "great design and easy to print" |
+| Can Cupboard — Wall-Mounted | 3DPrintedWithPurpose shop | ~$25-$40 | Wall-mounted, prevents forgotten cans |
+| Can Food Organization Shelf | Holds 40 standard cans | ~$30-$50 | Physical product |
+| rebeltaz FIFO Can Organizer | Available on Etsy, Printables, Thingiverse, Cults3D, MyMiniFactory, Pinshape | Free STL / ~$5 paid | WARNING: uses ~1kg filament per unit |
+
+**Shelf risers specifically (not can dispensers):** Almost NO 3D-printed shelf risers on Etsy. This is a distinct sub-product.
+
+#### Amazon Competitors
+
+| Product | Price | Notes |
+|---------|-------|-------|
+| Dedomy Expandable Cabinet Shelf Riser | ~$20-$30 (2-pack) | Metal, expands 14"-25", rust-resistant |
+| SKYJORMY Clear Acrylic Shelf Riser | ~$15-$25 (2-pack) | Stackable, L-shape option |
+| Tiered Stepped Expanding Pantry Riser | ~$12-$20 | Polystyrene, 3-tier, expands 14"-27" |
+| Yamazaki, mDesign, YouCopia risers | $15-$40 | Established brands, editorial recommendations |
+
+**Amazon is well-served here** — metal and acrylic risers are cheap, expandable, and established.
+
+#### Free STL Alternatives
+
+| Platform | Model | Notes |
+|----------|-------|-------|
+| MakerWorld — Stackable Shelf Organizer (nakano978) | Perforated design, lightweight | Free, functional |
+| Printables — FIFO Rolling Can Organizer (rebeltaz) | Most popular can organizer STL | Free, but uses lots of filament |
+| Cults3D — Various pantry organizers | ~87 free pantry models | Mixed quality |
+
+#### Gap Analysis
+1. **FIFO can dispensers are the clear winner** — already identified in prior research. Parametric shelf depth remains the key unmet need.
+2. **Tiered/stepped spice-jar-style risers for cans** — nobody makes a 3D-printed version that's parametric for shelf depth AND can diameter.
+3. **Under-shelf hanging baskets** for pantries are popular on Amazon in wire — a 3D-printed version with custom shelf thickness clips could work.
+4. **Bottle organizers** (wine, water bottles, sauce bottles) in pantries are underserved — most organizers focus on cans, not bottles.
+
+#### Competition Level: LOW (3D-printed) / HIGH (Amazon mass-market)
+- Amazon dominates shelf risers with cheap expandable metal/acrylic options
+- 3D-printed FIFO can dispensers have only 2-3 physical sellers on Etsy
+- STL market is moderately crowded for can organizers
+- Bottle-specific pantry organizers are a genuine gap
+
+#### Verdict: HIGH PRIORITY for FIFO can dispensers (confirmed). MEDIUM for parametric bottle organizers. LOW for generic shelf risers (Amazon too strong).
+
+---
+
+### 5. UNDER-CABINET TABLET / PHONE HOLDER (Recipe Display)
+
+#### Etsy Landscape
+
+| Seller / Listing | Product | Price | Reviews | Notes |
+|-----------------|---------|-------|---------|-------|
+| Under Cabinet Phone Mount (IKEA-fit) | Slides into 3/4" cabinet bottom | ~$12-$18 | Mixed — some phones don't fit under closed cabinet | Design flaw: doesn't work with all phone sizes |
+| Kitchen Cabinet Phone & Tablet Holder | No-drill, slides over cabinet edge, PETG | ~$15-$25 | **5.0 stars, 76 reviews** | Best-in-class Etsy listing, renter-friendly |
+| 3D Printed Tablet Stand (countertop) | Minimalist iPad holder | ~$15-$25 | No reviews yet | New listing, not under-cabinet |
+
+**The slide-over-edge design (Listing #2) is clearly winning** — 5.0 stars, 76 reviews, no-drill, renter-friendly. This is the benchmark to beat.
+
+**Key complaint from Listing #1:** Phone doesn't fit under closed cabinet when mounted horizontally. This is a design problem, not a market problem.
+
+#### Amazon Competitors (Strong)
+
+| Product | Price | Notes |
+|---------|-------|-------|
+| JUBOR Kitchen Tablet Mount Stand | ~$15-$25 | **Best Seller in Cookbook Stands**, 3 modes (tabletop/wall/under-cabinet), 5"-12.9" |
+| Macally 2-in-1 Holder | ~$20-$30 | 360° rotatable, multiple joints |
+| AboveTEK 3-in-1 Highflex | ~$25-$35 | 4.7"-13.5", wobble-free, small business |
+| iKross Kitchen Wall/Countertop Mount | ~$18-$28 | Brushed aluminum, folds down |
+| Drop Block Wooden Holder | ~$40-$60 | Unfinished wood, 6 finishes |
+
+**Amazon is moderately competitive** — the JUBOR at ~$20 is the category king. But these are all metal/plastic/wood — no 3D-printed options on Amazon.
+
+#### Free STL Alternatives (Threat Level: MODERATE)
+
+| Platform | Model | Notes |
+|----------|-------|-------|
+| Thingiverse — Under Kitchen Cabinet Tablet Holder (Matt2083) | Hidden fold-away, 9 parts, fits 6mm shelf | Most feature-rich free option |
+| MakerWorld — Phone Holder for Kitchen Cabinet | Also has tablet + vertical variants | Free, good reviews |
+| Printables — iPad Kitchen Cabinet Mount | iPad-specific mount | Free |
+| Cults3D — Kitchen Cabinet Tablet Holder | Slide-on, no screws | ~$2-$5 |
+
+#### Gap Analysis
+1. **Parametric cabinet thickness** — current designs assume 3/4" (18-19mm) shelves. European cabinets, IKEA cabinets, older homes all have different thicknesses. A parametric design that adjusts to 12mm, 16mm, 18mm, 20mm, 25mm shelves would be genuinely novel.
+2. **Combined phone + tablet** — most holders fit one OR the other. A design with adjustable cradle width (phone mode vs. tablet mode) is rare.
+3. **Charging pass-through** — no design integrates a cable routing channel so the device can charge while mounted.
+4. **Splash guard** — for mounting above a stove or sink, a small lip/shield to protect the device from steam/splashes. Nobody does this.
+5. **Magnetic mounting** — instead of sliding over cabinet edge (which can scratch), a magnetic mount for steel-reinforced cabinets.
+
+#### Competition Level: MODERATE
+- One strong Etsy seller (5.0 stars, 76 reviews) — but just one
+- Amazon has $15-$25 options that are functional (JUBOR dominates)
+- Free STLs exist but none are parametric for cabinet thickness
+- The 3D-printing advantage is moderate — these are small, fast prints with good margins
+
+#### Verdict: MEDIUM-HIGH PRIORITY — The parametric cabinet-thickness angle is genuinely novel. The splash guard and charging pass-through features could differentiate from both Amazon and the existing Etsy seller. Good margins on a small, fast print (~2-4 hours, <$3 filament).
+
+---
+
+## UPDATED GAP SUMMARY: Where Parametric 3D Printing Wins
+
+| Gap | Category | Why It's Novel | Difficulty |
+|-----|----------|---------------|-----------|
+| **Utensil-profile compartments** (shaped slots, not just rectangles) | Drawer Organizers | Nobody does contoured slots for specific utensil shapes | Medium |
+| **Parametric cabinet thickness** for tablet holder | Tablet Holder | All current designs assume one thickness | Low |
+| **Charging cable pass-through** on tablet mount | Tablet Holder | Zero competitors offer this | Low |
+| **FIFO can dispenser with parametric shelf depth** | Pantry Organizers | Everyone is fixed-size | Medium |
+| **Bottle-specific pantry organizer** (wine, sauce, water) | Pantry Organizers | Can organizers exist, bottle organizers don't | Medium |
+| **"Whole kitchen" bundle pricing** | Drawer Organizers | Nobody packages multiple drawer inserts | Low (business model) |
+| **Snap-together rearrangeable dividers** | Drawer Dividers | Current custom dividers are permanent | Medium |
+| **3D bracket + wood plank hybrid** dividers | Drawer Dividers | Premium look, underexplored on Etsy | Low |
+| **Costco bulk roll dispenser** (wider than 12") | Wrap Dispenser | All dispensers assume 12" rolls | Low |
+| **Splash guard for under-cabinet device mount** | Tablet Holder | Unique safety/protection feature | Low |
+
+---
+
 ## Sources
 
 - [Custom Silverware Drawer Organizer — Etsy](https://www.etsy.com/listing/1866452297/custom-silverware-utensil-drawer)
@@ -253,3 +514,28 @@ All products target the same customer: **the home organizer who has non-standard
 - [AG3D Custom Spice Rack Cost Analysis](https://ag3d-printing.com/part-detective-case-files/2025/2/28/spicing-up-organization-3d-printing-a-custom-spice-rack-for-small-kitchen-spaces)
 - [50 Useful 3D Printed Kitchen Gadgets 2025](https://www.ka3dp.com/3d-printing-ideas/kitchen-3d-prints/)
 - [Canned Food Dispenser — MakerWorld](https://makerworld.com/en/models/210569-canned-food-dispenser-w-labels-shortened-fifo)
+- [3D Printed Utensil Organizer Fork & Spoon — Etsy](https://www.etsy.com/listing/4369127829/3d-printed-utensil-organizer-fork-spoon)
+- [3D Printable Modular Foil Organizer STL — Etsy](https://www.etsy.com/listing/1839343068/3d-printable-modular-foil-organizer)
+- [Under-Cabinet Plastic Wrap Dispenser — Printables](https://www.printables.com/model/117839-under-cabinet-plastic-wrap-dispenser)
+- [Plastic Wrap / Tinfoil Dispenser — Printables](https://www.printables.com/model/16425-plastic-wrap-tinfoil-dispenser)
+- [SpaceAid WrapNeat 3-in-1 Bamboo Dispenser — Amazon](https://www.amazon.com/SpaceAid-WrapNeat-Dispenser-Organizer-Compatible/dp/B09FPFTMVX)
+- [Easy-Peasy Customizable Drawer Dividers — MakerWorld](https://makerworld.com/en/models/1319616-easy-peasy-customizable-drawer-dividers)
+- [Drawer Divider Set — Printables](https://www.printables.com/model/88883-drawer-divider-set)
+- [Parametric Drawer Dividers — Pinshape](https://pinshape.com/items/21742-3d-printed-parametric-drawer-dividersorganizer-trays)
+- [Gridfinity Kitchen Drawer Parametric — MakerWorld](https://makerworld.com/en/models/883766-gridfinity-kitchen-drawer-parametric)
+- [WAVEGRID Parametric Tray & Bin System — MakerWorld](https://makerworld.com/en/models/2408252-parametric-gridfinity-tray-bin-system)
+- [Gridfinity Complete Kitchen Collection — Printables](https://www.printables.com/model/719729-gridfinity-complete-kitchen-collection-w-modular-e)
+- [Parametric Utensil Drawer Organizer — Printables](https://www.printables.com/model/722857-parametric-utensil-drawer-organizer)
+- [Modular & Parametric Drawer Organizer — Printables](https://www.printables.com/model/732963-modular-and-parametric-drawer-organizer)
+- [Stackable Shelf Organizer — MakerWorld](https://makerworld.com/en/models/2499705-kitchen-organizer-stackable-shelf-organizer)
+- [Can Cupboard Wall-Mounted — Etsy](https://www.etsy.com/listing/1535797696/can-cupboard-wall-mounted-canned-goods)
+- [FIFO Rolling Can Pantry Organizer — Printables](https://www.printables.com/model/170264-fifo-rolling-can-pantry-organizer)
+- [Kitchen Cabinet Phone & Tablet Holder — Etsy](https://www.etsy.com/listing/1844707766/kitchen-cabinet-phone-tablet-holder)
+- [Under Cabinet Phone Mount — Etsy](https://www.etsy.com/listing/717840839/under-cabinet-phone-mount-kitchen-recipe)
+- [Under Kitchen Cabinet Tablet Holder — Thingiverse](https://www.thingiverse.com/thing:5365764/files)
+- [Phone Holder for Kitchen Cabinet — MakerWorld](https://makerworld.com/en/models/2309937-phone-holder-for-kitchen-cabinet)
+- [iPad Kitchen Cabinet Mount — Printables](https://www.printables.com/model/510815-ipad-kitchen-cabinet-mount)
+- [JUBOR Kitchen Tablet Mount — Amazon](https://www.amazon.com/Jubor-Kitchen-Cabinet-CounterTop-Nintendo/dp/B07N1HH49K)
+- [AboveTEK 3-in-1 Under Cabinet iPad Mount — Amazon](https://www.amazon.com/AboveTEK-Kitchen-Tablet-Stand-Universal/dp/B082S9Z1S9)
+- [Dedomy Expandable Cabinet Shelf Riser — Amazon](https://www.amazon.com/Dedomy-Expandable-Organizer-Adjustable-Countertop/dp/B0GHSBW4ST)
+- [IKEA Alex Drawer Gridfinity Organizer (Star Seller) — Etsy](https://www.etsy.com/listing/4407403687/ikea-alex-drawer-organizer-set-3d)
