@@ -451,6 +451,28 @@ class HUDOverlay {
         scoreBtn.addChild(scoreIcon)
 
         hudNode.addChild(scoreBtn)
+
+        // Civ bonuses button
+        let civBtn = SKNode()
+        civBtn.position = CGPoint(x: viewSize.width - 180, y: viewSize.height - 36 - safeAreaTop)
+        civBtn.name = "btn_showCivBonuses"
+
+        let civBg = SKShapeNode(rectOf: CGSize(width: 24, height: 24), cornerRadius: 4)
+        civBg.fillColor = SKColor(red: 0.35, green: 0.25, blue: 0.1, alpha: 0.9)
+        civBg.strokeColor = SKColor(red: 0.7, green: 0.55, blue: 0.25, alpha: 1.0)
+        civBg.lineWidth = 1
+        civBg.name = "btn_showCivBonuses"
+        civBtn.addChild(civBg)
+
+        let civIcon = SKLabelNode(text: "\u{2606}")
+        civIcon.fontSize = 14
+        civIcon.fontName = "Helvetica"
+        civIcon.fontColor = SKColor(red: 0.9, green: 0.75, blue: 0.35, alpha: 1)
+        civIcon.verticalAlignmentMode = .center
+        civIcon.name = "btn_showCivBonuses"
+        civBtn.addChild(civIcon)
+
+        hudNode.addChild(civBtn)
     }
 
     func updateIdleVillagerCount(player: Player) {
@@ -1786,6 +1808,89 @@ class HUDOverlay {
         ]))
     }
 
+    func showCivBonuses(player: Player) {
+        // Toggle off if already showing
+        if let existing = hudNode.childNode(withName: "civBonusesPanel") {
+            existing.removeFromParent()
+            return
+        }
+
+        let panelWidth: CGFloat = 260
+        let panelHeight: CGFloat = 180
+        let panel = SKNode()
+        panel.name = "civBonusesPanel"
+        panel.zPosition = 150
+        panel.position = CGPoint(x: viewSize.width - 200, y: viewSize.height - 120 - safeAreaTop)
+
+        let bg = SKShapeNode(rectOf: CGSize(width: panelWidth, height: panelHeight), cornerRadius: 8)
+        bg.fillColor = SKColor(red: 0.12, green: 0.1, blue: 0.05, alpha: 0.95)
+        bg.strokeColor = SKColor(red: 0.7, green: 0.55, blue: 0.25, alpha: 1)
+        bg.lineWidth = 1.5
+        bg.name = "closeCivBonuses"
+        panel.addChild(bg)
+
+        // Civ name and icon
+        let civTitle = SKLabelNode(text: "\(player.civilization.icon) \(player.civilization.displayName)")
+        civTitle.fontSize = 16
+        civTitle.fontName = "Helvetica-Bold"
+        civTitle.fontColor = SKColor(red: 0.9, green: 0.75, blue: 0.35, alpha: 1)
+        civTitle.position = CGPoint(x: 0, y: panelHeight / 2 - 30)
+        panel.addChild(civTitle)
+
+        // Separator
+        let sep = SKShapeNode(rectOf: CGSize(width: panelWidth - 30, height: 1))
+        sep.fillColor = SKColor(red: 0.5, green: 0.4, blue: 0.2, alpha: 0.6)
+        sep.strokeColor = .clear
+        sep.position = CGPoint(x: 0, y: panelHeight / 2 - 42)
+        panel.addChild(sep)
+
+        // Bonuses header
+        let bonusHeader = SKLabelNode(text: "Active Bonuses")
+        bonusHeader.fontSize = 12
+        bonusHeader.fontName = "Helvetica-Bold"
+        bonusHeader.fontColor = SKColor(red: 0.85, green: 0.7, blue: 0.4, alpha: 1)
+        bonusHeader.position = CGPoint(x: 0, y: panelHeight / 2 - 58)
+        panel.addChild(bonusHeader)
+
+        // Parse and display bonus lines
+        let bonusText = player.civilization.bonus
+        let bonusLines = bonusText.components(separatedBy: "\n")
+        for (i, line) in bonusLines.enumerated() {
+            let bonusLabel = SKLabelNode(text: line)
+            bonusLabel.fontSize = 12
+            bonusLabel.fontName = "Helvetica"
+            bonusLabel.fontColor = SKColor(red: 0.5, green: 0.9, blue: 0.5, alpha: 1)
+            bonusLabel.position = CGPoint(x: 0, y: panelHeight / 2 - 76 - CGFloat(i) * 20)
+            panel.addChild(bonusLabel)
+        }
+
+        // Current age
+        let ageInfo = SKLabelNode(text: "Current Age: \(player.currentAge.displayName)")
+        ageInfo.fontSize = 11
+        ageInfo.fontName = "Helvetica"
+        ageInfo.fontColor = .lightGray
+        ageInfo.position = CGPoint(x: 0, y: -panelHeight / 2 + 38)
+        panel.addChild(ageInfo)
+
+        // Close hint
+        let closeHint = SKLabelNode(text: "Tap to close")
+        closeHint.fontSize = 10
+        closeHint.fontName = "Helvetica"
+        closeHint.fontColor = SKColor(white: 0.5, alpha: 1)
+        closeHint.position = CGPoint(x: 0, y: -panelHeight / 2 + 18)
+        closeHint.name = "closeCivBonuses"
+        panel.addChild(closeHint)
+
+        // Auto-dismiss after 10 seconds
+        panel.run(SKAction.sequence([
+            SKAction.wait(forDuration: 10.0),
+            SKAction.fadeOut(withDuration: 0.3),
+            SKAction.removeFromParent()
+        ]))
+
+        hudNode.addChild(panel)
+    }
+
     func showGameOver(victory: Bool, player: Player? = nil) {
         let overlay = SKShapeNode(rectOf: CGSize(width: viewSize.width, height: viewSize.height))
         overlay.fillColor = SKColor.black.withAlphaComponent(0.85)
@@ -1988,6 +2093,11 @@ class HUDOverlay {
             if name == "btn_repair" { return .repairBuilding }
             if name == "btn_selectIdleMilitary" { return .selectIdleMilitary }
             if name == "btn_showScoreboard" { return .showScoreboard }
+            if name == "btn_showCivBonuses" { return .showCivBonuses }
+            if name == "closeCivBonuses" {
+                hudNode.childNode(withName: "civBonusesPanel")?.removeFromParent()
+                return nil
+            }
             if name == "idleVillagerBtn" { return .selectIdleVillager }
 
             if name.hasPrefix("build_") {
@@ -2126,4 +2236,5 @@ enum HUDAction {
     case selectIdleMilitary
     case showScoreboard
     case collectRelic
+    case showCivBonuses
 }

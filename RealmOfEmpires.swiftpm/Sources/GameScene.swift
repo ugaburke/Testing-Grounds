@@ -100,6 +100,10 @@ class GameScene: SKScene {
     var currentWeather: WeatherType = .clear
     var weatherNode: SKNode?
 
+    // Ambient effects
+    var ambientBirdTimer: CGFloat = 0
+    var deerUpdateTimer: CGFloat = 0
+
     // Tutorial
     var tutorialStep: Int = -1  // -1 means no tutorial
     var tutorialOverlay: SKNode?
@@ -231,6 +235,14 @@ class GameScene: SKScene {
             relic.node = node
             gameWorld.addChild(node)
         }
+
+        // Spawn deer herds on map
+        for herd in gameMap.deerHerds {
+            let worldPos = gameMap.gridToWorld(herd.gridPosition)
+            let node = spriteFactory.createDeerNode(at: worldPos)
+            herd.node = node
+            gameWorld.addChild(node)
+        }
     }
 
     private func setupPlayers() {
@@ -294,6 +306,36 @@ class GameScene: SKScene {
 
             player.units.append(unit)
             gameWorld.addChild(node)
+        }
+
+        // Chinese starting villager bonus
+        if player.civilization.startingVillagerBonus > 0 {
+            let bonusPositions = [
+                GridPosition(x: center.x - 2, y: center.y - 3),
+                GridPosition(x: center.x, y: center.y - 3),
+                GridPosition(x: center.x + 2, y: center.y - 3),
+            ]
+            for i in 0..<min(player.civilization.startingVillagerBonus, bonusPositions.count) {
+                let pos = bonusPositions[i]
+                let unit = Unit(type: .villager, ownerID: player.id, position: pos)
+                unit.ownerPlayer = player
+                unit.gridPosition = pos
+                unit.position = gameMap.gridToWorld(pos)
+
+                let node = spriteFactory.createUnitNode(unit: unit)
+                node.position = unit.position
+                unit.node = node
+
+                player.units.append(unit)
+                gameWorld.addChild(node)
+            }
+        }
+
+        // Vikings free eco upgrades
+        if player.civilization.freeEcoUpgrades.count > 0 {
+            for tech in player.civilization.freeEcoUpgrades {
+                player.researchedTechs.insert(tech)
+            }
         }
 
         // Scout
@@ -471,6 +513,16 @@ class GameScene: SKScene {
             }
         }
 
+        // Ambient birds (every ~30 seconds)
+        ambientBirdTimer += deltaTime
+        if ambientBirdTimer >= 30.0 {
+            ambientBirdTimer = 0
+            spawnAmbientBirds()
+        }
+
+        // Deer wandering (every frame, internal timer per herd)
+        updateDeerHerds(deltaTime: deltaTime)
+
         // Day/Night cycle
         dayNightTimer += deltaTime
         if dayNightTimer >= dayLength { dayNightTimer = 0 }
@@ -552,6 +604,61 @@ class GameScene: SKScene {
             for building in player.buildings {
                 let tile = gameMap.tile(at: building.gridPosition)
                 building.node?.isHidden = !(tile?.isExplored ?? false)
+            }
+        }
+    }
+
+    // MARK: - Ambient Effects
+
+    private func spawnAmbientBirds() {
+        let startX = CGFloat.random(in: 0...gameMap.gridToWorld(GridPosition(x: gameMap.width, y: 0)).x)
+        let startY = CGFloat.random(in: 0...gameMap.gridToWorld(GridPosition(x: 0, y: gameMap.height)).y)
+        let birdCount = Int.random(in: 3...6)
+
+        let flock = SKNode()
+        flock.position = CGPoint(x: startX, y: startY)
+        flock.zPosition = 45  // Above terrain, below HUD
+
+        for i in 0..<birdCount {
+            let bird = SKShapeNode(rectOf: CGSize(width: 3, height: 1.5))
+            bird.fillColor = SKColor(red: 0.2, green: 0.2, blue: 0.25, alpha: 0.7)
+            bird.strokeColor = .clear
+            // V-formation offset
+            let row = i / 2
+            let side = i % 2 == 0 ? 1 : -1
+            bird.position = CGPoint(x: CGFloat(row * side) * 6, y: -CGFloat(row) * 4)
+            flock.addChild(bird)
+        }
+
+        gameWorld.addChild(flock)
+
+        let direction = CGFloat.random(in: 0...(2 * .pi))
+        let distance: CGFloat = 800
+        let moveAction = SKAction.moveBy(x: cos(direction) * distance, y: sin(direction) * distance, duration: TimeInterval(CGFloat.random(in: 15...25)))
+        flock.run(SKAction.sequence([moveAction, SKAction.removeFromParent()]))
+    }
+
+    private func updateDeerHerds(deltaTime: CGFloat) {
+        for herd in gameMap.deerHerds {
+            guard herd.foodRemaining > 0 else {
+                herd.node?.removeFromParent()
+                continue
+            }
+
+            herd.wanderTimer += deltaTime
+            let wanderInterval = CGFloat.random(in: 5...8)
+            if herd.wanderTimer >= wanderInterval {
+                herd.wanderTimer = 0
+
+                // Pick a random adjacent grass tile
+                let neighbors = herd.gridPosition.neighbors.filter { pos in
+                    gameMap.isValid(pos) && gameMap.tiles[pos.y][pos.x].terrain == .grass && gameMap.tiles[pos.y][pos.x].building == nil
+                }
+                if let newPos = neighbors.randomElement() {
+                    herd.gridPosition = newPos
+                    let worldPos = gameMap.gridToWorld(newPos)
+                    herd.node?.run(SKAction.move(to: worldPos, duration: 1.0))
+                }
             }
         }
     }
@@ -1492,6 +1599,9 @@ class GameScene: SKScene {
             } else {
                 hud.showStatus("No relics available!")
             }
+
+        case .showCivBonuses:
+            hud.showCivBonuses(player: humanPlayer)
         }
     }
 

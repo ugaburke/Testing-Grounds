@@ -89,11 +89,14 @@ struct MainMenuView: View {
                             .font(.system(size: 20, weight: .semibold))
                             .foregroundColor(Color(red: 0.85, green: 0.7, blue: 0.4))
 
-                        HStack(spacing: 20) {
-                            ForEach(Civilization.allCases, id: \.self) { civ in
-                                CivSelectionCard(civ: civ, isSelected: selectedCiv == civ)
-                                    .onTapGesture { selectedCiv = civ }
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 20) {
+                                ForEach(Civilization.allCases, id: \.self) { civ in
+                                    CivSelectionCard(civ: civ, isSelected: selectedCiv == civ)
+                                        .onTapGesture { selectedCiv = civ }
+                                }
                             }
+                            .padding(.horizontal)
                         }
                     }
 

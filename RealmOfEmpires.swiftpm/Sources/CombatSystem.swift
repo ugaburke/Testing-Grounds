@@ -169,6 +169,11 @@ class CombatSystem {
                 target.hp -= damage
                 unit.attackCooldown = effectiveInterval
 
+                // Chu-Ko-Nu fires twice as fast
+                if unit.type == .chuKoNu {
+                    unit.attackCooldown = effectiveInterval * 0.5
+                }
+
                 // Petard: explode on hit (self-destruct)
                 if unit.type == .petard && !unit.isExploding {
                     unit.isExploding = true

@@ -182,6 +182,28 @@ class ResourceSystem {
 
             // Update tile visual if depleted
             if tile.resourceRemaining <= 0 {
+                // Tree falling animation for forest
+                if tile.terrain == .forest {
+                    if let scene = gameScene, let tileNode = tile.node {
+                        let fallingTree = SKShapeNode(circleOfRadius: scene.gameMap.tileSize * 0.3)
+                        fallingTree.fillColor = SKColor(red: 0.1, green: 0.35, blue: 0.08, alpha: 1.0)
+                        fallingTree.strokeColor = .clear
+                        fallingTree.position = tileNode.position
+                        fallingTree.zPosition = 5
+                        scene.gameWorld.addChild(fallingTree)
+
+                        let fallDir = CGFloat.random(in: -1...1) > 0 ? CGFloat.pi / 3 : -CGFloat.pi / 3
+                        fallingTree.run(SKAction.sequence([
+                            SKAction.group([
+                                SKAction.rotate(byAngle: fallDir, duration: 0.5),
+                                SKAction.fadeOut(withDuration: 0.6),
+                                SKAction.moveBy(x: fallDir > 0 ? 8 : -8, y: -4, duration: 0.5)
+                            ]),
+                            SKAction.removeFromParent()
+                        ]))
+                    }
+                }
+
                 tile.terrain = .grass
                 if let node = tile.node {
                     node.removeAllChildren()
@@ -265,12 +287,19 @@ class ResourceSystem {
             building.hp = building.maxHP
             unit.state = .idle
 
-            // Completion feedback: flash effect
+            // Completion feedback: enhanced flash effect
             if let node = building.node {
+                // White flash on the building body
                 let flash = SKAction.sequence([
                     SKAction.run { node.children.forEach { child in
                         if let shape = child as? SKShapeNode, shape.name == "buildingBody" {
                             shape.fillColor = .white
+                        }
+                    }},
+                    SKAction.wait(forDuration: 0.2),
+                    SKAction.run { node.children.forEach { child in
+                        if let shape = child as? SKShapeNode, shape.name == "buildingBody" {
+                            shape.fillColor = SKColor(red: 1, green: 0.9, blue: 0.5, alpha: 1)
                         }
                     }},
                     SKAction.wait(forDuration: 0.15),
@@ -282,6 +311,22 @@ class ResourceSystem {
                     }
                 ])
                 node.run(flash)
+
+                // Radial glow burst
+                let glow = SKShapeNode(circleOfRadius: 8)
+                glow.fillColor = SKColor(red: 1, green: 0.9, blue: 0.4, alpha: 0.6)
+                glow.strokeColor = SKColor(red: 1, green: 0.85, blue: 0.3, alpha: 0.4)
+                glow.lineWidth = 2
+                glow.zPosition = 5
+                glow.setScale(0.5)
+                node.addChild(glow)
+                glow.run(SKAction.sequence([
+                    SKAction.group([
+                        SKAction.scale(to: 4.0, duration: 0.5),
+                        SKAction.fadeOut(withDuration: 0.5)
+                    ]),
+                    SKAction.removeFromParent()
+                ]))
             }
 
             // Status message for human player

@@ -100,6 +100,22 @@ enum Civilization: String, CaseIterable {
         self == .japanese ? 1.1 : 1.0
     }
 
+    var techCostBonus: CGFloat {
+        self == .chinese ? 0.9 : 1.0
+    }
+
+    var startingVillagerBonus: Int {
+        self == .chinese ? 3 : 0
+    }
+
+    var infantryHPBonus: CGFloat {
+        self == .vikings ? 1.2 : 1.0
+    }
+
+    var freeEcoUpgrades: [TechType] {
+        self == .vikings ? [.wheelbarrow, .handCart] : []
+    }
+
     var uniqueUnitType: UnitType {
         switch self {
         case .britons: return .longbowman
@@ -108,6 +124,8 @@ enum Civilization: String, CaseIterable {
         case .byzantines: return .cataphract
         case .japanese: return .samurai
         case .persians: return .warElephant
+        case .chinese: return .chuKoNu
+        case .vikings: return .berserk
         }
     }
 }
@@ -686,6 +704,8 @@ enum UnitType: CaseIterable {
     case handCannoneer
     case samurai
     case warElephant
+    case chuKoNu
+    case berserk
 
     var displayName: String {
         switch self {
@@ -717,6 +737,8 @@ enum UnitType: CaseIterable {
         case .handCannoneer: return "Hand Cannoneer"
         case .samurai: return "Samurai"
         case .warElephant: return "War Elephant"
+        case .chuKoNu: return "Chu-Ko-Nu"
+        case .berserk: return "Berserk"
         }
     }
 
@@ -750,6 +772,8 @@ enum UnitType: CaseIterable {
         case .handCannoneer: return "HC"
         case .samurai: return "SM"
         case .warElephant: return "WE"
+        case .chuKoNu: return "CK"
+        case .berserk: return "BK"
         }
     }
 
@@ -783,6 +807,8 @@ enum UnitType: CaseIterable {
         case .handCannoneer: return Resources(food: 45, gold: 50)
         case .samurai: return Resources(food: 60, gold: 30)
         case .warElephant: return Resources(food: 200, gold: 75)
+        case .chuKoNu: return Resources(food: 40, wood: 35, gold: 40)
+        case .berserk: return Resources(food: 65, gold: 25)
         }
     }
 
@@ -816,6 +842,8 @@ enum UnitType: CaseIterable {
         case .handCannoneer: return 40
         case .samurai: return 80
         case .warElephant: return 350
+        case .chuKoNu: return 45
+        case .berserk: return 65
         }
     }
 
@@ -849,6 +877,8 @@ enum UnitType: CaseIterable {
         case .handCannoneer: return 7
         case .samurai: return 8
         case .warElephant: return 15
+        case .chuKoNu: return 4
+        case .berserk: return 9
         }
     }
 
@@ -882,6 +912,8 @@ enum UnitType: CaseIterable {
         case .handCannoneer: return 1
         case .samurai: return 3
         case .warElephant: return 5
+        case .chuKoNu: return 1
+        case .berserk: return 2
         }
     }
 
@@ -912,6 +944,8 @@ enum UnitType: CaseIterable {
         case .handCannoneer: return 0.85
         case .samurai: return 1.0
         case .warElephant: return 0.6
+        case .chuKoNu: return 0.96
+        case .berserk: return 1.1
         }
     }
 
@@ -928,6 +962,7 @@ enum UnitType: CaseIterable {
         case .warGalley: return 6.0
         case .fireShip: return 2.0
         case .handCannoneer: return 5.0
+        case .chuKoNu: return 5.0
         default: return 1.2
         }
     }
@@ -966,6 +1001,8 @@ enum UnitType: CaseIterable {
         case .handCannoneer: return 10.0
         case .samurai: return 10.0
         case .warElephant: return 15.0
+        case .chuKoNu: return 10.0
+        case .berserk: return 10.0
         }
     }
 
@@ -984,6 +1021,7 @@ enum UnitType: CaseIterable {
         case .camelRider: return .castleAge
         case .handCannoneer: return .imperialAge
         case .samurai, .warElephant: return .castleAge
+        case .chuKoNu, .berserk: return .castleAge
         }
     }
 
@@ -1011,7 +1049,7 @@ enum UnitType: CaseIterable {
 
     var isInfantry: Bool {
         switch self {
-        case .militia, .manAtArms, .spearman, .throwingAxeman, .samurai: return true
+        case .militia, .manAtArms, .spearman, .throwingAxeman, .samurai, .berserk: return true
         default: return false
         }
     }
@@ -1058,6 +1096,7 @@ enum UnitType: CaseIterable {
         case .fireShip: return 2
         case .warElephant: return 4
         case .camelRider: return 1
+        case .berserk: return 1
         default: return 0
         }
     }
@@ -1075,6 +1114,7 @@ enum UnitType: CaseIterable {
         case .camelRider: return 2
         case .samurai: return 3
         case .warElephant: return 5
+        case .berserk: return 2
         default: return 0
         }
     }
@@ -1106,6 +1146,8 @@ enum UnitType: CaseIterable {
         case .handCannoneer: return SKColor(red: 0.4, green: 0.4, blue: 0.45, alpha: 1.0)
         case .samurai: return SKColor(red: 0.7, green: 0.2, blue: 0.2, alpha: 1.0)
         case .warElephant: return SKColor(red: 0.5, green: 0.45, blue: 0.4, alpha: 1.0)
+        case .chuKoNu: return SKColor(red: 0.3, green: 0.45, blue: 0.25, alpha: 1.0)
+        case .berserk: return SKColor(red: 0.7, green: 0.25, blue: 0.25, alpha: 1.0)
         }
     }
 }

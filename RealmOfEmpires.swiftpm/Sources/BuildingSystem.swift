@@ -214,6 +214,14 @@ class BuildingSystem {
             unit.maxHP = Int(CGFloat(unit.maxHP) * 1.5)
             unit.hp = unit.maxHP
         }
+        // Apply infantry HP bonus (Vikings)
+        if type.isInfantry {
+            let infBonus = player.civilization.infantryHPBonus
+            if infBonus != 1.0 {
+                unit.maxHP = Int(CGFloat(unit.maxHP) * infBonus)
+                unit.hp = unit.maxHP
+            }
+        }
 
         let node = spriteFactory.createUnitNode(unit: unit)
         node.position = unit.position

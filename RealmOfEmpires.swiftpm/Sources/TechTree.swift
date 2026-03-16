@@ -295,18 +295,40 @@ class TechTree {
         TechType.allCases.filter { tech in
             !player.researchedTechs.contains(tech) &&
             player.currentAge.rawValue >= tech.requiredAge.rawValue &&
-            player.canAfford(tech.cost) &&
-            tech.prerequisites.allSatisfy { player.researchedTechs.contains($0) }
+            tech.prerequisites.allSatisfy { player.researchedTechs.contains($0) } &&
+            {
+                var cost = tech.cost
+                if player.civilization.techCostBonus != 1.0 {
+                    cost = Resources(
+                        food: Int(CGFloat(tech.cost.food) * player.civilization.techCostBonus),
+                        wood: Int(CGFloat(tech.cost.wood) * player.civilization.techCostBonus),
+                        gold: Int(CGFloat(tech.cost.gold) * player.civilization.techCostBonus),
+                        stone: Int(CGFloat(tech.cost.stone) * player.civilization.techCostBonus)
+                    )
+                }
+                return player.canAfford(cost)
+            }()
         }
     }
 
     func research(tech: TechType, player: Player) -> Bool {
         guard !player.researchedTechs.contains(tech) else { return false }
-        guard player.canAfford(tech.cost) else { return false }
         guard player.currentAge.rawValue >= tech.requiredAge.rawValue else { return false }
         guard tech.prerequisites.allSatisfy({ player.researchedTechs.contains($0) }) else { return false }
 
-        player.spend(tech.cost)
+        // Apply Chinese tech cost discount
+        var adjustedCost = tech.cost
+        if player.civilization.techCostBonus != 1.0 {
+            adjustedCost = Resources(
+                food: Int(CGFloat(tech.cost.food) * player.civilization.techCostBonus),
+                wood: Int(CGFloat(tech.cost.wood) * player.civilization.techCostBonus),
+                gold: Int(CGFloat(tech.cost.gold) * player.civilization.techCostBonus),
+                stone: Int(CGFloat(tech.cost.stone) * player.civilization.techCostBonus)
+            )
+        }
+
+        guard player.canAfford(adjustedCost) else { return false }
+        player.spend(adjustedCost)
         player.researchedTechs.insert(tech)
         return true
     }

@@ -281,6 +281,50 @@ class SpriteFactory {
             tusk2.position = CGPoint(x: bodySize * 0.2, y: -bodySize * 0.25)
             tusk2.zRotation = -0.3
             bodyContainer.addChild(tusk2)
+        } else if unit.type == .chuKoNu {
+            // Chu-Ko-Nu: diamond shape (ranged) with multi-bolt "x" pattern
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: 0, y: bodySize * 0.4))
+            path.addLine(to: CGPoint(x: -bodySize * 0.35, y: 0))
+            path.addLine(to: CGPoint(x: 0, y: -bodySize * 0.4))
+            path.addLine(to: CGPoint(x: bodySize * 0.35, y: 0))
+            path.closeSubpath()
+            body = SKShapeNode(path: path)
+            // Multi-bolt cross pattern
+            let bolt1 = SKShapeNode(rectOf: CGSize(width: 1.5, height: bodySize * 0.35))
+            bolt1.fillColor = SKColor.white.withAlphaComponent(0.7)
+            bolt1.strokeColor = .clear
+            bolt1.zRotation = .pi / 4
+            bodyContainer.addChild(bolt1)
+            let bolt2 = SKShapeNode(rectOf: CGSize(width: 1.5, height: bodySize * 0.35))
+            bolt2.fillColor = SKColor.white.withAlphaComponent(0.7)
+            bolt2.strokeColor = .clear
+            bolt2.zRotation = -.pi / 4
+            bodyContainer.addChild(bolt2)
+        } else if unit.type == .berserk {
+            // Berserk: slightly larger rounded shield shape with red tint
+            let path = CGMutablePath()
+            path.addRoundedRect(in: CGRect(x: -bodySize * 0.36, y: -bodySize * 0.36,
+                                            width: bodySize * 0.72, height: bodySize * 0.72),
+                                cornerWidth: bodySize * 0.12, cornerHeight: bodySize * 0.12)
+            body = SKShapeNode(path: path)
+            // Axe detail
+            let axeHandle = SKShapeNode(rectOf: CGSize(width: 2, height: bodySize * 0.45))
+            axeHandle.fillColor = SKColor(red: 0.5, green: 0.35, blue: 0.2, alpha: 0.9)
+            axeHandle.strokeColor = .clear
+            axeHandle.position = CGPoint(x: bodySize * 0.2, y: bodySize * 0.05)
+            axeHandle.zRotation = -0.3
+            bodyContainer.addChild(axeHandle)
+            let axeHead = SKShapeNode(circleOfRadius: bodySize * 0.1)
+            axeHead.fillColor = SKColor(red: 0.7, green: 0.7, blue: 0.75, alpha: 0.9)
+            axeHead.strokeColor = .clear
+            axeHead.position = CGPoint(x: bodySize * 0.28, y: bodySize * 0.25)
+            bodyContainer.addChild(axeHead)
+            // Red tint overlay
+            let redTint = SKShapeNode(circleOfRadius: bodySize * 0.3)
+            redTint.fillColor = SKColor(red: 1.0, green: 0.1, blue: 0.1, alpha: 0.15)
+            redTint.strokeColor = .clear
+            bodyContainer.addChild(redTint)
         } else {
             // Melee infantry — rounded shield shape
             let path = CGMutablePath()

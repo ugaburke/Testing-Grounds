@@ -8,6 +8,7 @@ class GameMap {
     var tiles: [[MapTile]]
     let mapNode: SKNode
     var relics: [Relic] = []
+    var deerHerds: [DeerHerd] = []
     let mapType: MapType
 
     init(width: Int = 80, height: Int = 80, tileSize: CGFloat = 32, mapType: MapType = .standard) {
@@ -27,6 +28,7 @@ class GameMap {
 
         generateTerrain()
         generateRelics()
+        generateDeerHerds()
     }
 
     // MARK: - Terrain Generation
@@ -661,6 +663,27 @@ class GameMap {
         }
     }
 
+    private func generateDeerHerds() {
+        let herdCount = Int.random(in: 3...5)
+        for _ in 0..<herdCount {
+            for _ in 0..<50 {  // Max attempts
+                let x = Int.random(in: 15..<(width - 15))
+                let y = Int.random(in: 15..<(height - 15))
+                let pos = GridPosition(x: x, y: y)
+                if tiles[y][x].terrain == .grass && tiles[y][x].building == nil {
+                    // Ensure away from typical player starts
+                    let distFromP1 = pos.distance(to: GridPosition(x: 12, y: 12))
+                    let distFromP2 = pos.distance(to: GridPosition(x: width - 15, y: height - 15))
+                    if distFromP1 > 15 && distFromP2 > 15 {
+                        let herd = DeerHerd(position: pos)
+                        deerHerds.append(herd)
+                        break
+                    }
+                }
+            }
+        }
+    }
+
     func isWater(_ pos: GridPosition) -> Bool {
         guard isValid(pos) else { return false }
         let terrain = tiles[pos.y][pos.x].terrain
@@ -725,6 +748,42 @@ class GameMap {
                         bush.fillColor = SKColor(red: 0.6, green: 0.15, blue: 0.3, alpha: 1.0)
                         bush.strokeColor = .clear
                         node.addChild(bush)
+                    }
+
+                    // Decorative elements on some grass tiles
+                    if tile.terrain == .grass && tile.building == nil {
+                        let hash = (x * 31 + y * 47) % 100
+                        if hash < 5 {
+                            // Small flower cluster
+                            let flower = SKShapeNode(circleOfRadius: tileSize * 0.08)
+                            flower.fillColor = hash < 2 ? SKColor.yellow : SKColor(red: 0.8, green: 0.3, blue: 0.5, alpha: 1.0)
+                            flower.strokeColor = .clear
+                            flower.position = CGPoint(x: CGFloat(hash % 3) * 3 - 3, y: CGFloat(hash % 5) * 2 - 4)
+                            flower.name = "decor"
+                            node.addChild(flower)
+                        } else if hash >= 5 && hash < 8 {
+                            // Small rock
+                            let rock = SKShapeNode(circleOfRadius: tileSize * 0.06)
+                            rock.fillColor = SKColor(red: 0.5, green: 0.48, blue: 0.45, alpha: 0.6)
+                            rock.strokeColor = .clear
+                            rock.position = CGPoint(x: CGFloat(hash % 7) - 3, y: CGFloat(hash % 5) - 2)
+                            rock.name = "decor"
+                            node.addChild(rock)
+                        } else if hash >= 8 && hash < 11 {
+                            // Small mushroom
+                            let stem = SKShapeNode(rectOf: CGSize(width: tileSize * 0.05, height: tileSize * 0.08))
+                            stem.fillColor = SKColor(red: 0.85, green: 0.8, blue: 0.7, alpha: 0.8)
+                            stem.strokeColor = .clear
+                            stem.position = CGPoint(x: CGFloat(hash % 5) - 2, y: CGFloat(hash % 3) - 3)
+                            stem.name = "decor"
+                            node.addChild(stem)
+                            let cap = SKShapeNode(circleOfRadius: tileSize * 0.06)
+                            cap.fillColor = hash < 10 ? SKColor(red: 0.7, green: 0.2, blue: 0.15, alpha: 0.8) : SKColor(red: 0.6, green: 0.5, blue: 0.2, alpha: 0.8)
+                            cap.strokeColor = .clear
+                            cap.position = CGPoint(x: CGFloat(hash % 5) - 2, y: CGFloat(hash % 3) - 3 + tileSize * 0.06)
+                            cap.name = "decor"
+                            node.addChild(cap)
+                        }
                     }
 
                     // Set initial alpha based on fog state to prevent flash
@@ -817,6 +876,25 @@ class GameMap {
                         let waveX2 = sin(time * 2.0 + offset + .pi) * tileSize * 0.15
                         let waveY2 = cos(time * 1.3 + offset + .pi) * tileSize * 0.1
                         highlight2.position = CGPoint(x: waveX2, y: waveY2)
+                    }
+                    // Fish jumping animation on deep water with fish
+                    if tile.terrain == .deepWater && tile.resourceRemaining > 0 {
+                        let fishPhase = (time * 0.5 + CGFloat(x * 13 + y * 29))
+                        if abs(sin(fishPhase)) < 0.02 {
+                            if node.childNode(withName: "fishJump") == nil {
+                                let fish = SKShapeNode(ellipseOf: CGSize(width: 4, height: 2))
+                                fish.fillColor = SKColor(red: 0.7, green: 0.7, blue: 0.8, alpha: 0.8)
+                                fish.strokeColor = .clear
+                                fish.name = "fishJump"
+                                fish.zPosition = 1
+                                node.addChild(fish)
+                                fish.run(SKAction.sequence([
+                                    SKAction.moveBy(x: 0, y: 8, duration: 0.2),
+                                    SKAction.moveBy(x: 0, y: -8, duration: 0.2),
+                                    SKAction.removeFromParent()
+                                ]))
+                            }
+                        }
                     }
                 } else if tile.terrain == .forest {
                     // Tree swaying

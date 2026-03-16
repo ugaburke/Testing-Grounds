@@ -872,10 +872,21 @@ class AIOpponent {
         // Prioritized tech list by age
         var desiredTechs: [TechType] = []
 
+        // Filter out free techs (Vikings get wheelbarrow/handCart for free)
+        let freeTechs = player.civilization.freeEcoUpgrades
+
         if player.currentAge.rawValue >= Age.feudalAge.rawValue {
             desiredTechs.append(contentsOf: [.doubleBitAxe, .horseCollar, .forging, .fletching, .loom])
             if difficulty == .hard {
                 desiredTechs.append(contentsOf: [.scaleMailArmor, .scaleBardingArmor, .bloodlines])
+            }
+            // Chinese AI: prioritize early tech research (discounted)
+            if player.civilization == .chinese {
+                desiredTechs.append(contentsOf: [.goldMining, .stoneMining, .masonry])
+            }
+            // Vikings AI: prioritize infantry upgrades
+            if player.civilization == .vikings {
+                desiredTechs.insert(.squires, at: 0)
             }
         }
 
@@ -886,6 +897,9 @@ class AIOpponent {
                 desiredTechs.append(contentsOf: [.heavyPlow, .goldMining, .ballistics, .arrowslits, .townWatch])
             }
         }
+
+        // Remove techs that are already free for this civilization
+        desiredTechs.removeAll { freeTechs.contains($0) }
 
         // Try to research each in order
         for tech in desiredTechs {

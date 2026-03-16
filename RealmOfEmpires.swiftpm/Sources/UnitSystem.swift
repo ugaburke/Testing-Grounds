@@ -33,6 +33,22 @@ class UnitSystem {
                 unit.tilesMoved = 0
             }
 
+            // Berserk self-heal: regenerate 1 HP every 2 seconds when not attacking
+            if unit.type == .berserk {
+                let isInCombat: Bool
+                switch unit.state {
+                case .attacking, .attackingBuilding: isInCombat = true
+                default: isInCombat = false
+                }
+                if !isInCombat {
+                    unit.healCooldown -= deltaTime
+                    if unit.healCooldown <= 0 && unit.hp < unit.maxHP {
+                        unit.hp = min(unit.maxHP, unit.hp + 1)
+                        unit.healCooldown = 2.0
+                    }
+                }
+            }
+
             // Auto-attack nearby enemies if idle or moving
             let shouldAutoAttack: Bool
             switch unit.state {
