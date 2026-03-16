@@ -1,6 +1,12 @@
 import Foundation
 import SpriteKit
 
+enum FormationType {
+    case box
+    case line
+    case spread
+}
+
 class UnitSystem {
     weak var gameScene: GameScene?
     let moveStepDuration: CGFloat = 0.3
@@ -79,6 +85,11 @@ class UnitSystem {
                 unit.state = .patrolling(from: points.0, to: points.1)
                 unit.patrolPoints = nil
             }
+
+            // Process command queue (shift-queue)
+            if case .idle = unit.state, !unit.commandQueue.isEmpty {
+                processCommandQueue(unit: unit, pathfinder: pathfinder)
+            }
         }
     }
 
@@ -133,22 +144,40 @@ class UnitSystem {
         unit.state = .moving(to: target)
     }
 
-    func moveUnits(_ units: [Unit], to target: GridPosition, pathfinder: Pathfinder) {
-        // Formation movement: spread units around the target
+    func moveUnits(_ units: [Unit], to target: GridPosition, pathfinder: Pathfinder, formation: FormationType = .box) {
         let count = units.count
         if count == 1 {
             moveUnit(units[0], to: target, pathfinder: pathfinder)
             return
         }
 
-        let cols = Int(ceil(sqrt(CGFloat(count))))
-        for (i, unit) in units.enumerated() {
-            let row = i / cols
-            let col = i % cols
-            let offsetX = col - cols / 2
-            let offsetY = row - cols / 2
-            let dest = GridPosition(x: target.x + offsetX, y: target.y + offsetY)
-            moveUnit(unit, to: dest, pathfinder: pathfinder)
+        switch formation {
+        case .box:
+            let cols = Int(ceil(sqrt(CGFloat(count))))
+            for (i, unit) in units.enumerated() {
+                let row = i / cols
+                let col = i % cols
+                let offsetX = col - cols / 2
+                let offsetY = row - cols / 2
+                let dest = GridPosition(x: target.x + offsetX, y: target.y + offsetY)
+                moveUnit(unit, to: dest, pathfinder: pathfinder)
+            }
+        case .line:
+            let halfCount = count / 2
+            for (i, unit) in units.enumerated() {
+                let offset = i - halfCount
+                let dest = GridPosition(x: target.x + offset, y: target.y)
+                moveUnit(unit, to: dest, pathfinder: pathfinder)
+            }
+        case .spread:
+            let radius = max(2, count / 3)
+            for (i, unit) in units.enumerated() {
+                let angle = CGFloat(i) * (2.0 * .pi / CGFloat(count))
+                let dx = Int(CGFloat(radius) * cos(angle))
+                let dy = Int(CGFloat(radius) * sin(angle))
+                let dest = GridPosition(x: target.x + dx, y: target.y + dy)
+                moveUnit(unit, to: dest, pathfinder: pathfinder)
+            }
         }
     }
 
@@ -245,5 +274,99 @@ class UnitSystem {
         }
         unit.node?.removeFromParent()
         player.units.removeAll { $0.id == unit.id }
+    }
+
+    // MARK: - Shift-Queue Commands
+
+    func queueCommand(unit: Unit, state: UnitState, position: GridPosition?) {
+        unit.commandQueue.append((state, position))
+    }
+
+    func processCommandQueue(unit: Unit, pathfinder: Pathfinder) {
+        guard case .idle = unit.state else { return }
+        guard !unit.commandQueue.isEmpty else { return }
+
+        let (nextState, position) = unit.commandQueue.removeFirst()
+        unit.state = nextState
+        if let pos = position {
+            unit.path = pathfinder.findPath(from: unit.gridPosition, to: pos)
+        }
+    }
+
+    // MARK: - Garrison
+
+    func garrisonUnit(_ unit: Unit, into building: Building, player: Player) -> Bool {
+        guard building.garrisonedUnits.count < building.garrisonCapacity else { return false }
+        guard building.ownerID == unit.ownerID else { return false }
+
+        let dist = unit.gridPosition.distance(to: building.gridPosition)
+        if dist <= 3.0 {
+            building.garrisonedUnits.append(unit.id)
+            unit.state = .garrisoned(buildingID: building.id)
+            unit.node?.isHidden = true
+            return true
+        }
+        return false
+    }
+
+    func ungarrisonAll(building: Building, player: Player, map: GameMap) {
+        for unitID in building.garrisonedUnits {
+            if let unit = player.units.first(where: { $0.id == unitID }) {
+                unit.state = .idle
+                unit.node?.isHidden = false
+                // Place near building
+                if let spawnPos = findSpawnPosition(near: building, map: map) {
+                    unit.gridPosition = spawnPos
+                    unit.position = map.gridToWorld(spawnPos)
+                    unit.node?.position = unit.position
+                }
+            }
+        }
+        building.garrisonedUnits.removeAll()
+    }
+
+    private func findSpawnPosition(near building: Building, map: GameMap) -> GridPosition? {
+        let size = building.type.size
+        let baseX = building.gridPosition.x
+        let baseY = building.gridPosition.y
+
+        for dx in -1...(size.width) {
+            for dy in -1...(size.height) {
+                if dx == -1 || dx == size.width || dy == -1 || dy == size.height {
+                    let pos = GridPosition(x: baseX + dx, y: baseY + dy)
+                    if map.isPassable(pos) {
+                        return pos
+                    }
+                }
+            }
+        }
+        return nil
+    }
+
+    // MARK: - Idle Military Alert
+
+    func idleMilitaryUnits(for player: Player) -> [Unit] {
+        player.units.filter { unit in
+            unit.type != .villager && unit.type != .monk && unit.type != .fishingBoat && unit.type != .tradeCart
+            && {
+                if case .idle = unit.state { return true }
+                return false
+            }()
+        }
+    }
+
+    // MARK: - Control Groups
+
+    func setControlGroup(_ group: Int, units: [Unit], player: Player) {
+        player.controlGroups[group] = units.map { $0.id }
+        for unit in units { unit.controlGroup = group }
+    }
+
+    func selectControlGroup(_ group: Int, player: Player) -> [Unit] {
+        let ids = player.controlGroups[group]
+        let units = player.units.filter { ids.contains($0.id) }
+        // Clean up dead units from group
+        player.controlGroups[group] = units.map { $0.id }
+        return units
     }
 }

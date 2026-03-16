@@ -160,6 +160,18 @@ class GameMap {
                 }
             }
         }
+
+        // Fish in deep water
+        for y in 2..<(height-2) {
+            for x in 2..<(width-2) {
+                if tiles[y][x].terrain == .deepWater {
+                    // Add fish resource to some deep water tiles
+                    if CGFloat.random(in: 0...1, using: &rng) < 0.15 {
+                        tiles[y][x].resourceRemaining = 500  // Fish amount
+                    }
+                }
+            }
+        }
     }
 
     private func generateSand() {
@@ -415,7 +427,7 @@ class GameMap {
     func isPassable(_ pos: GridPosition) -> Bool {
         guard isValid(pos) else { return false }
         let tile = tiles[pos.y][pos.x]
-        return tile.terrain.isPassable && tile.building == nil
+        return tile.terrain.isPassable && (tile.building == nil || tile.building?.type == .gate)
     }
 
     func isBuildable(_ pos: GridPosition) -> Bool {
@@ -426,6 +438,28 @@ class GameMap {
 
     func canPlaceBuilding(type: BuildingType, at pos: GridPosition) -> Bool {
         let size = type.size
+
+        if type == .dock {
+            // Dock must be on land adjacent to water
+            var hasWaterNeighbor = false
+            for dy in 0..<size.height {
+                for dx in 0..<size.width {
+                    let checkPos = GridPosition(x: pos.x + dx, y: pos.y + dy)
+                    if !isBuildable(checkPos) { return false }
+                    // Check neighbors for water
+                    for neighbor in checkPos.neighbors {
+                        if isValid(neighbor) {
+                            let t = tiles[neighbor.y][neighbor.x].terrain
+                            if t == .water || t == .deepWater {
+                                hasWaterNeighbor = true
+                            }
+                        }
+                    }
+                }
+            }
+            return hasWaterNeighbor
+        }
+
         for dy in 0..<size.height {
             for dx in 0..<size.width {
                 let checkPos = GridPosition(x: pos.x + dx, y: pos.y + dy)
@@ -472,6 +506,7 @@ class GameMap {
             case .townCenter: isDropOff = true
             case .lumberCamp: isDropOff = (resourceType == .wood)
             case .miningCamp: isDropOff = (resourceType == .gold || resourceType == .stone)
+            case .dock: isDropOff = (resourceType == .food)
             default: isDropOff = false
             }
             if isDropOff {

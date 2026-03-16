@@ -61,6 +61,10 @@ class HUDOverlay {
     private var statusLabel: SKLabelNode!
     private var statusBg: SKShapeNode!
 
+    // Event log
+    private var eventLogEntries: [SKLabelNode] = []
+    private var eventLogBg: SKShapeNode!
+
     // Mode indicator
     private var modeIndicatorLabel: SKLabelNode!
     private var modeIndicatorBg: SKShapeNode!
@@ -96,6 +100,7 @@ class HUDOverlay {
         setupIdleVillagerButton()
         setupModeIndicator()
         setupVillagerAlloc()
+        setupEventLog()
     }
 
     // MARK: - Setup
@@ -503,6 +508,11 @@ class HUDOverlay {
             modeIndicatorLabel.fontColor = SKColor(red: 0.3, green: 0.6, blue: 1.0, alpha: 1.0)
             modeIndicatorLabel.isHidden = false
             modeIndicatorBg.isHidden = false
+        case .guardMode:
+            modeIndicatorLabel.text = "GUARD MODE"
+            modeIndicatorLabel.fontColor = SKColor(red: 0.3, green: 0.6, blue: 0.8, alpha: 1.0)
+            modeIndicatorLabel.isHidden = false
+            modeIndicatorBg.isHidden = false
         case .normal:
             modeIndicatorLabel.isHidden = true
             modeIndicatorBg.isHidden = true
@@ -889,7 +899,7 @@ class HUDOverlay {
             }
 
             // Tech button for buildings that have researchable techs
-            let techBuildings: [BuildingType] = [.blacksmith, .lumberCamp, .miningCamp, .townCenter, .stable]
+            let techBuildings: [BuildingType] = [.blacksmith, .lumberCamp, .miningCamp, .townCenter, .stable, .monastery, .castle]
             if techBuildings.contains(building.type) {
                 let techBtn = createActionButton(
                     text: "Tech", icon: "T",
@@ -899,6 +909,40 @@ class HUDOverlay {
                     y: startY - (buttonSize + padding), size: buttonSize)
                 actionPanel.addChild(techBtn)
                 actionButtons.append(techBtn)
+            }
+
+            // Garrison button for buildings with capacity
+            if building.garrisonCapacity > 0 {
+                let garrisonCount = building.garrisonedUnits.count
+                let garrisonBtn = createActionButton(
+                    text: "Garrison", icon: "\(garrisonCount)/\(building.garrisonCapacity)",
+                    color: SKColor(red: 0.3, green: 0.35, blue: 0.5, alpha: 1.0),
+                    name: "btn_garrison",
+                    x: startX, y: startY - 2 * (buttonSize + padding), size: buttonSize)
+                actionPanel.addChild(garrisonBtn)
+                actionButtons.append(garrisonBtn)
+
+                if garrisonCount > 0 {
+                    let ungarrisonBtn = createActionButton(
+                        text: "Ungarr", icon: "UG",
+                        color: SKColor(red: 0.5, green: 0.35, blue: 0.2, alpha: 1.0),
+                        name: "btn_ungarrison",
+                        x: startX + (buttonSize + padding), y: startY - 2 * (buttonSize + padding), size: buttonSize)
+                    actionPanel.addChild(ungarrisonBtn)
+                    actionButtons.append(ungarrisonBtn)
+                }
+            }
+
+            // Auto-reseed toggle for farms
+            if building.type == .farm {
+                let reseedText = building.autoReseed ? "Auto:ON" : "Auto:OFF"
+                let reseedBtn = createActionButton(
+                    text: "Reseed", icon: reseedText,
+                    color: building.autoReseed ? SKColor(red: 0.2, green: 0.5, blue: 0.2, alpha: 1.0) : SKColor(red: 0.4, green: 0.3, blue: 0.2, alpha: 1.0),
+                    name: "btn_autoReseed",
+                    x: startX, y: startY - (buttonSize + padding), size: buttonSize)
+                actionPanel.addChild(reseedBtn)
+                actionButtons.append(reseedBtn)
             }
         }
 
@@ -929,6 +973,14 @@ class HUDOverlay {
                     x: startX + 2 * (buttonSize + padding), y: startY, size: buttonSize)
                 actionPanel.addChild(stanceBtn)
                 actionButtons.append(stanceBtn)
+
+                let guardBtn = createActionButton(
+                    text: "Guard", icon: "GD",
+                    color: SKColor(red: 0.3, green: 0.4, blue: 0.5, alpha: 1.0),
+                    name: "btn_guard",
+                    x: startX + 3 * (buttonSize + padding), y: startY, size: buttonSize)
+                actionPanel.addChild(guardBtn)
+                actionButtons.append(guardBtn)
             }
         }
     }
@@ -1069,7 +1121,7 @@ class HUDOverlay {
         buildMenuNode.isHidden = false
         buildMenuNode.removeAllChildren()
 
-        let bg = SKShapeNode(rectOf: CGSize(width: 420, height: 340), cornerRadius: 8)
+        let bg = SKShapeNode(rectOf: CGSize(width: 420, height: 380), cornerRadius: 8)
         bg.fillColor = SKColor(red: 0.1, green: 0.08, blue: 0.05, alpha: 0.95)
         bg.strokeColor = SKColor(red: 0.5, green: 0.4, blue: 0.2, alpha: 1.0)
         bg.lineWidth = 2
@@ -1086,7 +1138,8 @@ class HUDOverlay {
         let buildingTypes: [BuildingType] = [
             .townCenter, .house, .farm, .lumberCamp, .miningCamp,
             .barracks, .archeryRange, .stable, .blacksmith,
-            .market, .tower, .wall, .castle, .siegeWorkshop
+            .market, .tower, .wall, .gate, .castle, .siegeWorkshop,
+            .monastery, .dock
         ]
 
         let buttonSize: CGFloat = 66
@@ -1201,7 +1254,7 @@ class HUDOverlay {
         techMenuNode.isHidden = false
         techMenuNode.removeAllChildren()
 
-        let bg = SKShapeNode(rectOf: CGSize(width: 420, height: 340), cornerRadius: 8)
+        let bg = SKShapeNode(rectOf: CGSize(width: 420, height: 380), cornerRadius: 8)
         bg.fillColor = SKColor(red: 0.1, green: 0.08, blue: 0.05, alpha: 0.95)
         bg.strokeColor = SKColor(red: 0.5, green: 0.4, blue: 0.2, alpha: 1.0)
         bg.lineWidth = 2
@@ -1421,6 +1474,10 @@ class HUDOverlay {
             if name == "btn_patrol" { return .patrolMode }
             if name == "btn_stance" { return .cycleStance }
             if name == "btn_cancelTrain" { return .cancelTraining }
+            if name == "btn_guard" { return .guardMode }
+            if name == "btn_garrison" { return .garrison }
+            if name == "btn_ungarrison" { return .ungarrison }
+            if name == "btn_autoReseed" { return .toggleAutoReseed }
             if name == "idleVillagerBtn" { return .selectIdleVillager }
 
             if name.hasPrefix("build_") {
@@ -1549,4 +1606,8 @@ enum HUDAction {
     case selectIdleVillager
     case cancelTraining
     case cycleStance
+    case guardMode
+    case garrison
+    case ungarrison
+    case toggleAutoReseed
 }

@@ -77,6 +77,11 @@ class GameScene: SKScene {
 
     // Idle villager cycling
     var lastIdleVillagerIndex: Int = 0
+    var lastAttackAlertTime: TimeInterval = 0
+    var attackAlertPosition: CGPoint?
+    var weatherTimer: CGFloat = 0
+    var currentWeather: WeatherType = .clear
+    var weatherNode: SKNode?
 
     // Tutorial
     var tutorialStep: Int = -1  // -1 means no tutorial
@@ -389,10 +394,27 @@ class GameScene: SKScene {
                               cameraPos: cameraPosition, viewSize: size)
         }
 
+        // Weather system
+        weatherTimer += deltaTime
+        if weatherTimer >= 300 { // Change weather every 5 minutes
+            weatherTimer = 0
+            let weathers: [WeatherType] = [.clear, .clear, .clear, .rain, .snow]
+            let newWeather = weathers.randomElement() ?? .clear
+            if newWeather != currentWeather {
+                currentWeather = newWeather
+                weatherNode?.removeFromParent()
+                if newWeather != .clear {
+                    weatherNode = spriteFactory.createWeatherEffect(type: newWeather, viewSize: size)
+                    hudCamera.addChild(weatherNode!)
+                }
+            }
+        }
+
         // HUD
         hud.update(player: humanPlayer)
         hud.updateIncomeRates(player: humanPlayer, deltaTime: deltaTime)
         hud.updateIdleVillagerCount(player: humanPlayer)
+        hud.updateIdleMilitaryAlert(player: humanPlayer)
         if let building = selectedBuilding {
             hud.showBuildingInfo(building: building, player: humanPlayer)
         }
@@ -402,6 +424,9 @@ class GameScene: SKScene {
 
         // Check win/loss
         checkGameEnd()
+
+        // Check for attacks on human player (throttled)
+        checkAttackAlerts()
 
         // Hide enemy units in fog
         updateUnitVisibility()

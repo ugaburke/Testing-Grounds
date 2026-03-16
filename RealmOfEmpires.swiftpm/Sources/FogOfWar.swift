@@ -29,7 +29,12 @@ class FogOfWar {
 
         // Reveal around buildings
         for building in player.buildings {
-            let buildingRange = building.type == .tower ? sightRange + 3 : sightRange
+            let buildingRange: Int
+            switch building.type {
+            case .tower: buildingRange = sightRange + 3
+            case .castle: buildingRange = sightRange + 2
+            default: buildingRange = sightRange
+            }
             revealArea(around: building.gridPosition, range: buildingRange)
         }
     }

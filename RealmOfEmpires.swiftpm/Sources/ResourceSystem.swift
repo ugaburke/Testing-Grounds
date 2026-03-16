@@ -55,12 +55,36 @@ class ResourceSystem {
             }
         }
 
-        // Farm auto-gathering
+        // Handle fishing boats
+        for unit in player.units where unit.type == .fishingBoat {
+            if case .fishing(let tilePos) = unit.state {
+                handleFishing(unit: unit, tilePos: tilePos, player: player, map: map, deltaTime: deltaTime, pathfinder: pathfinder)
+            }
+        }
+
+        // Handle trade carts
+        for unit in player.units where unit.type == .tradeCart {
+            if case .trading(let marketPos, let targetMarketPos) = unit.state {
+                handleTrading(unit: unit, marketPos: marketPos, targetMarketPos: targetMarketPos, player: player, map: map, pathfinder: pathfinder)
+            }
+        }
+
+        // Farm auto-gathering and auto-reseed
         for building in player.buildings where building.type == .farm && building.isConstructed {
             let tile = map.tile(at: building.gridPosition)
             if tile?.terrain != .farm {
                 tile?.terrain = .farm
                 tile?.resourceRemaining = TerrainType.farm.resourceAmount
+            }
+            // Auto-reseed: if farm is depleted and auto-reseed is on, reset resources
+            if let tile = tile, tile.resourceRemaining <= 0 && building.autoReseed {
+                if player.resources.wood >= 60 {
+                    player.resources.wood -= 60
+                    tile.resourceRemaining = TerrainType.farm.resourceAmount
+                    if let scene = gameScene {
+                        scene.hud.showStatus("Farm auto-reseeded")
+                    }
+                }
             }
         }
     }
@@ -234,5 +258,134 @@ class ResourceSystem {
         guard unit.type == .villager else { return }
         unit.state = .building(buildingID: building.id)
         unit.path = pathfinder.findPath(from: unit.gridPosition, to: building.gridPosition)
+    }
+
+    private func handleFishing(unit: Unit, tilePos: GridPosition, player: Player, map: GameMap, deltaTime: CGFloat, pathfinder: Pathfinder) {
+        let dist = unit.gridPosition.distance(to: tilePos)
+        if dist > 2.0 {
+            if unit.path.isEmpty {
+                // Water pathfinding: just move directly since boats go over water
+                unit.path = [tilePos]
+            }
+            return
+        }
+
+        guard let tile = map.tile(at: tilePos) else { return }
+        guard tile.terrain == .water || tile.terrain == .deepWater else {
+            unit.state = .idle
+            return
+        }
+
+        // Generate food from fishing
+        unit.gatherAccumulator += 0.5 * deltaTime * 10
+        let amount = Int(unit.gatherAccumulator)
+        if amount > 0 {
+            unit.gatherAccumulator -= CGFloat(amount)
+            player.resources.food += amount
+        }
+    }
+
+    private func handleTrading(unit: Unit, marketPos: GridPosition, targetMarketPos: GridPosition, player: Player, map: GameMap, pathfinder: Pathfinder) {
+        let distToTarget = unit.gridPosition.distance(to: targetMarketPos)
+        let distToHome = unit.gridPosition.distance(to: marketPos)
+
+        if unit.tradeGold == 0 {
+            // Going to target market
+            if distToTarget <= 2.0 {
+                // Calculate gold based on distance between markets
+                let tradeDist = marketPos.distance(to: targetMarketPos)
+                unit.tradeGold = max(5, Int(tradeDist * 1.5))
+                // Now head back
+                unit.path = pathfinder.findPath(from: unit.gridPosition, to: marketPos)
+            } else if unit.path.isEmpty {
+                unit.path = pathfinder.findPath(from: unit.gridPosition, to: targetMarketPos)
+            }
+        } else {
+            // Returning to home market
+            if distToHome <= 2.0 {
+                player.resources.gold += unit.tradeGold
+                if let scene = gameScene {
+                    let feedback = scene.spriteFactory.createDepositFeedback(
+                        at: map.gridToWorld(marketPos), amount: unit.tradeGold, resourceType: .gold)
+                    scene.gameWorld.addChild(feedback)
+                }
+                unit.tradeGold = 0
+                // Go back to target market
+                unit.path = pathfinder.findPath(from: unit.gridPosition, to: targetMarketPos)
+            } else if unit.path.isEmpty {
+                unit.path = pathfinder.findPath(from: unit.gridPosition, to: marketPos)
+            }
+        }
+    }
+
+    func checkResourceWarnings(player: Player, map: GameMap) {
+        guard let scene = gameScene else { return }
+
+        // Check for depleted resource tiles near active gatherers
+        for unit in player.units where unit.type == .villager {
+            if case .gathering(let rt, let tilePos) = unit.state {
+                if let tile = map.tile(at: tilePos), tile.resourceRemaining > 0 && tile.resourceRemaining < 20 {
+                    let resourceName: String
+                    switch rt {
+                    case .food: resourceName = "Food"
+                    case .wood: resourceName = "Wood"
+                    case .gold: resourceName = "Gold"
+                    case .stone: resourceName = "Stone"
+                    }
+                    scene.hud.showStatus("\(resourceName) running low nearby!")
+                }
+            }
+        }
+    }
+
+    func autoAssignVillager(_ unit: Unit, player: Player, map: GameMap, pathfinder: Pathfinder) {
+        guard unit.type == .villager else { return }
+
+        // Determine what resource is most needed
+        let resourcePriority: ResourceType
+        if player.resources.food < 100 {
+            resourcePriority = .food
+        } else if player.resources.wood < 100 {
+            resourcePriority = .wood
+        } else if player.resources.gold < 50 {
+            resourcePriority = .gold
+        } else {
+            resourcePriority = .food  // Default to food
+        }
+
+        if let tile = map.findNearestResource(resourcePriority, from: unit.gridPosition) {
+            sendVillagerToGather(unit: unit, tilePos: tile, map: map, pathfinder: pathfinder)
+        }
+    }
+
+    func marketTrade(buy: ResourceType, sell: ResourceType, player: Player, amount: Int = 100) -> Bool {
+        // Market exchange rate: sell 100 of one resource, get 80 of another (20% fee)
+        let sellAmount = amount
+        let buyAmount = Int(Double(amount) * 0.8)
+
+        switch sell {
+        case .food: guard player.resources.food >= sellAmount else { return false }
+        case .wood: guard player.resources.wood >= sellAmount else { return false }
+        case .gold: guard player.resources.gold >= sellAmount else { return false }
+        case .stone: guard player.resources.stone >= sellAmount else { return false }
+        }
+
+        // Deduct sold resource
+        switch sell {
+        case .food: player.resources.food -= sellAmount
+        case .wood: player.resources.wood -= sellAmount
+        case .gold: player.resources.gold -= sellAmount
+        case .stone: player.resources.stone -= sellAmount
+        }
+
+        // Add bought resource
+        switch buy {
+        case .food: player.resources.food += buyAmount
+        case .wood: player.resources.wood += buyAmount
+        case .gold: player.resources.gold += buyAmount
+        case .stone: player.resources.stone += buyAmount
+        }
+
+        return true
     }
 }

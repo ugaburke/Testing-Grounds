@@ -22,6 +22,12 @@ enum TechType: String, CaseIterable {
     case leatherArcherArmor
     case ballistics
     case bloodlines
+    case redemption    // Monks convert buildings
+    case fervor        // Monks move faster
+    case sanctity      // Monks +50% HP
+    case conscription  // Units train 33% faster
+    case murder_holes  // Buildings no min range
+    case sappers       // Infantry +15 vs buildings
 
     var displayName: String {
         switch self {
@@ -46,6 +52,12 @@ enum TechType: String, CaseIterable {
         case .leatherArcherArmor: return "Leather Armor"
         case .ballistics: return "Ballistics"
         case .bloodlines: return "Bloodlines"
+        case .redemption: return "Redemption"
+        case .fervor: return "Fervor"
+        case .sanctity: return "Sanctity"
+        case .conscription: return "Conscription"
+        case .murder_holes: return "Murder Holes"
+        case .sappers: return "Sappers"
         }
     }
 
@@ -72,6 +84,12 @@ enum TechType: String, CaseIterable {
         case .leatherArcherArmor: return Resources(food: 150, gold: 150)
         case .ballistics: return Resources(food: 0, wood: 300, gold: 175)
         case .bloodlines: return Resources(food: 150, gold: 100)
+        case .redemption: return Resources(food: 0, gold: 150)
+        case .fervor: return Resources(food: 0, gold: 100)
+        case .sanctity: return Resources(food: 0, gold: 120)
+        case .conscription: return Resources(food: 150, gold: 150)
+        case .murder_holes: return Resources(food: 200, stone: 100)
+        case .sappers: return Resources(food: 400, gold: 200)
         }
     }
 
@@ -85,6 +103,8 @@ enum TechType: String, CaseIterable {
         case .handCart, .bowSaw, .heavyPlow, .bodkinArrow, .ironCasting, .chainMailArmor,
              .chainBardingArmor, .leatherArcherArmor, .ballistics:
             return .castleAge
+        case .redemption, .fervor, .sanctity: return .castleAge
+        case .conscription, .murder_holes, .sappers: return .imperialAge
         }
     }
 
@@ -98,6 +118,10 @@ enum TechType: String, CaseIterable {
         case .forging, .ironCasting, .scaleMailArmor, .chainMailArmor,
              .scaleBardingArmor, .chainBardingArmor: return .blacksmith
         case .bloodlines: return .stable
+        case .redemption, .fervor, .sanctity: return .monastery
+        case .conscription: return .castle
+        case .murder_holes: return .castle
+        case .sappers: return .castle
         }
     }
 
@@ -117,6 +141,12 @@ enum TechType: String, CaseIterable {
         case .paddedArcherArmor, .leatherArcherArmor: return "🎯"
         case .ballistics: return "💥"
         case .bloodlines: return "❤"
+        case .redemption: return "✝"
+        case .fervor: return "🏃"
+        case .sanctity: return "💛"
+        case .conscription: return "📯"
+        case .murder_holes: return "🕳"
+        case .sappers: return "⛏"
         }
     }
 
@@ -143,6 +173,12 @@ enum TechType: String, CaseIterable {
         case .leatherArcherArmor: return "+1 Archer DEF"
         case .ballistics: return "Improved Accuracy"
         case .bloodlines: return "+20 Cavalry HP"
+        case .redemption: return "Monks convert buildings"
+        case .fervor: return "+15% Monk speed"
+        case .sanctity: return "+50% Monk HP"
+        case .conscription: return "Units train 33% faster"
+        case .murder_holes: return "No minimum attack range"
+        case .sappers: return "+15 Infantry vs buildings"
         }
     }
 

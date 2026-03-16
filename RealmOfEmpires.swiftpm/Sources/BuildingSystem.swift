@@ -11,7 +11,11 @@ class BuildingSystem {
             // Process training queue
             if !building.trainingQueue.isEmpty {
                 let unitType = building.trainingQueue[0]
-                building.trainingProgress += deltaTime / unitType.trainTime
+                var trainSpeed = unitType.trainTime
+                if player.researchedTechs.contains(.conscription) {
+                    trainSpeed *= 0.67  // 33% faster
+                }
+                building.trainingProgress += deltaTime / trainSpeed
 
                 if building.trainingProgress >= 1.0 {
                     building.trainingProgress = 0
@@ -21,6 +25,17 @@ class BuildingSystem {
                     if player.population < player.populationCap {
                         spawnUnit(type: unitType, player: player, building: building,
                                   map: map, spriteFactory: spriteFactory)
+                    }
+                }
+            }
+
+            // Heal garrisoned units slowly
+            if !building.garrisonedUnits.isEmpty {
+                for unitID in building.garrisonedUnits {
+                    if let unit = player.units.first(where: { $0.id == unitID }) {
+                        if unit.hp < unit.maxHP {
+                            unit.hp = min(unit.maxHP, unit.hp + 1)
+                        }
                     }
                 }
             }
@@ -211,7 +226,8 @@ class BuildingSystem {
         guard let scene = gameScene else { return }
 
         let range = building.type.attackRange
-        let damage = building.type.attackDamage
+        let garrisonBonus = building.garrisonedUnits.count
+        let damage = building.type.attackDamage + garrisonBonus
 
         // Find nearest enemy unit in range
         for player in scene.players {
@@ -261,8 +277,29 @@ class BuildingSystem {
             }
         }
 
+        // Ungarrison all units
+        for unitID in building.garrisonedUnits {
+            if let unit = player.units.first(where: { $0.id == unitID }) {
+                unit.state = .idle
+                unit.node?.isHidden = false
+                // Place near building
+                let spawnOffset = GridPosition(x: building.gridPosition.x - 1, y: building.gridPosition.y - 1)
+                if map.isValid(spawnOffset) && map.isPassable(spawnOffset) {
+                    unit.gridPosition = spawnOffset
+                    unit.position = map.gridToWorld(spawnOffset)
+                    unit.node?.position = unit.position
+                }
+            }
+        }
+        building.garrisonedUnits.removeAll()
+
         building.rallyFlagNode?.removeFromParent()
         building.node?.removeFromParent()
         player.buildings.removeAll { $0.id == building.id }
+    }
+
+    func toggleAutoReseed(building: Building) {
+        guard building.type == .farm else { return }
+        building.autoReseed = !building.autoReseed
     }
 }

@@ -99,6 +99,21 @@ class AIOpponent {
 
         guard !threatPositions.isEmpty else { return }
 
+        // Retreat behavior: pull back wounded units
+        for unit in player.units where unit.type != .villager {
+            if CGFloat(unit.hp) < CGFloat(unit.maxHP) * 0.25 {
+                // Critically wounded, retreat to TC
+                if let tc = player.buildings.first(where: { $0.type == .townCenter }) {
+                    let distToTC = unit.gridPosition.distance(to: tc.gridPosition)
+                    if distToTC > 5 {
+                        if case .attacking(_) = unit.state {
+                            scene.unitSystem.moveUnit(unit, to: tc.gridPosition, pathfinder: scene.pathfinder)
+                        }
+                    }
+                }
+            }
+        }
+
         let idleMilitary = player.units.filter { $0.type != .villager && isIdle($0) }
         guard !idleMilitary.isEmpty else { return }
 
@@ -143,12 +158,28 @@ class AIOpponent {
         let hasBarracks = player.buildings.contains { $0.type == .barracks && $0.isConstructed }
 
         // Train villagers
-        if villagerCount < 15 {
+        let maxVillagers = difficulty == .hard ? 20 : (difficulty == .normal ? 15 : 12)
+        if villagerCount < maxVillagers {
             if let tc = player.buildings.first(where: { $0.type == .townCenter && $0.isConstructed }) {
                 if tc.trainingQueue.count < 2 {
                     _ = scene.buildingSystem.trainUnit(type: .villager, at: tc, player: player)
                 }
             }
+        }
+
+        // Send scout to explore
+        let scouts = player.units.filter { $0.type == .scout && isIdle($0) }
+        if let scout = scouts.first {
+            let mapCenter = GridPosition(x: scene.gameMap.width / 2, y: scene.gameMap.height / 2)
+            let scoutTargets = [
+                GridPosition(x: scene.gameMap.width / 4, y: scene.gameMap.height / 4),
+                GridPosition(x: scene.gameMap.width * 3 / 4, y: scene.gameMap.height / 4),
+                GridPosition(x: scene.gameMap.width / 4, y: scene.gameMap.height * 3 / 4),
+                GridPosition(x: scene.gameMap.width * 3 / 4, y: scene.gameMap.height * 3 / 4),
+                mapCenter
+            ]
+            let target = scoutTargets.randomElement() ?? mapCenter
+            scene.unitSystem.moveUnit(scout, to: target, pathfinder: scene.pathfinder)
         }
 
         // Build houses if needed
@@ -205,6 +236,14 @@ class AIOpponent {
             }
             if !player.buildings.contains(where: { $0.type == .siegeWorkshop }) && player.resources.wood >= 200 {
                 buildNearTC(.siegeWorkshop)
+            }
+        }
+
+        // Build walls around base
+        if player.currentAge.rawValue >= Age.feudalAge.rawValue && difficulty != .easy {
+            let wallCount = player.buildings.filter { $0.type == .wall }.count
+            if wallCount < 8 && player.resources.stone >= 40 {
+                buildWallSegmentNearBase()
             }
         }
     }
@@ -266,8 +305,14 @@ class AIOpponent {
                     }
                 }
             case .siegeWorkshop:
-                if player.resources.wood >= 160 && player.resources.gold >= 75 {
+                if player.resources.wood >= 200 && player.resources.gold >= 200 {
+                    _ = scene.buildingSystem.trainUnit(type: .trebuchet, at: building, player: player)
+                } else if player.resources.wood >= 160 && player.resources.gold >= 75 {
                     _ = scene.buildingSystem.trainUnit(type: .batteringRam, at: building, player: player)
+                }
+            case .monastery:
+                if player.resources.gold >= 100 {
+                    _ = scene.buildingSystem.trainUnit(type: .monk, at: building, player: player)
                 }
             default:
                 break
@@ -312,7 +357,7 @@ class AIOpponent {
         // Main army: target weakest buildings first (economy buildings), then TC
         let target: GridPosition
         let econBuildings = humanPlayer.buildings.filter {
-            $0.type == .lumberCamp || $0.type == .miningCamp || $0.type == .farm
+            $0.type == .lumberCamp || $0.type == .miningCamp || $0.type == .farm || $0.type == .dock || $0.type == .market
         }
         if let weakTarget = econBuildings.min(by: { $0.hp < $1.hp }) {
             target = weakTarget.gridPosition
@@ -326,24 +371,43 @@ class AIOpponent {
             return
         }
 
-        // Send main army
-        for unit in mainArmy {
-            if isIdle(unit) {
-                // Find nearest enemy unit first
-                var nearestEnemy: Unit?
-                var nearestDist: CGFloat = .infinity
-                for enemy in humanPlayer.units {
-                    let dist = unit.gridPosition.distance(to: enemy.gridPosition)
-                    if dist < nearestDist {
-                        nearestDist = dist
-                        nearestEnemy = enemy
+        // Coordinated attack: split army into groups for multi-prong attack (hard AI)
+        if difficulty == .hard && mainArmy.count >= 8 {
+            let halfCount = mainArmy.count / 2
+            let group1 = Array(mainArmy.prefix(halfCount))
+            let group2 = Array(mainArmy.suffix(from: halfCount))
+
+            // Group 1: attack main target
+            for unit in group1 {
+                if isIdle(unit) {
+                    if let enemy = findNearestEnemyUnit(unit: unit, humanPlayer: humanPlayer) {
+                        scene.unitSystem.attackTarget(unit: unit, targetID: enemy.id, pathfinder: scene.pathfinder)
+                    } else {
+                        scene.unitSystem.moveUnit(unit, to: target, pathfinder: scene.pathfinder)
                     }
                 }
+            }
 
-                if let enemy = nearestEnemy, nearestDist < 15 {
-                    scene.unitSystem.attackTarget(unit: unit, targetID: enemy.id, pathfinder: scene.pathfinder)
-                } else {
-                    scene.unitSystem.moveUnit(unit, to: target, pathfinder: scene.pathfinder)
+            // Group 2: flank from different angle (offset target)
+            let flankTarget = GridPosition(x: target.x + 8, y: target.y + 5)
+            for unit in group2 {
+                if isIdle(unit) {
+                    if let enemy = findNearestEnemyUnit(unit: unit, humanPlayer: humanPlayer) {
+                        scene.unitSystem.attackTarget(unit: unit, targetID: enemy.id, pathfinder: scene.pathfinder)
+                    } else {
+                        scene.unitSystem.moveUnit(unit, to: flankTarget, pathfinder: scene.pathfinder)
+                    }
+                }
+            }
+        } else {
+            // Send main army (standard approach)
+            for unit in mainArmy {
+                if isIdle(unit) {
+                    if let enemy = findNearestEnemyUnit(unit: unit, humanPlayer: humanPlayer) {
+                        scene.unitSystem.attackTarget(unit: unit, targetID: enemy.id, pathfinder: scene.pathfinder)
+                    } else {
+                        scene.unitSystem.moveUnit(unit, to: target, pathfinder: scene.pathfinder)
+                    }
                 }
             }
         }
@@ -525,5 +589,53 @@ class AIOpponent {
         guard let scene = gameScene else { return nil }
         guard let tc = player.buildings.first(where: { $0.type == .townCenter }) else { return nil }
         return scene.gameMap.findNearestResource(type, from: tc.gridPosition)
+    }
+
+    private func buildWallSegmentNearBase() {
+        guard let scene = gameScene else { return }
+        guard let tc = player.buildings.first(where: { $0.type == .townCenter }) else { return }
+
+        let basePos = tc.gridPosition
+        let wallRadius = 8
+
+        // Build walls in a rough perimeter
+        let positions = [
+            GridPosition(x: basePos.x - wallRadius, y: basePos.y),
+            GridPosition(x: basePos.x + wallRadius, y: basePos.y),
+            GridPosition(x: basePos.x, y: basePos.y - wallRadius),
+            GridPosition(x: basePos.x, y: basePos.y + wallRadius),
+            GridPosition(x: basePos.x - wallRadius, y: basePos.y - wallRadius),
+            GridPosition(x: basePos.x + wallRadius, y: basePos.y + wallRadius),
+            GridPosition(x: basePos.x - wallRadius, y: basePos.y + wallRadius),
+            GridPosition(x: basePos.x + wallRadius, y: basePos.y - wallRadius),
+        ]
+
+        for pos in positions {
+            if scene.gameMap.canPlaceBuilding(type: .wall, at: pos) {
+                if let building = scene.buildingSystem.placeBuilding(
+                    type: .wall, at: pos, player: player,
+                    map: scene.gameMap, spriteFactory: scene.spriteFactory) {
+                    building.isConstructed = true
+                    building.hp = building.maxHP
+                    building.constructionProgress = 1.0
+                    scene.gameWorld.addChild(building.node!)
+                    scene.spriteFactory.updateBuildingNode(building)
+                    return
+                }
+            }
+        }
+    }
+
+    private func findNearestEnemyUnit(unit: Unit, humanPlayer: Player) -> Unit? {
+        var nearestEnemy: Unit?
+        var nearestDist: CGFloat = .infinity
+        for enemy in humanPlayer.units {
+            let dist = unit.gridPosition.distance(to: enemy.gridPosition)
+            if dist < nearestDist {
+                nearestDist = dist
+                nearestEnemy = enemy
+            }
+        }
+        return nearestDist < 15 ? nearestEnemy : nil
     }
 }

@@ -1,5 +1,11 @@
 import SpriteKit
 
+enum WeatherType {
+    case clear
+    case rain
+    case snow
+}
+
 class SpriteFactory {
     let tileSize: CGFloat
     static let playerColors: [SKColor] = [
@@ -135,6 +141,58 @@ class SpriteFactory {
             bodyContainer.addChild(bowString)
         } else if unit.type == .villager {
             body = SKShapeNode(circleOfRadius: bodySize * 0.35)
+        } else if unit.type == .monk {
+            // Monk: cross/diamond shape
+            body = SKShapeNode(circleOfRadius: bodySize * 0.35)
+            let cross1 = SKShapeNode(rectOf: CGSize(width: 2, height: bodySize * 0.4))
+            cross1.fillColor = SKColor(red: 0.9, green: 0.8, blue: 0.2, alpha: 0.8)
+            cross1.strokeColor = .clear
+            bodyContainer.addChild(cross1)
+            let cross2 = SKShapeNode(rectOf: CGSize(width: bodySize * 0.25, height: 2))
+            cross2.fillColor = SKColor(red: 0.9, green: 0.8, blue: 0.2, alpha: 0.8)
+            cross2.strokeColor = .clear
+            cross2.position = CGPoint(x: 0, y: bodySize * 0.08)
+            bodyContainer.addChild(cross2)
+        } else if unit.type == .tradeCart {
+            // Trade cart: wider rectangle
+            body = SKShapeNode(rectOf: CGSize(width: bodySize * 0.7, height: bodySize * 0.4), cornerRadius: bodySize * 0.06)
+            let cargo = SKShapeNode(rectOf: CGSize(width: bodySize * 0.3, height: bodySize * 0.2))
+            cargo.fillColor = SKColor(red: 0.8, green: 0.7, blue: 0.2, alpha: 0.6)
+            cargo.strokeColor = .clear
+            cargo.position = CGPoint(x: -bodySize * 0.1, y: 0)
+            bodyContainer.addChild(cargo)
+        } else if unit.type == .fishingBoat {
+            // Fishing boat: oval boat shape
+            let path = CGMutablePath()
+            path.addEllipse(in: CGRect(x: -bodySize * 0.4, y: -bodySize * 0.2,
+                                        width: bodySize * 0.8, height: bodySize * 0.4))
+            body = SKShapeNode(path: path)
+            let mast = SKShapeNode(rectOf: CGSize(width: 1.5, height: bodySize * 0.35))
+            mast.fillColor = SKColor.brown
+            mast.strokeColor = .clear
+            mast.position = CGPoint(x: 0, y: bodySize * 0.15)
+            bodyContainer.addChild(mast)
+        } else if unit.type == .trebuchet {
+            // Trebuchet: triangle base with arm
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: -bodySize * 0.4, y: -bodySize * 0.3))
+            path.addLine(to: CGPoint(x: bodySize * 0.4, y: -bodySize * 0.3))
+            path.addLine(to: CGPoint(x: 0, y: bodySize * 0.2))
+            path.closeSubpath()
+            body = SKShapeNode(path: path)
+            // Trebuchet arm
+            let arm = SKShapeNode(rectOf: CGSize(width: 2, height: bodySize * 0.5))
+            arm.fillColor = SKColor(red: 0.5, green: 0.35, blue: 0.2, alpha: 0.9)
+            arm.strokeColor = .clear
+            arm.position = CGPoint(x: 0, y: bodySize * 0.15)
+            arm.zRotation = 0.4
+            bodyContainer.addChild(arm)
+            // Counterweight
+            let weight = SKShapeNode(circleOfRadius: bodySize * 0.1)
+            weight.fillColor = SKColor(red: 0.4, green: 0.4, blue: 0.45, alpha: 1.0)
+            weight.strokeColor = .clear
+            weight.position = CGPoint(x: -bodySize * 0.15, y: bodySize * 0.3)
+            bodyContainer.addChild(weight)
         } else {
             // Melee infantry — rounded shield shape
             let path = CGMutablePath()
@@ -251,6 +309,22 @@ class SpriteFactory {
             }
         } else if let stateLabel = container.childNode(withName: "stateIndicator") as? SKLabelNode {
             stateLabel.text = ""
+        }
+
+        // Idle animation: gentle bob
+        if let bodyNode = unit.bodyNode {
+            let isIdle: Bool
+            if case .idle = unit.state { isIdle = true } else { isIdle = false }
+
+            if isIdle && bodyNode.action(forKey: "idleBob") == nil {
+                let bob = SKAction.repeatForever(SKAction.sequence([
+                    SKAction.moveBy(x: 0, y: 1.5, duration: 0.6),
+                    SKAction.moveBy(x: 0, y: -1.5, duration: 0.6)
+                ]))
+                bodyNode.run(bob, withKey: "idleBob")
+            } else if !isIdle {
+                bodyNode.removeAction(forKey: "idleBob")
+            }
         }
     }
 
@@ -551,6 +625,20 @@ class SpriteFactory {
             }
         }
 
+        // Show fire on heavily damaged buildings
+        let hpRatio = CGFloat(building.hp) / CGFloat(building.maxHP)
+        if building.isConstructed && hpRatio < 0.4 {
+            if container.childNode(withName: "torchFire") == nil {
+                let w = CGFloat(building.type.size.width) * tileSize
+                let h = CGFloat(building.type.size.height) * tileSize
+                let fire = createTorchEffect(at: CGPoint(x: CGFloat.random(in: -w*0.2...w*0.2),
+                                                           y: CGFloat.random(in: -h*0.1...h*0.2)))
+                container.addChild(fire)
+            }
+        } else {
+            container.childNode(withName: "torchFire")?.removeFromParent()
+        }
+
         // Training indicator
         if !building.trainingQueue.isEmpty {
             if container.childNode(withName: "trainingIndicator") == nil {
@@ -848,6 +936,179 @@ class SpriteFactory {
         ])
         container.run(cleanup)
         return container
+    }
+
+    func createBuildingDestructionEffect(at position: CGPoint, buildingSize: CGSize) -> SKNode {
+        let container = SKNode()
+        container.position = position
+        container.zPosition = 20
+
+        // Large dust cloud
+        for _ in 0..<20 {
+            let particle = SKShapeNode(circleOfRadius: CGFloat.random(in: 2...5))
+            particle.fillColor = [
+                SKColor(red: 0.5, green: 0.4, blue: 0.3, alpha: 0.8),
+                SKColor(red: 0.6, green: 0.5, blue: 0.3, alpha: 0.7),
+                SKColor.orange.withAlphaComponent(0.5)
+            ].randomElement()!
+            particle.strokeColor = .clear
+
+            let dx = CGFloat.random(in: -buildingSize.width * 0.5...buildingSize.width * 0.5)
+            let dy = CGFloat.random(in: -buildingSize.height * 0.3...buildingSize.height * 0.5)
+
+            let anim = SKAction.sequence([
+                SKAction.group([
+                    SKAction.moveBy(x: dx, y: dy, duration: 0.8),
+                    SKAction.fadeOut(withDuration: 0.8),
+                    SKAction.scale(to: 2.0, duration: 0.8)
+                ]),
+                SKAction.removeFromParent()
+            ])
+            particle.run(anim)
+            container.addChild(particle)
+        }
+
+        // Debris falling
+        for _ in 0..<8 {
+            let debris = SKShapeNode(rectOf: CGSize(width: CGFloat.random(in: 3...6),
+                                                     height: CGFloat.random(in: 2...4)))
+            debris.fillColor = SKColor(red: 0.4, green: 0.3, blue: 0.2, alpha: 1.0)
+            debris.strokeColor = .clear
+
+            let dx = CGFloat.random(in: -30...30)
+            let dy = CGFloat.random(in: 10...40)
+
+            let fall = SKAction.sequence([
+                SKAction.moveBy(x: dx, y: dy, duration: 0.3),
+                SKAction.moveBy(x: dx * 0.5, y: -dy * 1.5, duration: 0.4),
+                SKAction.fadeOut(withDuration: 0.3),
+                SKAction.removeFromParent()
+            ])
+            debris.zRotation = CGFloat.random(in: 0...(CGFloat.pi * 2))
+            debris.run(fall)
+            container.addChild(debris)
+        }
+
+        let cleanup = SKAction.sequence([
+            SKAction.wait(forDuration: 2.0),
+            SKAction.removeFromParent()
+        ])
+        container.run(cleanup)
+        return container
+    }
+
+    func createWeatherEffect(type: WeatherType, viewSize: CGSize) -> SKNode {
+        let container = SKNode()
+        container.name = "weatherEffect"
+        container.zPosition = 80
+
+        switch type {
+        case .rain:
+            for _ in 0..<40 {
+                let drop = SKShapeNode(rectOf: CGSize(width: 1, height: 8))
+                drop.fillColor = SKColor(red: 0.5, green: 0.6, blue: 0.9, alpha: 0.3)
+                drop.strokeColor = .clear
+                drop.position = CGPoint(
+                    x: CGFloat.random(in: -viewSize.width/2...viewSize.width/2),
+                    y: CGFloat.random(in: -viewSize.height/2...viewSize.height/2)
+                )
+
+                let fall = SKAction.repeatForever(SKAction.sequence([
+                    SKAction.moveBy(x: -20, y: -viewSize.height, duration: Double.random(in: 0.5...1.0)),
+                    SKAction.run { drop.position.y += viewSize.height; drop.position.x += 20 }
+                ]))
+                drop.run(fall)
+                container.addChild(drop)
+            }
+        case .snow:
+            for _ in 0..<25 {
+                let flake = SKShapeNode(circleOfRadius: CGFloat.random(in: 1...3))
+                flake.fillColor = SKColor.white.withAlphaComponent(CGFloat.random(in: 0.3...0.6))
+                flake.strokeColor = .clear
+                flake.position = CGPoint(
+                    x: CGFloat.random(in: -viewSize.width/2...viewSize.width/2),
+                    y: CGFloat.random(in: -viewSize.height/2...viewSize.height/2)
+                )
+
+                let drift = SKAction.repeatForever(SKAction.sequence([
+                    SKAction.group([
+                        SKAction.moveBy(x: CGFloat.random(in: -10...10), y: -viewSize.height, duration: Double.random(in: 2...4)),
+                    ]),
+                    SKAction.run { flake.position.y += viewSize.height }
+                ]))
+                flake.run(drift)
+                container.addChild(flake)
+            }
+        case .clear:
+            break
+        }
+
+        return container
+    }
+
+    func createTorchEffect(at position: CGPoint) -> SKNode {
+        let container = SKNode()
+        container.position = position
+        container.zPosition = 16
+        container.name = "torchFire"
+
+        let fireAction = SKAction.repeatForever(SKAction.sequence([
+            SKAction.run { [weak container] in
+                guard let container = container else { return }
+                let flame = SKShapeNode(circleOfRadius: CGFloat.random(in: 2...4))
+                flame.fillColor = [SKColor.orange, SKColor.red, SKColor.yellow].randomElement()!
+                flame.strokeColor = .clear
+                flame.position = CGPoint(x: CGFloat.random(in: -3...3), y: 0)
+
+                let rise = SKAction.sequence([
+                    SKAction.group([
+                        SKAction.moveBy(x: CGFloat.random(in: -2...2), y: CGFloat.random(in: 8...14), duration: 0.4),
+                        SKAction.fadeOut(withDuration: 0.4),
+                        SKAction.scale(to: 0.3, duration: 0.4)
+                    ]),
+                    SKAction.removeFromParent()
+                ])
+                flame.run(rise)
+                container.addChild(flame)
+            },
+            SKAction.wait(forDuration: 0.15)
+        ]))
+        container.run(fireAction)
+
+        return container
+    }
+
+    func createPlacementGhost(type: BuildingType, validPlacement: Bool) -> SKNode {
+        let w = CGFloat(type.size.width) * tileSize
+        let h = CGFloat(type.size.height) * tileSize
+
+        let ghost = SKShapeNode(rectOf: CGSize(width: w - 2, height: h - 2))
+        ghost.fillColor = validPlacement
+            ? SKColor.green.withAlphaComponent(0.3)
+            : SKColor.red.withAlphaComponent(0.3)
+        ghost.strokeColor = validPlacement
+            ? SKColor.green.withAlphaComponent(0.8)
+            : SKColor.red.withAlphaComponent(0.8)
+        ghost.lineWidth = 2
+        ghost.zPosition = 45
+        ghost.name = "placementGhost"
+
+        // Size label
+        let label = SKLabelNode(text: type.icon)
+        label.fontSize = min(w, h) * 0.3
+        label.fontName = "Helvetica-Bold"
+        label.fontColor = .white
+        label.verticalAlignmentMode = .center
+        ghost.addChild(label)
+
+        // Pulsing effect
+        let pulse = SKAction.repeatForever(SKAction.sequence([
+            SKAction.fadeAlpha(to: 0.5, duration: 0.5),
+            SKAction.fadeAlpha(to: 1.0, duration: 0.5)
+        ]))
+        ghost.run(pulse)
+
+        return ghost
     }
 }
 
