@@ -171,10 +171,35 @@ class CombatSystem {
                     }
                 }
 
+                // Splash damage for siege units
+                if unit.type == .mangonel || unit.type == .trebuchet {
+                    let splashRadius: CGFloat = 1.5
+                    let splashDamage = max(1, damage / 3)
+                    for p in allPlayers where p.id != player.id {
+                        for splashTarget in p.units where splashTarget.id != target.id {
+                            let splashDist = splashTarget.gridPosition.distance(to: target.gridPosition)
+                            if splashDist <= splashRadius {
+                                splashTarget.hp -= splashDamage
+                            }
+                        }
+                    }
+                }
+
                 // Track kills for veterancy
                 if target.hp <= 0 {
                     unit.killCount += 1
                     updateVeterancyIndicator(unit: unit)
+
+                    // Kill feed
+                    if let scene = gameScene {
+                        let killerName = unit.type.displayName
+                        let victimName = target.type.displayName
+                        if unit.ownerID == scene.humanPlayer.id {
+                            scene.hud.addEventLog("Your \(killerName) killed enemy \(victimName)!")
+                        } else if target.ownerID == scene.humanPlayer.id {
+                            scene.hud.addEventLog("Enemy \(killerName) killed your \(victimName)!")
+                        }
+                    }
                 }
 
                 // Visual effect

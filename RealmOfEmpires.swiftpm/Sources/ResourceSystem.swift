@@ -375,16 +375,26 @@ class ResourceSystem {
     func autoAssignVillager(_ unit: Unit, player: Player, map: GameMap, pathfinder: Pathfinder) {
         guard unit.type == .villager else { return }
 
-        // Determine what resource is most needed
+        let foodWorkers = player.units.filter { if case .gathering(.food, _) = $0.state { return true }; return false }.count
+        let woodWorkers = player.units.filter { if case .gathering(.wood, _) = $0.state { return true }; return false }.count
+        let goldWorkers = player.units.filter { if case .gathering(.gold, _) = $0.state { return true }; return false }.count
+
+        // Target ratios: food 40%, wood 30%, gold 20%, stone 10%
+        let totalWorkers = max(1, foodWorkers + woodWorkers + goldWorkers)
+        let foodRatio = CGFloat(foodWorkers) / CGFloat(totalWorkers)
+        let woodRatio = CGFloat(woodWorkers) / CGFloat(totalWorkers)
+
         let resourcePriority: ResourceType
-        if player.resources.food < 100 {
+        if player.resources.food < 50 || foodRatio < 0.3 {
             resourcePriority = .food
-        } else if player.resources.wood < 100 {
+        } else if player.resources.wood < 50 || woodRatio < 0.2 {
             resourcePriority = .wood
-        } else if player.resources.gold < 50 {
+        } else if player.resources.gold < 30 {
             resourcePriority = .gold
+        } else if player.resources.stone < 20 {
+            resourcePriority = .stone
         } else {
-            resourcePriority = .food  // Default to food
+            resourcePriority = .food
         }
 
         if let tile = map.findNearestResource(resourcePriority, from: unit.gridPosition) {

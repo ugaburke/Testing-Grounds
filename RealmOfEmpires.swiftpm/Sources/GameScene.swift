@@ -1576,6 +1576,29 @@ class GameScene: SKScene {
         return false
     }
 
+    // MARK: - Town Bell
+
+    func townBell() {
+        guard let tc = humanPlayer.buildings.first(where: { $0.type == .townCenter && $0.isConstructed }) else { return }
+        // Garrison all villagers within 15 tiles of TC
+        let nearbyVillagers = humanPlayer.units.filter {
+            $0.type == .villager && $0.gridPosition.distance(to: tc.gridPosition) <= 15
+        }
+        for villager in nearbyVillagers {
+            _ = unitSystem.garrisonUnit(villager, into: tc, player: humanPlayer)
+            // If garrison is full, at least move them to TC
+            if case .garrisoned = villager.state { continue }
+            unitSystem.moveUnit(villager, to: tc.gridPosition, pathfinder: pathfinder)
+        }
+        hud.showStatus("Town Bell! Villagers seeking shelter!")
+    }
+
+    func ungarrisonTC() {
+        guard let tc = humanPlayer.buildings.first(where: { $0.type == .townCenter && $0.isConstructed }) else { return }
+        unitSystem.ungarrisonAll(building: tc, player: humanPlayer, map: gameMap)
+        hud.showStatus("Villagers back to work!")
+    }
+
     // MARK: - Help Overlay
 
     private func showHelpOverlay() {

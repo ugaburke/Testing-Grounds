@@ -208,6 +208,11 @@ class BuildingSystem {
             unit.maxHP += 20
             unit.hp = unit.maxHP
         }
+        // Apply sanctity HP bonus for monks
+        if type == .monk && player.researchedTechs.contains(.sanctity) {
+            unit.maxHP = Int(CGFloat(unit.maxHP) * 1.5)
+            unit.hp = unit.maxHP
+        }
 
         let node = spriteFactory.createUnitNode(unit: unit)
         node.position = unit.position

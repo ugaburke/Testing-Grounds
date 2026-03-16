@@ -127,8 +127,19 @@ class UnitSystem {
             unit.lastDirection += normalizedDiff * min(1.0, deltaTime * 8.0)
         }
 
-        let speedMultiplier: CGFloat = unit.type.isCavalry ? player.civilization.cavalrySpeedBonus : 1.0
+        var speedMultiplier: CGFloat = unit.type.isCavalry ? player.civilization.cavalrySpeedBonus : 1.0
+        // Fervor: monks move 15% faster
+        if unit.type == .monk, player.researchedTechs.contains(.fervor) {
+            speedMultiplier *= 1.15
+        }
+        // Squires: infantry move 10% faster
+        if unit.type.isInfantry, player.researchedTechs.contains(.squires) {
+            speedMultiplier *= 1.1
+        }
         let speed = unit.type.moveSpeed * speedMultiplier * map.tileSize * 2.0
+
+        // Track distance moved for cavalry charge bonus
+        unit.tilesMoved += deltaTime * speed / (map.tileSize * 2.0)
 
         if dist < 2.0 {
             unit.position = targetWorldPos
@@ -299,7 +310,7 @@ class UnitSystem {
         if unit.stance == .noAttack { return }
         if unit.stance == .standGround && unit.type.attackRange <= 1.2 { return }
 
-        let effectiveRange = unit.stance == .standGround ? unit.type.attackRange : range
+        let effectiveRange = unit.stance == .standGround ? unit.effectiveAttackRange : range
 
         for enemy in scene.players where enemy.id != player.id {
             for enemyUnit in enemy.units {
@@ -310,7 +321,7 @@ class UnitSystem {
                         unit.savedMoveDestination = dest
                     }
                     unit.state = .attacking(targetUnitID: enemyUnit.id)
-                    if dist > unit.type.attackRange {
+                    if dist > unit.effectiveAttackRange {
                         unit.path = pathfinder.findPath(from: unit.gridPosition, to: enemyUnit.gridPosition)
                     }
                     return
@@ -325,7 +336,7 @@ class UnitSystem {
             for player in scene.players {
                 if let target = player.units.first(where: { $0.id == targetID }) {
                     let dist = unit.gridPosition.distance(to: target.gridPosition)
-                    if dist > unit.type.attackRange {
+                    if dist > unit.effectiveAttackRange {
                         unit.path = pathfinder.findPath(from: unit.gridPosition, to: target.gridPosition)
                     }
                     return
@@ -340,7 +351,7 @@ class UnitSystem {
             for player in scene.players {
                 if let target = player.buildings.first(where: { $0.id == targetBuildingID }) {
                     let dist = unit.gridPosition.distance(to: target.gridPosition)
-                    if dist > unit.type.attackRange {
+                    if dist > unit.effectiveAttackRange {
                         unit.path = pathfinder.findPath(from: unit.gridPosition, to: target.gridPosition)
                     }
                     return
