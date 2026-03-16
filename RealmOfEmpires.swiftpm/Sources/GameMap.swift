@@ -8,11 +8,13 @@ class GameMap {
     var tiles: [[MapTile]]
     let mapNode: SKNode
     var relics: [Relic] = []
+    let mapType: MapType
 
-    init(width: Int = 80, height: Int = 80, tileSize: CGFloat = 32) {
+    init(width: Int = 80, height: Int = 80, tileSize: CGFloat = 32, mapType: MapType = .standard) {
         self.width = width
         self.height = height
         self.tileSize = tileSize
+        self.mapType = mapType
         self.mapNode = SKNode()
         self.mapNode.name = "mapNode"
 

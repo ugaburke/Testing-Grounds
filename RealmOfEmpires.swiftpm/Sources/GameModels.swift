@@ -1245,6 +1245,80 @@ class Unit {
     }
 }
 
+// MARK: - Map Type
+
+enum MapType: String, CaseIterable {
+    case standard
+    case islands
+    case rivers
+    case arena
+    case blackForest
+    case goldRush
+
+    var displayName: String {
+        switch self {
+        case .standard: return "Standard"
+        case .islands: return "Islands"
+        case .rivers: return "Rivers"
+        case .arena: return "Arena"
+        case .blackForest: return "Black Forest"
+        case .goldRush: return "Gold Rush"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .standard: return "Classic balanced map"
+        case .islands: return "Large water body, land islands"
+        case .rivers: return "Rivers divide map into quadrants"
+        case .arena: return "Walled-in starting positions"
+        case .blackForest: return "Dense forests with narrow paths"
+        case .goldRush: return "Gold concentrated in the center"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .standard: return "\u{1F30D}"
+        case .islands: return "\u{1F3DD}\u{FE0F}"
+        case .rivers: return "\u{1F30A}"
+        case .arena: return "\u{1F3DF}\u{FE0F}"
+        case .blackForest: return "\u{1F332}"
+        case .goldRush: return "\u{1FA99}"
+        }
+    }
+}
+
+enum MapSize: String, CaseIterable {
+    case small
+    case medium
+    case large
+
+    var displayName: String {
+        switch self {
+        case .small: return "Small"
+        case .medium: return "Medium"
+        case .large: return "Large"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .small: return "60x60 - Quick games"
+        case .medium: return "80x80 - Balanced"
+        case .large: return "100x100 - Epic battles"
+        }
+    }
+
+    var dimensions: (width: Int, height: Int) {
+        switch self {
+        case .small: return (60, 60)
+        case .medium: return (80, 80)
+        case .large: return (100, 100)
+        }
+    }
+}
+
 // MARK: - Game State
 
 enum GameState {
