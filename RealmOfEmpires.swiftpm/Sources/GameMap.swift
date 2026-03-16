@@ -36,16 +36,461 @@ class GameMap {
         let seed = UInt64.random(in: 0...UInt64.max)
         var rng = SeededRNG(seed: seed)
 
-        // Generate water bodies (lakes/rivers)
-        generateWater(&rng)
+        switch mapType {
+        case .standard:
+            generateStandardTerrain(&rng)
+        case .islands:
+            generateIslandsTerrain(&rng)
+        case .rivers:
+            generateRiversTerrain(&rng)
+        case .arena:
+            generateArenaTerrain(&rng)
+        case .blackForest:
+            generateBlackForestTerrain(&rng)
+        case .goldRush:
+            generateGoldRushTerrain(&rng)
+        }
+    }
 
-        // Generate forests
+    // MARK: - Standard Map
+
+    private func generateStandardTerrain(_ rng: inout SeededRNG) {
+        generateWater(&rng)
+        generateForests(&rng)
+        generateResources(&rng)
+        generateSand()
+    }
+
+    // MARK: - Islands Map
+
+    private func generateIslandsTerrain(_ rng: inout SeededRNG) {
+        let cx = width / 2
+        let cy = height / 2
+
+        // Fill ~40% of map with water in a large central body
+        let waterRadiusX = CGFloat(width) * 0.35
+        let waterRadiusY = CGFloat(height) * 0.35
+
+        for y in 0..<height {
+            for x in 0..<width {
+                let dx = CGFloat(x - cx) / waterRadiusX
+                let dy = CGFloat(y - cy) / waterRadiusY
+                let dist = dx * dx + dy * dy
+                // Create water in central area with noise for irregular edges
+                let noise = CGFloat.random(in: -0.15...0.15, using: &rng)
+                if dist < (0.8 + noise) {
+                    tiles[y][x].terrain = dist < (0.5 + noise) ? .deepWater : .water
+                }
+            }
+        }
+
+        // Ensure corners are land "islands" - clear land areas in corners for players
+        let islandRadius = min(width, height) / 5
+        let corners = [
+            GridPosition(x: islandRadius, y: islandRadius),
+            GridPosition(x: width - islandRadius - 1, y: height - islandRadius - 1),
+            GridPosition(x: islandRadius, y: height - islandRadius - 1),
+            GridPosition(x: width - islandRadius - 1, y: islandRadius)
+        ]
+
+        for corner in corners {
+            for dy in -islandRadius...islandRadius {
+                for dx in -islandRadius...islandRadius {
+                    let px = corner.x + dx
+                    let py = corner.y + dy
+                    guard px >= 0 && px < width && py >= 0 && py < height else { continue }
+                    let dist = sqrt(CGFloat(dx * dx + dy * dy))
+                    if dist < CGFloat(islandRadius) {
+                        tiles[py][px].terrain = .grass
+                    }
+                }
+            }
+        }
+
+        // Add some scattered small islands in the water
+        let smallIslandCount = Int.random(in: 2...4, using: &rng)
+        for _ in 0..<smallIslandCount {
+            let ix = Int.random(in: width / 4..<(width * 3 / 4), using: &rng)
+            let iy = Int.random(in: height / 4..<(height * 3 / 4), using: &rng)
+            let r = Int.random(in: 2...4, using: &rng)
+            for dy in -r...r {
+                for dx in -r...r {
+                    let px = ix + dx
+                    let py = iy + dy
+                    guard px >= 0 && px < width && py >= 0 && py < height else { continue }
+                    if dx * dx + dy * dy < r * r {
+                        tiles[py][px].terrain = .grass
+                    }
+                }
+            }
+        }
+
+        generateForests(&rng)
+        generateResources(&rng)
+        generateSand()
+    }
+
+    // MARK: - Rivers Map
+
+    private func generateRiversTerrain(_ rng: inout SeededRNG) {
+        let riverWidth = 3
+        let crossingWidth = 3
+
+        // Horizontal river (with wandering)
+        let midY = height / 2
+        var ry = midY
+        for x in 0..<width {
+            ry += Int.random(in: -1...1, using: &rng)
+            ry = max(riverWidth, min(height - riverWidth - 1, ry))
+            for w in -riverWidth/2...riverWidth/2 {
+                let y = ry + w
+                if y >= 0 && y < height {
+                    tiles[y][x].terrain = .water
+                }
+            }
+        }
+
+        // Vertical river (with wandering)
+        let midX = width / 2
+        var rx = midX
+        for y in 0..<height {
+            rx += Int.random(in: -1...1, using: &rng)
+            rx = max(riverWidth, min(width - riverWidth - 1, rx))
+            for w in -riverWidth/2...riverWidth/2 {
+                let x = rx + w
+                if x >= 0 && x < width {
+                    tiles[y][x].terrain = .water
+                }
+            }
+        }
+
+        // Add shallow crossing points (sand bridges) at ~1/4 and ~3/4 of each river
+        let hCrossings = [width / 4, width * 3 / 4]
+        for cx in hCrossings {
+            for dx in -crossingWidth...crossingWidth {
+                let x = cx + dx
+                guard x >= 0 && x < width else { continue }
+                for y in 0..<height {
+                    if tiles[y][x].terrain == .water {
+                        tiles[y][x].terrain = .sand
+                    }
+                }
+            }
+        }
+
+        let vCrossings = [height / 4, height * 3 / 4]
+        for cy in vCrossings {
+            for dy in -crossingWidth...crossingWidth {
+                let y = cy + dy
+                guard y >= 0 && y < height else { continue }
+                for x in 0..<width {
+                    if tiles[y][x].terrain == .water {
+                        tiles[y][x].terrain = .sand
+                    }
+                }
+            }
+        }
+
+        generateForests(&rng)
+        generateResources(&rng)
+        generateSand()
+    }
+
+    // MARK: - Arena Map
+
+    private func generateArenaTerrain(_ rng: inout SeededRNG) {
+        // Standard base terrain
+        generateWater(&rng)
+        generateForests(&rng)
+        generateResources(&rng)
+        generateSand()
+
+        // Generate stone walls in a circle around each player starting position
+        let wallRadius = 10
+        let startPositions = [
+            GridPosition(x: 15, y: 15),
+            GridPosition(x: width - 16, y: height - 16)
+        ]
+
+        for center in startPositions {
+            // Clear inside the arena
+            for dy in -wallRadius...wallRadius {
+                for dx in -wallRadius...wallRadius {
+                    let px = center.x + dx
+                    let py = center.y + dy
+                    guard px >= 0 && px < width && py >= 0 && py < height else { continue }
+                    let dist = sqrt(CGFloat(dx * dx + dy * dy))
+                    if dist < CGFloat(wallRadius - 1) {
+                        tiles[py][px].terrain = .grass
+                        tiles[py][px].resourceRemaining = 0
+                    }
+                }
+            }
+
+            // Place stone walls in a ring
+            for dy in -(wallRadius + 1)...(wallRadius + 1) {
+                for dx in -(wallRadius + 1)...(wallRadius + 1) {
+                    let px = center.x + dx
+                    let py = center.y + dy
+                    guard px >= 0 && px < width && py >= 0 && py < height else { continue }
+                    let dist = sqrt(CGFloat(dx * dx + dy * dy))
+                    if dist >= CGFloat(wallRadius - 1) && dist < CGFloat(wallRadius + 1) {
+                        tiles[py][px].terrain = .stone
+                        tiles[py][px].resourceRemaining = TerrainType.stone.resourceAmount
+                    }
+                }
+            }
+
+            // Create 2 gaps (breakout points) in the wall - one towards center, one perpendicular
+            let gapWidth = 2
+            let angles: [CGFloat] = [
+                atan2(CGFloat(height / 2 - center.y), CGFloat(width / 2 - center.x)),
+                atan2(CGFloat(height / 2 - center.y), CGFloat(width / 2 - center.x)) + .pi / 2
+            ]
+            for angle in angles {
+                for r in (wallRadius - 1)...(wallRadius + 1) {
+                    for g in -gapWidth...gapWidth {
+                        let gx = center.x + Int(CGFloat(r) * cos(angle) + CGFloat(g) * sin(angle))
+                        let gy = center.y + Int(CGFloat(r) * sin(angle) - CGFloat(g) * cos(angle))
+                        guard gx >= 0 && gx < width && gy >= 0 && gy < height else { continue }
+                        if tiles[gy][gx].terrain == .stone {
+                            tiles[gy][gx].terrain = .grass
+                            tiles[gy][gx].resourceRemaining = 0
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Black Forest Map
+
+    private func generateBlackForestTerrain(_ rng: inout SeededRNG) {
+        // Fill ~70% with forest
+        for y in 0..<height {
+            for x in 0..<width {
+                if CGFloat.random(in: 0...1, using: &rng) < 0.70 {
+                    tiles[y][x].terrain = .forest
+                    tiles[y][x].resourceRemaining = TerrainType.forest.resourceAmount
+                }
+            }
+        }
+
+        // Carve clear areas around player starting positions
+        let clearRadius = 8
+        let startPositions = [
+            GridPosition(x: 15, y: 15),
+            GridPosition(x: width - 16, y: height - 16)
+        ]
+
+        for center in startPositions {
+            for dy in -clearRadius...clearRadius {
+                for dx in -clearRadius...clearRadius {
+                    let px = center.x + dx
+                    let py = center.y + dy
+                    guard px >= 0 && px < width && py >= 0 && py < height else { continue }
+                    let dist = sqrt(CGFloat(dx * dx + dy * dy))
+                    if dist < CGFloat(clearRadius) {
+                        tiles[py][px].terrain = .grass
+                        tiles[py][px].resourceRemaining = 0
+                    }
+                }
+            }
+        }
+
+        // Carve winding paths between player areas using a random walk
+        let pathWidth = 2
+        var px = startPositions[0].x
+        var py = startPositions[0].y
+        let targetX = startPositions[1].x
+        let targetY = startPositions[1].y
+
+        while abs(px - targetX) > 3 || abs(py - targetY) > 3 {
+            // Move generally towards target with randomness
+            let dx = targetX - px
+            let dy = targetY - py
+
+            if Int.random(in: 0...2, using: &rng) < 2 {
+                // Move towards target
+                if abs(dx) > abs(dy) {
+                    px += dx > 0 ? 1 : -1
+                } else {
+                    py += dy > 0 ? 1 : -1
+                }
+            } else {
+                // Random sideways movement for winding effect
+                if Bool.random(using: &rng) {
+                    px += Int.random(in: -1...1, using: &rng)
+                } else {
+                    py += Int.random(in: -1...1, using: &rng)
+                }
+            }
+
+            px = max(1, min(width - 2, px))
+            py = max(1, min(height - 2, py))
+
+            // Clear path area
+            for pdy in -pathWidth...pathWidth {
+                for pdx in -pathWidth...pathWidth {
+                    let cx = px + pdx
+                    let cy = py + pdy
+                    if cx >= 0 && cx < width && cy >= 0 && cy < height {
+                        if tiles[cy][cx].terrain == .forest {
+                            tiles[cy][cx].terrain = .grass
+                            tiles[cy][cx].resourceRemaining = 0
+                        }
+                    }
+                }
+            }
+        }
+
+        // Carve a second winding path for variety
+        px = startPositions[0].x
+        py = startPositions[0].y + 10
+
+        while abs(px - targetX) > 3 || abs(py - targetY + 10) > 3 {
+            let dx = targetX - px
+            let dy = (targetY - 10) - py
+
+            if Int.random(in: 0...2, using: &rng) < 2 {
+                if abs(dx) > abs(dy) {
+                    px += dx > 0 ? 1 : -1
+                } else {
+                    py += dy > 0 ? 1 : -1
+                }
+            } else {
+                if Bool.random(using: &rng) {
+                    px += Int.random(in: -1...1, using: &rng)
+                } else {
+                    py += Int.random(in: -1...1, using: &rng)
+                }
+            }
+
+            px = max(1, min(width - 2, px))
+            py = max(1, min(height - 2, py))
+
+            for pdy in -pathWidth...pathWidth {
+                for pdx in -pathWidth...pathWidth {
+                    let cx = px + pdx
+                    let cy = py + pdy
+                    if cx >= 0 && cx < width && cy >= 0 && cy < height {
+                        if tiles[cy][cx].terrain == .forest {
+                            tiles[cy][cx].terrain = .grass
+                            tiles[cy][cx].resourceRemaining = 0
+                        }
+                    }
+                }
+            }
+        }
+
+        // Add some water bodies
+        let lakeCount = Int.random(in: 1...2, using: &rng)
+        for _ in 0..<lakeCount {
+            let lx = Int.random(in: 20..<(width - 20), using: &rng)
+            let ly = Int.random(in: 20..<(height - 20), using: &rng)
+            let lr = Int.random(in: 3...5, using: &rng)
+            for dy in -lr...lr {
+                for dx in -lr...lr {
+                    let cx = lx + dx
+                    let cy = ly + dy
+                    guard cx >= 0 && cx < width && cy >= 0 && cy < height else { continue }
+                    if dx * dx + dy * dy < lr * lr {
+                        tiles[cy][cx].terrain = .water
+                        tiles[cy][cx].resourceRemaining = 0
+                    }
+                }
+            }
+        }
+
+        generateResources(&rng)
+        generateSand()
+    }
+
+    // MARK: - Gold Rush Map
+
+    private func generateGoldRushTerrain(_ rng: inout SeededRNG) {
+        // Standard water and forests
+        generateWater(&rng)
         generateForests(&rng)
 
-        // Generate resource deposits
-        generateResources(&rng)
+        // Reduced gold near edges (player starting areas)
+        let edgeGoldCount = Int.random(in: 1...2, using: &rng)
+        for _ in 0..<edgeGoldCount {
+            let inCorner = Bool.random(using: &rng)
+            let cx: Int
+            let cy: Int
+            if inCorner {
+                cx = Int.random(in: 5...15, using: &rng)
+                cy = Int.random(in: 5...15, using: &rng)
+            } else {
+                cx = Int.random(in: (width - 16)..<(width - 5), using: &rng)
+                cy = Int.random(in: (height - 16)..<(height - 5), using: &rng)
+            }
+            let size = 1
+            for y in max(0, cy - size)...min(height - 1, cy + size) {
+                for x in max(0, cx - size)...min(width - 1, cx + size) {
+                    if tiles[y][x].terrain == .grass {
+                        tiles[y][x].terrain = .gold
+                        tiles[y][x].resourceRemaining = TerrainType.gold.resourceAmount
+                    }
+                }
+            }
+        }
 
-        // Generate sand near water
+        // Massive gold deposits in center
+        let centerX = width / 2
+        let centerY = height / 2
+        let centerGoldRadius = min(width, height) / 8
+
+        for dy in -centerGoldRadius...centerGoldRadius {
+            for dx in -centerGoldRadius...centerGoldRadius {
+                let px = centerX + dx
+                let py = centerY + dy
+                guard px >= 0 && px < width && py >= 0 && py < height else { continue }
+                let dist = sqrt(CGFloat(dx * dx + dy * dy))
+                if dist < CGFloat(centerGoldRadius) && tiles[py][px].terrain == .grass {
+                    if CGFloat.random(in: 0...1, using: &rng) < 0.6 {
+                        tiles[py][px].terrain = .gold
+                        tiles[py][px].resourceRemaining = TerrainType.gold.resourceAmount * 2
+                    }
+                }
+            }
+        }
+
+        // Normal stone deposits
+        let stoneCount = Int.random(in: 4...7, using: &rng)
+        for _ in 0..<stoneCount {
+            let cx = Int.random(in: 5..<(width - 5), using: &rng)
+            let cy = Int.random(in: 5..<(height - 5), using: &rng)
+            let size = Int.random(in: 2...3, using: &rng)
+            for y in max(0, cy - size)...min(height - 1, cy + size) {
+                for x in max(0, cx - size)...min(width - 1, cx + size) {
+                    let dist = GridPosition(x: x, y: y).distance(to: GridPosition(x: cx, y: cy))
+                    if dist < CGFloat(size) && tiles[y][x].terrain == .grass {
+                        if CGFloat.random(in: 0...1, using: &rng) < 0.5 {
+                            tiles[y][x].terrain = .stone
+                            tiles[y][x].resourceRemaining = TerrainType.stone.resourceAmount
+                        }
+                    }
+                }
+            }
+        }
+
+        // Berry bushes
+        let berryCount = Int.random(in: 4...6, using: &rng)
+        for _ in 0..<berryCount {
+            let cx = Int.random(in: 5..<(width - 5), using: &rng)
+            let cy = Int.random(in: 5..<(height - 5), using: &rng)
+            for y in max(0, cy - 1)...min(height - 1, cy + 1) {
+                for x in max(0, cx - 1)...min(width - 1, cx + 1) {
+                    if tiles[y][x].terrain == .grass {
+                        tiles[y][x].terrain = .berryBush
+                        tiles[y][x].resourceRemaining = TerrainType.berryBush.resourceAmount
+                    }
+                }
+            }
+        }
+
         generateSand()
     }
 

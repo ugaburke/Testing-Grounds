@@ -7,6 +7,8 @@ class GameScene: SKScene {
 
     var playerCivilization: Civilization = .britons
     var aiDifficulty: AIDifficulty = .normal
+    var mapType: MapType = .standard
+    var mapSize: MapSize = .medium
     var onExit: (() -> Void)?
 
     // Game speed
@@ -213,7 +215,8 @@ class GameScene: SKScene {
         gameWorld.name = "gameWorld"
         addChild(gameWorld)
 
-        gameMap = GameMap(width: 80, height: 80, tileSize: 32)
+        let dims = mapSize.dimensions
+        gameMap = GameMap(width: dims.width, height: dims.height, tileSize: 32, mapType: mapType)
         gameWorld.addChild(gameMap.mapNode)
 
         pathfinder = Pathfinder(map: gameMap)
