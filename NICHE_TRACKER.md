@@ -296,3 +296,65 @@ Next cycle candidates:
 - Custom Utensil Drawer Organizer (held at 3.8 from C7 scan) — natural drawer sub-line expansion
 - Bottle-Specific Pantry Organizer — pantry sub-line expansion
 - Tablet Holder v1.1 (charging pass-through) — revision, not new cycle
+
+---
+
+## Cycle 8 — 2026-03-16 (Primary Niche Operation — Second Cycle)
+
+| Category | Subs/Sources Scanned | Candidates Found | Avg Score | Top Candidate | Notes |
+|----------|---------------------|------------------|-----------|---------------|-------|
+| **Kitchen/Home** (Primary) | Etsy, Amazon, Printables, MakerWorld, Thingiverse | 6 (Utensil organizer, Bottle organizer, Sink sponge holder, Under-shelf basket, Whole kitchen bundle model, Costco roll dispenser) | 3.60 | Utensil Drawer Organizer w/ Contoured Slots (4.6) | Tied highest score ever (C3 Spice Organizer). Zero competitors offer contoured profiles. |
+
+### Cycle 8 Summary
+
+- **Total candidates scanned:** 6
+- **Candidates advanced:** 1 (Custom Utensil Drawer Organizer with Contoured Slots)
+- **Mode:** Primary Niche Operation — Kitchen/Home
+- **Key innovation:** Contoured utensil-profile slots — 6 profiles (serving spoon, spatula, whisk, tongs, ladle, peeler). Zero competitors offer shaped slots; all use rectangular grids.
+- **Competition gap:** 5/5 — the widest gap since C3 Spice Organizer's brand-specific jar presets
+- **Margin:** 74% net (highest in portfolio) due to premium pricing vs. $129–199 wood benchmark
+- **Bundle potential:** 2-Drawer ($119.99) and 3-Drawer ($169.99) bundles for highest AOV in portfolio
+
+### Cross-Cycle Category Performance (All 8 Cycles)
+
+| Category | C1 | C2 | C3 | C4 | C5 | C6 | C7 | C8 | Products to Stage 5 | Best Product (Score) |
+|----------|----|----|----|----|----|----|-----|-----|---------------------|---------------------|
+| **Kitchen/Home** | 3.8 | 3.9 | 4.6 | 3.52 | 3.03 | 3.15 | 3.67 | 3.60 | 5 | Spice Organizer / Utensil Organizer (4.6) |
+| **Desk/Keyboard** | 3.6 | 3.9 | 3.12 | 3.8 | — | — | — | — | 2 | TPU Wrist Rest (4.4) |
+| **Pet Accessories** | — | 3.3 | 4.0 | 4.0 | 4.0 | 4.2 | — | — | 1 | Pet Puzzle Feeder (4.2) |
+
+### Portfolio Status (8 Products)
+
+**Kitchen/Home (Primary — 5 products):**
+1. Spice Drawer Organizer (C3, 4.6) — drawer sub-line
+2. Under-Cabinet K-Cup Holder (C4, 4.2) — under-cabinet sub-line
+3. Under-Cabinet Tablet Holder (C5, 4.0) — under-cabinet sub-line
+4. FIFO Can Dispenser (C7, 4.2) — pantry sub-line
+5. Utensil Drawer Organizer (C8, 4.6) — drawer sub-line ← NEW
+
+**Desk/Keyboard (Secondary — 2 products):**
+6. Under-Desk Headphone Mount (C1, 4.4)
+7. TPU Keyboard Wrist Rest (C2, 4.4)
+
+**Pet Accessories (Tertiary — 1 product):**
+8. Modular Pet Puzzle Feeder (C6, 4.2)
+
+### Kitchen Sub-Line Maturity
+
+| Sub-Line | Products | Status | Next |
+|----------|----------|--------|------|
+| **Drawer Organization** | Spice Organizer (C3) + Utensil Organizer (C8) | 2 products — **bundle-ready** | Junk drawer organizer or 3-Drawer bundle model |
+| **Under-Cabinet** | K-Cup Holder (C4) + Tablet Holder (C5) | 2 products — bundle-ready | Tablet v1.1 revision (charging pass-through) |
+| **Pantry** | FIFO Can Dispenser (C7) | 1 product | Bottle-specific organizer |
+
+### Convergence Status: PRIMARY OPERATION (Cycle 8)
+
+With 5 Kitchen/Home products across 3 sub-lines, the kitchen brand is now substantial enough for:
+- **"Whole Kitchen" bundle pricing** — combine drawer + under-cabinet + pantry products
+- **Cross-sell automation** — every order triggers recommendations for adjacent sub-lines
+- **Brand identity** — "The custom-fit kitchen organizer company"
+
+Next cycle priorities:
+- **Cycle 9 (Kitchen/Home):** Bottle-Specific Pantry Organizer or Sink Sponge Holder
+- **Cycle 9 (Pet — due):** Cat puzzle feeder expansion (cat variant of C6 modular puzzle)
+- **Cycle 10 (Desk — due):** New desk/keyboard product TBD
