@@ -37,6 +37,9 @@ enum TechType: String, CaseIterable {
     case heatedShot    // Towers +4 vs ships
     case masonry       // Buildings +10% HP
     case townWatch     // Buildings +2 LOS
+    case squires       // Infantry +10% speed
+    case cropRotation  // +175 farm food
+    case guilds        // +15% trade profit
 
     var displayName: String {
         switch self {
@@ -75,6 +78,24 @@ enum TechType: String, CaseIterable {
         case .heatedShot: return "Heated Shot"
         case .masonry: return "Masonry"
         case .townWatch: return "Town Watch"
+        case .squires: return "Squires"
+        case .cropRotation: return "Crop Rotation"
+        case .guilds: return "Guilds"
+        }
+    }
+
+    var prerequisites: [TechType] {
+        switch self {
+        case .bowSaw: return [.doubleBitAxe]
+        case .heavyPlow: return [.horseCollar]
+        case .handCart: return [.wheelbarrow]
+        case .ironCasting: return [.forging]
+        case .bodkinArrow: return [.fletching]
+        case .chainMailArmor: return [.scaleMailArmor]
+        case .chainBardingArmor: return [.scaleBardingArmor]
+        case .leatherArcherArmor: return [.paddedArcherArmor]
+        case .architecture: return [.masonry]
+        default: return []
         }
     }
 
@@ -115,6 +136,9 @@ enum TechType: String, CaseIterable {
         case .heatedShot: return Resources(food: 0, gold: 200)
         case .masonry: return Resources(food: 150, stone: 175)
         case .townWatch: return Resources(food: 75)
+        case .squires: return Resources(food: 200)
+        case .cropRotation: return Resources(food: 250, wood: 250)
+        case .guilds: return Resources(food: 200, gold: 200)
         }
     }
 
@@ -137,6 +161,9 @@ enum TechType: String, CaseIterable {
         case .heatedShot: return .castleAge
         case .masonry: return .feudalAge
         case .townWatch: return .feudalAge
+        case .squires: return .castleAge
+        case .cropRotation: return .imperialAge
+        case .guilds: return .imperialAge
         }
     }
 
@@ -161,6 +188,9 @@ enum TechType: String, CaseIterable {
         case .heatedShot: return .university
         case .masonry: return .university
         case .townWatch: return .townCenter
+        case .squires: return .barracks
+        case .cropRotation: return .miningCamp
+        case .guilds: return .market
         }
     }
 
@@ -194,6 +224,9 @@ enum TechType: String, CaseIterable {
         case .heatedShot: return "🔥"
         case .masonry: return "🧱"
         case .townWatch: return "👁"
+        case .squires: return "🏃"
+        case .cropRotation: return "🌾"
+        case .guilds: return "💰"
         }
     }
 
@@ -234,6 +267,9 @@ enum TechType: String, CaseIterable {
         case .heatedShot: return "+4 Tower ATK vs ships"
         case .masonry: return "+10% Building HP"
         case .townWatch: return "+2 Building LOS"
+        case .squires: return "+10% Infantry speed"
+        case .cropRotation: return "+175 Farm food"
+        case .guilds: return "+15% Trade profit"
         }
     }
 
@@ -246,6 +282,9 @@ enum TechType: String, CaseIterable {
             return 12
         case .townWatch: return 8
         case .masonry: return 12
+        case .squires: return 14
+        case .cropRotation: return 18
+        case .guilds: return 16
         default: return 18
         }
     }
