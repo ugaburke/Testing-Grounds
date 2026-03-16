@@ -31,3 +31,44 @@ No niche commitment yet. Next cycle should explore:
 - More desk/office accessories (monitor risers, desk organizers, webcam mounts)
 - More kitchen functional prints (spice racks, bag clips, utensil holders)
 - At least one new wildcard category (automotive, pet accessories, or cosplay)
+
+---
+
+## Cycle 2 — 2026-03-16 (Wide-Scan, Deeper Focus)
+
+| Category | Subs/Sources Scanned | Candidates Found | Avg Score | Top Candidate | Notes |
+|----------|---------------------|------------------|-----------|---------------|-------|
+| **Desk/Keyboard Accessories** | r/MechanicalKeyboards, Etsy, Amazon | 2 (TPU wrist rest, Weighted phone stand) | 3.9 | TPU Keyboard Wrist Rest (4.4) | **Breakout category.** TPU moat + keyboard community = highest-potential product yet. |
+| **Kitchen/Home** | Etsy, Amazon, MakerWorld | 2 (Spice drawer organizer, Gridfinity kitchen kits) | 3.9 | Spice Drawer Organizer (4.0) | Consistent strong performer. Brand-specific sizing is a novel angle. |
+| **3D Printer Accessories** | Bambu Lab Forum, Wiki, All3DP, MakerWorld | 3 (AMS DryPod, AMS Lite bundle, Vibration platform) | 3.2 | AMS DryPod System (3.4) | Still saturated with free alternatives. AMS 2 Pro makes some obsolete. |
+| **Pet Accessories** (Wildcard) | Etsy, Amazon, Printables, r/dogs | 2 (Slow feeder dog bowl, Food-safe pet bowl stand) | 3.3 | Food-Safe Pet Bowl Stand (3.4) | Moderate opportunity. Food-safety angle is differentiated but adds production complexity. |
+| **Assistive Devices** | Makers Making Change, r/functionalprint, CDC stats | 1 (Parametric arthritis aids) | 3.8 | Assistive Device Collection (3.8) | High impact, high pain, but monetization unclear (2/5 profit). |
+| **IKEA Replacement Parts** | Etsy, Thingiverse, Printables, STLFinder | 2 (DETOLF clips, General parts library) | 3.6 | IKEA DETOLF Clips (3.6) | Proven sales (55K+ from one seller). But low per-unit revenue. |
+
+### Cycle 2 Summary
+
+- **Total candidates scanned:** 12
+- **Candidates advanced:** 2 (TPU Wrist Rest, Spice Drawer Organizer)
+- **Strongest signal:** Desk/Keyboard Accessories — the TPU wrist rest is the strongest single opportunity across both cycles (4.4 avg, 5/5 competition gap, 5/5 profit)
+- **Emerging signal:** Kitchen/Home remains consistently strong at 3.9 avg
+- **Wildcard result:** Pet Accessories moderate at 3.3 — food safety differentiation exists but production complexity is high
+- **Declining signal:** 3D Printer Accessories continues to underperform (saturated free market)
+
+### Cross-Cycle Category Performance
+
+| Category | Cycle 1 Avg | Cycle 2 Avg | Trend | Products Advanced |
+|----------|-------------|-------------|-------|-------------------|
+| **Desk/Keyboard Accessories** | 3.6 | 3.9 | ↑ Rising | 2 (Headphone mount, Wrist rest) |
+| **Kitchen/Home** | 3.8 | 3.9 | ↑ Stable-high | 1 (Sponge rack advanced C1, Spice organizer backup C2) |
+| **3D Printer Accessories** | 3.35 | 3.2 | ↓ Declining | 0 |
+| **Pet Accessories** | — | 3.3 | New | 0 |
+| **IKEA Parts** | — | 3.6 | New | 0 |
+| **Assistive** | — | 3.8 | New | 0 (profit concern) |
+
+### Convergence Status: WIDE-SCAN (Cycle 2 of 3)
+
+**Early convergence signal:** Desk/Keyboard Accessories is the clear winner across two cycles, producing the two highest-scoring products (both 4.4). Kitchen/Home is a strong secondary niche. Cycle 3 should:
+- Begin deeper Desk/Keyboard exploration (monitor stands, cable organizers, desk mats, keycap accessories)
+- Pursue the Spice Drawer Organizer as the Kitchen/Home flagship
+- Run one more wildcard (automotive? cosplay?) to confirm no higher-signal niche exists
+- Consider dropping 3D Printer Accessories from active scanning (saturated, low profit)
