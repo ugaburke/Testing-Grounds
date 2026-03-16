@@ -295,7 +295,8 @@ class TechTree {
         TechType.allCases.filter { tech in
             !player.researchedTechs.contains(tech) &&
             player.currentAge.rawValue >= tech.requiredAge.rawValue &&
-            player.canAfford(tech.cost)
+            player.canAfford(tech.cost) &&
+            tech.prerequisites.allSatisfy { player.researchedTechs.contains($0) }
         }
     }
 
@@ -303,6 +304,7 @@ class TechTree {
         guard !player.researchedTechs.contains(tech) else { return false }
         guard player.canAfford(tech.cost) else { return false }
         guard player.currentAge.rawValue >= tech.requiredAge.rawValue else { return false }
+        guard tech.prerequisites.allSatisfy({ player.researchedTechs.contains($0) }) else { return false }
 
         player.spend(tech.cost)
         player.researchedTechs.insert(tech)

@@ -1176,6 +1176,9 @@ class Unit {
     var velocity: CGPoint = .zero
     var targetVelocity: CGPoint = .zero
     var dustTimer: CGFloat = 0  // Timer for movement dust particles
+    var isPackedSiege: Bool = false  // Trebuchets must unpack to fire
+    var packTimer: CGFloat = 0
+    var tilesMoved: CGFloat = 0  // Track distance moved for charge bonus
     weak var ownerPlayer: Player?
 
     init(type: UnitType, ownerID: Int, position: GridPosition, hpBonus: CGFloat = 1.0, speedBonus: CGFloat = 1.0) {
@@ -1234,6 +1237,19 @@ class Unit {
         }
         if veterancyLevel >= 2 { def += 1 }
         return def
+    }
+
+    var effectiveAttackRange: CGFloat {
+        var range = type.attackRange
+        // Siege Engineers: +1 range for siege
+        if type.isSiege, let techs = ownerPlayer?.researchedTechs, techs.contains(.siegeEngineers) {
+            range += 1.0
+        }
+        // Briton archer range bonus
+        if type.isRanged, let civ = ownerPlayer?.civilization {
+            range *= civ.archerRangeBonus
+        }
+        return range
     }
 
     func bonusDamage(against target: Unit) -> Int {

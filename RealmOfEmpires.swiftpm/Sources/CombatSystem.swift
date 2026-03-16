@@ -88,9 +88,38 @@ class CombatSystem {
 
         let dist = unit.gridPosition.distance(to: target.gridPosition)
 
+        // Minimum range for siege: can't fire at close units
+        let minRange: CGFloat
+        switch unit.type {
+        case .trebuchet: minRange = 3.0
+        case .mangonel: minRange = 2.0
+        default: minRange = 0
+        }
+        if minRange > 0 && dist < minRange && dist <= unit.type.attackRange {
+            // Too close, try to move away
+            let awayX = unit.gridPosition.x + (unit.gridPosition.x - target.gridPosition.x)
+            let awayY = unit.gridPosition.y + (unit.gridPosition.y - target.gridPosition.y)
+            let awayPos = GridPosition(x: awayX, y: awayY)
+            unit.path = pathfinder.findPath(from: unit.gridPosition, to: awayPos)
+            return
+        }
+
         // Check if in range
         if dist <= unit.type.attackRange {
             unit.path = []
+
+            // Trebuchet pack/unpack: must unpack before firing
+            if unit.type == .trebuchet {
+                if unit.isPackedSiege {
+                    // Need to unpack (2 second setup time)
+                    unit.packTimer += deltaTime
+                    if unit.packTimer >= 2.0 {
+                        unit.isPackedSiege = false
+                        unit.packTimer = 0
+                    }
+                    return
+                }
+            }
 
             // Attack with cooldown
             if unit.attackCooldown <= 0 {
@@ -100,7 +129,34 @@ class CombatSystem {
                 let armorReduction = unit.type.isRanged ? target.type.pierceArmor : target.type.meleeArmor
                 // Japanese infantry attack speed bonus
                 let effectiveInterval = unit.type.isInfantry ? attackInterval * (unit.ownerPlayer?.civilization.infantryAttackSpeedBonus ?? 1.0) : attackInterval
-                let damage = max(1, unit.effectiveAttack + bonus - (target.effectiveDefense + armorReduction) + Int.random(in: 0...2))
+                var damage = max(1, unit.effectiveAttack + bonus - (target.effectiveDefense + armorReduction) + Int.random(in: 0...2))
+
+                // Cavalry charge bonus: +50% damage after moving 3+ tiles
+                if unit.type.isCavalry && unit.tilesMoved >= 3.0 {
+                    damage = Int(CGFloat(damage) * 1.5)
+                    unit.tilesMoved = 0  // Reset after charge
+                    // Visual: show "CHARGE!" text
+                    if let scene = gameScene {
+                        let chargeLabel = SKLabelNode(text: "CHARGE!")
+                        chargeLabel.fontSize = 12
+                        chargeLabel.fontName = "Helvetica-Bold"
+                        chargeLabel.fontColor = .yellow
+                        chargeLabel.position = unit.position
+                        chargeLabel.zPosition = 20
+                        scene.gameWorld.addChild(chargeLabel)
+                        chargeLabel.run(SKAction.sequence([
+                            SKAction.group([SKAction.moveBy(x: 0, y: 20, duration: 0.6), SKAction.fadeOut(withDuration: 0.6)]),
+                            SKAction.removeFromParent()
+                        ]))
+                    }
+                }
+
+                // Forest elevation: ranged units on forest get +2 bonus damage
+                if map.isValid(unit.gridPosition) && map.tiles[unit.gridPosition.y][unit.gridPosition.x].terrain == .forest {
+                    if unit.type.isRanged {
+                        damage += 2
+                    }
+                }
 
                 target.hp -= damage
                 unit.attackCooldown = effectiveInterval
