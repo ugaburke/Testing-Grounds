@@ -1548,7 +1548,11 @@ class GameScene: SKScene {
         case .repairBuilding:
             if let building = selectedBuilding, building.hp < building.maxHP {
                 // Send nearest idle villager to repair
-                let idleVillagers = humanPlayer.units.filter { $0.type == .villager && { if case .idle = $0.state { return true }; return false }() }
+                let idleVillagers = humanPlayer.units.filter { unit in
+                    guard unit.type == .villager else { return false }
+                    if case .idle = unit.state { return true }
+                    return false
+                }
                 if let nearestVil = idleVillagers.min(by: { $0.gridPosition.distance(to: building.gridPosition) < $1.gridPosition.distance(to: building.gridPosition) }) {
                     resourceSystem.sendVillagerToRepair(unit: nearestVil, building: building, pathfinder: pathfinder)
                     hud.showStatus("Villager repairing \(building.type.displayName)")
