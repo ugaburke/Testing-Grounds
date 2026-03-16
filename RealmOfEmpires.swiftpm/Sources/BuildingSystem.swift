@@ -146,6 +146,7 @@ class BuildingSystem {
 
     func trainUnit(type: UnitType, at building: Building, player: Player) -> Bool {
         guard building.isConstructed else { return false }
+        guard building.trainingQueue.count < 5 else { return false }
         // Resolve unique unit to civ-specific type
         let actualType = (type == .uniqueUnit) ? player.civilization.uniqueUnitType : type
         guard building.type.trainableUnits.contains(type) else { return false }
@@ -291,6 +292,14 @@ class BuildingSystem {
                             SKAction.removeFromParent()
                         ])
                         effect.run(fadeOut)
+
+                        // If building has garrisoned ranged units, show arrow projectile
+                        if !building.garrisonedUnits.isEmpty, let buildingPos = building.node?.position {
+                            let projectile = scene.spriteFactory.createAttackEffect(at: buildingPos, isRanged: true)
+                            scene.gameWorld.addChild(projectile)
+                            let moveToTarget = SKAction.move(to: unit.position, duration: 0.3)
+                            projectile.run(SKAction.sequence([moveToTarget, SKAction.removeFromParent()]))
+                        }
                     }
                     return
                 }

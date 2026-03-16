@@ -352,7 +352,7 @@ class ResourceSystem {
                 player.resources.gold += goldEarned
                 if let scene = gameScene {
                     let feedback = scene.spriteFactory.createDepositFeedback(
-                        at: map.gridToWorld(marketPos), amount: unit.tradeGold, resourceType: .gold)
+                        at: map.gridToWorld(marketPos), amount: goldEarned, resourceType: .gold)
                     scene.gameWorld.addChild(feedback)
                 }
                 unit.tradeGold = 0

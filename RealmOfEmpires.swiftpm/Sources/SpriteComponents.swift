@@ -423,6 +423,46 @@ class SpriteFactory {
 
         // Update carry indicator for villagers
         updateCarryIndicator(unit: unit)
+
+        // Update damaged unit health bar (shown on all damaged units, not just selected)
+        updateDamagedUnitHealthBar(unit: unit)
+    }
+
+    // MARK: - Damaged Unit Health Bars
+
+    func updateDamagedUnitHealthBar(unit: Unit) {
+        let healthBarName = "damagedHealthBar"
+        if unit.hp < unit.maxHP && !unit.isSelected {
+            if unit.node?.childNode(withName: healthBarName) == nil {
+                let barWidth: CGFloat = tileSize * 0.8
+                let barHeight: CGFloat = 3
+                let bg = SKShapeNode(rectOf: CGSize(width: barWidth, height: barHeight))
+                bg.fillColor = .red
+                bg.strokeColor = .clear
+                bg.position = CGPoint(x: 0, y: tileSize * 0.5)
+                bg.zPosition = 12
+                bg.name = healthBarName
+
+                let hpRatio = CGFloat(unit.hp) / CGFloat(unit.maxHP)
+                let fg = SKShapeNode(rectOf: CGSize(width: barWidth * hpRatio, height: barHeight))
+                fg.fillColor = hpRatio > 0.5 ? .green : (hpRatio > 0.25 ? .yellow : .red)
+                fg.strokeColor = .clear
+                fg.position = CGPoint(x: -(barWidth * (1 - hpRatio)) / 2, y: 0)
+                fg.name = "hpFill"
+                bg.addChild(fg)
+                unit.node?.addChild(bg)
+            } else if let bar = unit.node?.childNode(withName: healthBarName) as? SKShapeNode {
+                // Update existing
+                let barWidth: CGFloat = tileSize * 0.8
+                let hpRatio = CGFloat(unit.hp) / CGFloat(unit.maxHP)
+                if let fg = bar.childNode(withName: "hpFill") as? SKShapeNode {
+                    fg.xScale = hpRatio
+                    fg.fillColor = hpRatio > 0.5 ? .green : (hpRatio > 0.25 ? .yellow : .red)
+                }
+            }
+        } else {
+            unit.node?.childNode(withName: healthBarName)?.removeFromParent()
+        }
     }
 
     // MARK: - Unit Facing

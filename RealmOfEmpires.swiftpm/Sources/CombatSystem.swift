@@ -105,7 +105,7 @@ class CombatSystem {
         }
 
         // Check if in range
-        if dist <= unit.type.attackRange {
+        if dist <= unit.effectiveAttackRange {
             unit.path = []
 
             // Trebuchet pack/unpack: must unpack before firing
@@ -123,6 +123,14 @@ class CombatSystem {
 
             // Attack with cooldown
             if unit.attackCooldown <= 0 {
+                // Ranged accuracy: 15% miss chance, ballistics removes it
+                if unit.type.isRanged && !(unit.ownerPlayer?.researchedTechs.contains(.ballistics) ?? false) {
+                    if CGFloat.random(in: 0...1) < 0.15 {
+                        unit.attackCooldown = attackInterval * 0.5  // Partial cooldown on miss
+                        return  // Miss!
+                    }
+                }
+
                 var bonus = unit.bonusDamage(against: target)
                 // Naval bonus damage
                 if target.type.isNaval { bonus += unit.type.bonusVsNaval }
@@ -287,7 +295,7 @@ class CombatSystem {
 
         let dist = unit.gridPosition.distance(to: target.gridPosition)
 
-        if dist <= unit.type.attackRange + 1.0 {
+        if dist <= unit.effectiveAttackRange + 1.0 {
             unit.path = []
 
             if unit.attackCooldown <= 0 {
