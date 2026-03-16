@@ -833,6 +833,25 @@ class SpriteFactory {
             }
         }
 
+        // Construction stage visual: scaffold overlay
+        if !building.isConstructed {
+            let progress = building.constructionProgress
+            if container.childNode(withName: "scaffold") == nil && progress < 0.9 {
+                let scaffold = SKShapeNode(rectOf: CGSize(width: w * 0.8, height: h * 0.8))
+                scaffold.fillColor = .clear
+                scaffold.strokeColor = SKColor(red: 0.6, green: 0.4, blue: 0.2, alpha: 0.5)
+                scaffold.lineWidth = 1.5
+                scaffold.name = "scaffold"
+                scaffold.zPosition = 1.6
+                container.addChild(scaffold)
+            }
+            if progress >= 0.9 {
+                container.childNode(withName: "scaffold")?.removeFromParent()
+            }
+        } else {
+            container.childNode(withName: "scaffold")?.removeFromParent()
+        }
+
         // Show fire on heavily damaged buildings
         let hpRatio = CGFloat(building.hp) / CGFloat(building.maxHP)
         if building.isConstructed && hpRatio < 0.4 {
@@ -1588,6 +1607,38 @@ class SpriteFactory {
             line.zRotation = CGFloat(i) * .pi / 4.0
             container.addChild(line)
         }
+
+        return container
+    }
+
+    // MARK: - Deer Node
+
+    func createDeerNode(at position: CGPoint) -> SKNode {
+        let container = SKNode()
+        container.position = position
+        container.zPosition = 8
+        container.name = "deer"
+
+        // Body: small brown diamond
+        let bodySize = tileSize * 0.5
+        let path = CGMutablePath()
+        path.move(to: CGPoint(x: 0, y: bodySize * 0.4))
+        path.addLine(to: CGPoint(x: -bodySize * 0.3, y: 0))
+        path.addLine(to: CGPoint(x: 0, y: -bodySize * 0.4))
+        path.addLine(to: CGPoint(x: bodySize * 0.3, y: 0))
+        path.closeSubpath()
+        let body = SKShapeNode(path: path)
+        body.fillColor = SKColor(red: 0.55, green: 0.35, blue: 0.15, alpha: 1.0)
+        body.strokeColor = SKColor(red: 0.4, green: 0.25, blue: 0.1, alpha: 0.8)
+        body.lineWidth = 0.5
+        container.addChild(body)
+
+        // Head: small circle
+        let head = SKShapeNode(circleOfRadius: bodySize * 0.15)
+        head.fillColor = SKColor(red: 0.6, green: 0.4, blue: 0.2, alpha: 1.0)
+        head.strokeColor = .clear
+        head.position = CGPoint(x: 0, y: bodySize * 0.45)
+        container.addChild(head)
 
         return container
     }

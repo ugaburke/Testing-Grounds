@@ -386,6 +386,40 @@ class GameScene: SKScene {
                     if player.isHuman {
                         hud.showStatus("Advanced to \(nextAge.displayName)!")
                         hud.addEventLog("Advanced to \(nextAge.displayName)")
+
+                        // Age advancement ceremony - golden flash
+                        let flash = SKShapeNode(rectOf: size)
+                        flash.fillColor = SKColor(red: 1, green: 0.85, blue: 0.3, alpha: 0.3)
+                        flash.strokeColor = .clear
+                        flash.zPosition = 90
+                        flash.position = CGPoint(x: 0, y: 0)
+                        hudCamera.addChild(flash)
+                        flash.run(SKAction.sequence([
+                            SKAction.fadeOut(withDuration: 1.5),
+                            SKAction.removeFromParent()
+                        ]))
+
+                        // Age announcement label
+                        let ageLabel = SKLabelNode(text: nextAge.displayName)
+                        ageLabel.fontSize = 48
+                        ageLabel.fontName = "Helvetica-Bold"
+                        ageLabel.fontColor = SKColor(red: 1, green: 0.85, blue: 0.3, alpha: 1)
+                        ageLabel.position = CGPoint(x: 0, y: 40)
+                        ageLabel.zPosition = 91
+                        ageLabel.setScale(0.3)
+                        hudCamera.addChild(ageLabel)
+                        ageLabel.run(SKAction.sequence([
+                            SKAction.group([
+                                SKAction.scale(to: 1.0, duration: 0.4),
+                                SKAction.fadeIn(withDuration: 0.2)
+                            ]),
+                            SKAction.wait(forDuration: 2.0),
+                            SKAction.group([
+                                SKAction.fadeOut(withDuration: 0.8),
+                                SKAction.moveBy(x: 0, y: 30, duration: 0.8)
+                            ]),
+                            SKAction.removeFromParent()
+                        ]))
                     }
                 }
             }
@@ -1637,44 +1671,114 @@ class GameScene: SKScene {
         overlay.zPosition = 300
 
         let bg = SKShapeNode(rectOf: size)
-        bg.fillColor = SKColor.black.withAlphaComponent(0.85)
+        bg.fillColor = SKColor.black.withAlphaComponent(0.88)
         bg.strokeColor = .clear
         overlay.addChild(bg)
 
         let title = SKLabelNode(text: "How to Play")
-        title.fontSize = 24
+        title.fontSize = 26
         title.fontName = "Helvetica-Bold"
         title.fontColor = SKColor(red: 0.85, green: 0.7, blue: 0.4, alpha: 1.0)
-        title.position = CGPoint(x: 0, y: size.height * 0.35)
+        title.position = CGPoint(x: 0, y: size.height * 0.38)
         overlay.addChild(title)
 
-        let tips = [
+        let titleLine = SKShapeNode(rectOf: CGSize(width: 180, height: 2))
+        titleLine.fillColor = SKColor(red: 0.85, green: 0.7, blue: 0.4, alpha: 0.6)
+        titleLine.strokeColor = .clear
+        titleLine.position = CGPoint(x: 0, y: size.height * 0.36)
+        overlay.addChild(titleLine)
+
+        // Controls section
+        let controlsHeader = SKLabelNode(text: "CONTROLS")
+        controlsHeader.fontSize = 14
+        controlsHeader.fontName = "Helvetica-Bold"
+        controlsHeader.fontColor = SKColor(red: 0.85, green: 0.7, blue: 0.4, alpha: 1.0)
+        controlsHeader.position = CGPoint(x: -size.width * 0.2, y: size.height * 0.3)
+        overlay.addChild(controlsHeader)
+
+        let controlTips = [
             "Drag to pan the camera, pinch to zoom",
             "Tap a unit to select, drag to box-select",
             "Tap ground to move selected units",
-            "Select villagers > Build to construct buildings",
-            "Tap resources with villagers to gather",
-            "Tap unfinished buildings with villagers to help build",
-            "Select military buildings to train units",
             "Double-tap a unit to select all of same type",
             "Deselect button cancels placement / deselects",
             "Tap enemy units or buildings to attack",
         ]
 
-        for (i, tip) in tips.enumerated() {
+        for (i, tip) in controlTips.enumerated() {
             let label = SKLabelNode(text: tip)
-            label.fontSize = 13
+            label.fontSize = 12
             label.fontName = "Helvetica"
             label.fontColor = .white
-            label.position = CGPoint(x: 0, y: size.height * 0.25 - CGFloat(i) * 22)
+            label.horizontalAlignmentMode = .left
+            label.position = CGPoint(x: -size.width * 0.35, y: size.height * 0.25 - CGFloat(i) * 20)
+            overlay.addChild(label)
+        }
+
+        // Strategy guide section
+        let strategyHeader = SKLabelNode(text: "GAME PHASES")
+        strategyHeader.fontSize = 14
+        strategyHeader.fontName = "Helvetica-Bold"
+        strategyHeader.fontColor = SKColor(red: 0.85, green: 0.7, blue: 0.4, alpha: 1.0)
+        strategyHeader.position = CGPoint(x: -size.width * 0.2, y: size.height * 0.08)
+        overlay.addChild(strategyHeader)
+
+        let phases: [(String, String, SKColor)] = [
+            ("Early Game:", "Build villagers and gather resources", SKColor(red: 0.4, green: 0.8, blue: 0.4, alpha: 1)),
+            ("Military:", "Train soldiers at Barracks, Archery Range, Stable", SKColor(red: 0.8, green: 0.4, blue: 0.4, alpha: 1)),
+            ("Age Up:", "Advance ages at Town Center for new buildings/units", SKColor(red: 0.4, green: 0.6, blue: 0.9, alpha: 1)),
+            ("Late Game:", "Build a Wonder or collect all Relics to win", SKColor(red: 0.9, green: 0.75, blue: 0.35, alpha: 1)),
+        ]
+
+        for (i, phase) in phases.enumerated() {
+            let phaseLabel = SKLabelNode(text: phase.0)
+            phaseLabel.fontSize = 12
+            phaseLabel.fontName = "Helvetica-Bold"
+            phaseLabel.fontColor = phase.2
+            phaseLabel.horizontalAlignmentMode = .left
+            phaseLabel.position = CGPoint(x: -size.width * 0.35, y: size.height * 0.02 - CGFloat(i) * 24)
+            overlay.addChild(phaseLabel)
+
+            let descLabel = SKLabelNode(text: phase.1)
+            descLabel.fontSize = 12
+            descLabel.fontName = "Helvetica"
+            descLabel.fontColor = .lightGray
+            descLabel.horizontalAlignmentMode = .left
+            descLabel.position = CGPoint(x: -size.width * 0.35 + 90, y: size.height * 0.02 - CGFloat(i) * 24)
+            overlay.addChild(descLabel)
+        }
+
+        // Buildings guide
+        let buildingsHeader = SKLabelNode(text: "KEY BUILDINGS")
+        buildingsHeader.fontSize = 14
+        buildingsHeader.fontName = "Helvetica-Bold"
+        buildingsHeader.fontColor = SKColor(red: 0.85, green: 0.7, blue: 0.4, alpha: 1.0)
+        buildingsHeader.position = CGPoint(x: -size.width * 0.2, y: -size.height * 0.13)
+        overlay.addChild(buildingsHeader)
+
+        let buildingTips = [
+            "Select villagers > Build to construct buildings",
+            "Tap unfinished buildings with villagers to help build",
+            "Select military buildings to train units",
+            "Town Center: Train villagers, advance ages",
+            "Houses: Increase population cap",
+        ]
+
+        for (i, tip) in buildingTips.enumerated() {
+            let label = SKLabelNode(text: tip)
+            label.fontSize = 12
+            label.fontName = "Helvetica"
+            label.fontColor = .white
+            label.horizontalAlignmentMode = .left
+            label.position = CGPoint(x: -size.width * 0.35, y: -size.height * 0.18 - CGFloat(i) * 20)
             overlay.addChild(label)
         }
 
         let closeLabel = SKLabelNode(text: "Tap anywhere to close")
-        closeLabel.fontSize = 14
+        closeLabel.fontSize = 15
         closeLabel.fontName = "Helvetica-Bold"
-        closeLabel.fontColor = .yellow
-        closeLabel.position = CGPoint(x: 0, y: -size.height * 0.35)
+        closeLabel.fontColor = SKColor(red: 1, green: 0.85, blue: 0.3, alpha: 1)
+        closeLabel.position = CGPoint(x: 0, y: -size.height * 0.38)
         closeLabel.name = "helpOverlay"
         overlay.addChild(closeLabel)
 

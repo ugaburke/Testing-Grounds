@@ -312,6 +312,15 @@ struct GameContainerView: View {
     let mapSize: MapSize
     let onExit: () -> Void
     @State private var scene: GameScene?
+    @State private var loadingMessage: String = "Generating terrain..."
+    @State private var loadingTimer: Timer?
+
+    private let loadingMessages = [
+        "Generating terrain...",
+        "Placing resources...",
+        "Deploying scouts...",
+        "Preparing for battle..."
+    ]
 
     var body: some View {
         ZStack {
@@ -319,9 +328,34 @@ struct GameContainerView: View {
                 SpriteView(scene: scene, preferredFramesPerSecond: 60)
                     .ignoresSafeArea()
             } else {
-                Color.black
-                    .ignoresSafeArea()
-                    .onAppear {
+                VStack(spacing: 16) {
+                    Text("REALM OF EMPIRES")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(Color(red: 0.9, green: 0.75, blue: 0.35))
+
+                    Text(loadingMessage)
+                        .font(.system(size: 14))
+                        .foregroundColor(.gray)
+                        .animation(.easeInOut(duration: 0.3), value: loadingMessage)
+
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: Color(red: 0.85, green: 0.7, blue: 0.4)))
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(red: 0.15, green: 0.1, blue: 0.05))
+                .ignoresSafeArea()
+                .onAppear {
+                    var messageIndex = 0
+                    loadingTimer = Timer.scheduledTimer(withTimeInterval: 0.6, repeats: true) { timer in
+                        messageIndex += 1
+                        if messageIndex < loadingMessages.count {
+                            loadingMessage = loadingMessages[messageIndex]
+                        } else {
+                            timer.invalidate()
+                        }
+                    }
+
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         let newScene = GameScene(size: UIScreen.main.bounds.size)
                         newScene.scaleMode = .resizeFill
                         newScene.playerCivilization = civilization
@@ -329,8 +363,10 @@ struct GameContainerView: View {
                         newScene.mapType = mapType
                         newScene.mapSize = mapSize
                         newScene.onExit = onExit
+                        self.loadingTimer?.invalidate()
                         self.scene = newScene
                     }
+                }
             }
         }
     }

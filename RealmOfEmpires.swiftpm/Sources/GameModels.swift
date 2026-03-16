@@ -10,6 +10,8 @@ enum Civilization: String, CaseIterable {
     case byzantines
     case japanese
     case persians
+    case chinese
+    case vikings
 
     var displayName: String {
         switch self {
@@ -19,6 +21,8 @@ enum Civilization: String, CaseIterable {
         case .byzantines: return "Byzantines"
         case .japanese: return "Japanese"
         case .persians: return "Persians"
+        case .chinese: return "Chinese"
+        case .vikings: return "Vikings"
         }
     }
 
@@ -30,6 +34,8 @@ enum Civilization: String, CaseIterable {
         case .byzantines: return "\u{1F6E1}\u{FE0F}"
         case .japanese: return "\u{2328}\u{FE0F}"
         case .persians: return "\u{1F451}"
+        case .chinese: return "\u{1F3EF}"
+        case .vikings: return "\u{2693}"
         }
     }
 
@@ -41,6 +47,8 @@ enum Civilization: String, CaseIterable {
         case .byzantines: return "+25% Building HP\n+10% All Defense"
         case .japanese: return "+15% Infantry ATK Speed\n+10% Fishing"
         case .persians: return "+20% TC Work Rate\n+15% Cavalry HP"
+        case .chinese: return "+3 Starting Villagers\n-10% Tech Cost"
+        case .vikings: return "Free Wheelbarrow/Hand Cart\n+20% Infantry HP"
         }
     }
 
@@ -1396,6 +1404,19 @@ enum TimeOfDay {
         case .dusk: return SKColor(red: 1.0, green: 0.5, blue: 0.3, alpha: 1.0)
         case .night: return SKColor(red: 0.1, green: 0.1, blue: 0.3, alpha: 1.0)
         }
+    }
+}
+
+// MARK: - Deer Herd
+
+class DeerHerd {
+    var gridPosition: GridPosition
+    var foodRemaining: Int = 200
+    var node: SKNode?
+    var wanderTimer: CGFloat = 0
+
+    init(position: GridPosition) {
+        self.gridPosition = position
     }
 }
 

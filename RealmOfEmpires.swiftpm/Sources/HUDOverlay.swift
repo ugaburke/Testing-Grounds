@@ -1788,20 +1788,20 @@ class HUDOverlay {
 
     func showGameOver(victory: Bool, player: Player? = nil) {
         let overlay = SKShapeNode(rectOf: CGSize(width: viewSize.width, height: viewSize.height))
-        overlay.fillColor = SKColor.black.withAlphaComponent(0.8)
+        overlay.fillColor = SKColor.black.withAlphaComponent(0.85)
         overlay.strokeColor = .clear
         overlay.position = CGPoint(x: viewSize.width / 2, y: viewSize.height / 2)
         overlay.zPosition = 200
         hudNode.addChild(overlay)
 
         let text = victory ? "VICTORY!" : "DEFEAT"
-        let color: SKColor = victory ? .yellow : .red
+        let color: SKColor = victory ? SKColor(red: 1, green: 0.85, blue: 0.3, alpha: 1) : .red
 
         let label = SKLabelNode(text: text)
         label.fontSize = 60
         label.fontName = "Helvetica-Bold"
         label.fontColor = color
-        label.position = CGPoint(x: viewSize.width / 2, y: viewSize.height / 2 + 80)
+        label.position = CGPoint(x: viewSize.width / 2, y: viewSize.height / 2 + 140)
         label.zPosition = 201
         label.setScale(0.1)
         label.run(SKAction.sequence([
@@ -1810,37 +1810,123 @@ class HUDOverlay {
         ]))
         hudNode.addChild(label)
 
-        // Enhanced stats
+        // Decorative line under title
+        let titleLine = SKShapeNode(rectOf: CGSize(width: 250, height: 2))
+        titleLine.fillColor = SKColor(red: 0.85, green: 0.7, blue: 0.4, alpha: 1)
+        titleLine.strokeColor = .clear
+        titleLine.position = CGPoint(x: viewSize.width / 2, y: viewSize.height / 2 + 110)
+        titleLine.zPosition = 201
+        hudNode.addChild(titleLine)
+
+        // Stats panel background
+        let panelWidth: CGFloat = 380
+        let panelHeight: CGFloat = 250
+        let panelBg = SKShapeNode(rectOf: CGSize(width: panelWidth, height: panelHeight), cornerRadius: 8)
+        panelBg.fillColor = SKColor(red: 0.12, green: 0.1, blue: 0.06, alpha: 0.9)
+        panelBg.strokeColor = SKColor(red: 0.5, green: 0.4, blue: 0.2, alpha: 1)
+        panelBg.lineWidth = 1.5
+        panelBg.position = CGPoint(x: viewSize.width / 2, y: viewSize.height / 2 - 15)
+        panelBg.zPosition = 201
+        hudNode.addChild(panelBg)
+
+        // Stats header
+        let statsHeader = SKLabelNode(text: "GAME STATISTICS")
+        statsHeader.fontSize = 14
+        statsHeader.fontName = "Helvetica-Bold"
+        statsHeader.fontColor = SKColor(red: 0.85, green: 0.7, blue: 0.4, alpha: 1)
+        statsHeader.position = CGPoint(x: viewSize.width / 2, y: viewSize.height / 2 + 95)
+        statsHeader.zPosition = 202
+        hudNode.addChild(statsHeader)
+
         if let player = player {
             let scene = gameScene
             let gameDuration = scene != nil ? Int(scene!.gameTime - scene!.gameStartTime) : 0
             let minutes = gameDuration / 60
             let seconds = gameDuration % 60
+            let timeStr = String(format: "%02d:%02d", minutes, seconds)
 
-            let stats = [
-                "Age: \(player.currentAge.displayName)",
-                "Game Time: \(minutes)m \(seconds)s",
-                "Units: \(player.units.count)  Buildings: \(player.buildings.count)",
-                "Units Trained: \(scene?.totalUnitsTrainedHuman ?? 0)  Units Lost: \(scene?.totalUnitsLostHuman ?? 0)",
-                "Resources: F:\(player.resources.food) W:\(player.resources.wood) G:\(player.resources.gold) S:\(player.resources.stone)"
+            let gathered = player.totalResourcesGathered
+
+            let leftLabels: [(String, String)] = [
+                ("Game Duration", timeStr),
+                ("Age Reached", player.currentAge.displayName),
+                ("Units Trained", "\(scene?.totalUnitsTrainedHuman ?? 0)"),
+                ("Units Lost", "\(scene?.totalUnitsLostHuman ?? 0)"),
+                ("Enemies Killed", "\(player.totalKills)"),
+                ("Techs Researched", "\(player.researchedTechs.count)")
             ]
-            for (i, stat) in stats.enumerated() {
-                let statLabel = SKLabelNode(text: stat)
-                statLabel.fontSize = 14
-                statLabel.fontName = "Helvetica"
-                statLabel.fontColor = .lightGray
-                statLabel.position = CGPoint(x: viewSize.width / 2, y: viewSize.height / 2 + 35 - CGFloat(i) * 22)
-                statLabel.zPosition = 201
-                hudNode.addChild(statLabel)
+
+            let rightLabels: [(String, String)] = [
+                ("Buildings", "\(player.buildings.count)"),
+                ("Food Gathered", "\(Int(gathered.food))"),
+                ("Wood Gathered", "\(Int(gathered.wood))"),
+                ("Gold Gathered", "\(Int(gathered.gold))"),
+                ("Stone Gathered", "\(Int(gathered.stone))"),
+                ("Relics Collected", "\(player.relicsCollected)")
+            ]
+
+            let colLeftX = viewSize.width / 2 - panelWidth / 2 + 20
+            let colRightX = viewSize.width / 2 + 10
+            let startY = viewSize.height / 2 + 70
+
+            for (i, entry) in leftLabels.enumerated() {
+                let nameLabel = SKLabelNode(text: entry.0)
+                nameLabel.fontSize = 12
+                nameLabel.fontName = "Helvetica"
+                nameLabel.fontColor = .lightGray
+                nameLabel.horizontalAlignmentMode = .left
+                nameLabel.position = CGPoint(x: colLeftX, y: startY - CGFloat(i) * 22)
+                nameLabel.zPosition = 202
+                hudNode.addChild(nameLabel)
+
+                let valLabel = SKLabelNode(text: entry.1)
+                valLabel.fontSize = 12
+                valLabel.fontName = "Helvetica-Bold"
+                valLabel.fontColor = .white
+                valLabel.horizontalAlignmentMode = .right
+                valLabel.position = CGPoint(x: colLeftX + 160, y: startY - CGFloat(i) * 22)
+                valLabel.zPosition = 202
+                hudNode.addChild(valLabel)
+            }
+
+            for (i, entry) in rightLabels.enumerated() {
+                let nameLabel = SKLabelNode(text: entry.0)
+                nameLabel.fontSize = 12
+                nameLabel.fontName = "Helvetica"
+                nameLabel.fontColor = .lightGray
+                nameLabel.horizontalAlignmentMode = .left
+                nameLabel.position = CGPoint(x: colRightX, y: startY - CGFloat(i) * 22)
+                nameLabel.zPosition = 202
+                hudNode.addChild(nameLabel)
+
+                let valLabel = SKLabelNode(text: entry.1)
+                valLabel.fontSize = 12
+                valLabel.fontName = "Helvetica-Bold"
+                valLabel.fontColor = .white
+                valLabel.horizontalAlignmentMode = .right
+                valLabel.position = CGPoint(x: colRightX + 160, y: startY - CGFloat(i) * 22)
+                valLabel.zPosition = 202
+                hudNode.addChild(valLabel)
             }
         }
 
-        let exitLabel = SKLabelNode(text: "Tap to return to menu")
-        exitLabel.fontSize = 20
-        exitLabel.fontName = "Helvetica"
+        // Exit button
+        let exitBtnBg = SKShapeNode(rectOf: CGSize(width: 220, height: 40), cornerRadius: 6)
+        exitBtnBg.fillColor = SKColor(red: 0.5, green: 0.15, blue: 0.1, alpha: 1)
+        exitBtnBg.strokeColor = SKColor(red: 0.85, green: 0.7, blue: 0.4, alpha: 1)
+        exitBtnBg.lineWidth = 1.5
+        exitBtnBg.position = CGPoint(x: viewSize.width / 2, y: viewSize.height / 2 - 165)
+        exitBtnBg.zPosition = 201
+        exitBtnBg.name = "gameOverExit"
+        hudNode.addChild(exitBtnBg)
+
+        let exitLabel = SKLabelNode(text: "RETURN TO MENU")
+        exitLabel.fontSize = 16
+        exitLabel.fontName = "Helvetica-Bold"
         exitLabel.fontColor = .white
-        exitLabel.position = CGPoint(x: viewSize.width / 2, y: viewSize.height / 2 - 90)
-        exitLabel.zPosition = 201
+        exitLabel.verticalAlignmentMode = .center
+        exitLabel.position = CGPoint(x: viewSize.width / 2, y: viewSize.height / 2 - 165)
+        exitLabel.zPosition = 202
         exitLabel.name = "gameOverExit"
         hudNode.addChild(exitLabel)
     }
