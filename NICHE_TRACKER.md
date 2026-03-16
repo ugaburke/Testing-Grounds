@@ -72,3 +72,56 @@ No niche commitment yet. Next cycle should explore:
 - Pursue the Spice Drawer Organizer as the Kitchen/Home flagship
 - Run one more wildcard (automotive? cosplay?) to confirm no higher-signal niche exists
 - Consider dropping 3D Printer Accessories from active scanning (saturated, low profit)
+
+---
+
+## Cycle 3 — 2026-03-16 (Final Wide-Scan + Niche Convergence)
+
+| Category | Subs/Sources Scanned | Candidates Found | Avg Score | Top Candidate | Notes |
+|----------|---------------------|------------------|-----------|---------------|-------|
+| **Kitchen/Home** | Etsy (SpaceAid, OrganizeMyDrawers, Spool Forge, FourEyedShop), Amazon reviews, Printables, MakerWorld | 1 (Brand-specific spice organizer) | 4.6 | Spice Drawer Organizer (4.6) | **Highest score across ALL cycles.** Brand-specific presets = completely unoccupied niche. Deep research confirmed. |
+| **Desk/Office Accessories** | Etsy, The Workspace Hero, MakerWorld, r/battlestations | 5 (Vertical laptop stand, Modular desk shelf, Under-desk mount, Cable grommet, Monitor-top shelf) | 3.12 | Vertical Laptop Stand (3.6) | Category well-served. Most subcategories saturated or low-margin. Headphone mount + wrist rest from C1-C2 were the best this category has to offer. |
+| **Automotive** (Wildcard) | Etsy, Amazon, Thingiverse | 2 (Console organizer, Cup holder adapter) | 3.2 | Cup Holder Adapter (3.2) | Vehicle-specific = same pattern as keyboard-specific, but each car needs custom CAD work — doesn't scale. |
+| **Pet Accessories** | Cycle 2 background agent data | 1 (Modular puzzle feeder) | 4.0 | Modular Pet Puzzle Feeder (4.0) | Interesting recurring-revenue model. Held for future exploration. |
+| **Phone/Tablet Accessories** | Amazon, Thingiverse | 1 (Desk clamp mount) | 2.8 | Articulated Desk Clamp (2.8) | Crowded Amazon market, hard to compete on price. |
+
+### Cycle 3 Summary
+
+- **Total candidates scanned:** 10
+- **Candidates advanced:** 1 (Spice Drawer Organizer — primary), 1 backup (Pet Puzzle Feeder)
+- **Breakthrough:** The spice drawer organizer scored 4.6 — the highest of any product across 3 cycles and 34 total candidates
+- **Desk/Office winding down:** After producing the two best products (C1, C2), new desk subcategories showed diminishing returns. The best desk products are already in our portfolio.
+- **Automotive wildcard:** Moderate signal but poor scalability. Dropped.
+
+### Final Cross-Cycle Category Performance (All 3 Cycles)
+
+| Category | C1 Avg | C2 Avg | C3 Avg | Trend | Products to Stage 5 | Best Product (Score) |
+|----------|--------|--------|--------|-------|---------------------|---------------------|
+| **Desk/Keyboard** | 3.6 | 3.9 | 3.12 | ↑↓ Peaked C2 | 2 | TPU Wrist Rest (4.4) |
+| **Kitchen/Home** | 3.8 | 3.9 | 4.6 | ↑↑ Accelerating | 1 | Spice Organizer (4.6) |
+| **3D Printer Accessories** | 3.35 | 3.2 | — | ↓ Dropped | 0 | AMS Spool Adapter (3.8) |
+| **Pet Accessories** | — | 3.3 | 4.0 | ↑ Rising | 0 | Pet Puzzle Feeder (4.0) |
+| **Automotive** | — | — | 3.2 | New, dropped | 0 | Cup Holder Adapter (3.2) |
+| **Board Games** | 3.2 | — | — | Dropped C1 | 0 | Board Game Inserts (3.2) |
+
+---
+
+## NICHE CONVERGENCE DECISION (Post-Cycle 3)
+
+### Primary Niche: Kitchen/Home Organization
+- **Rationale:** Produced the single highest-scoring product (Spice Organizer, 4.6) and showed accelerating scores across cycles. The "brand-specific" / "custom-fit" angle is our competitive moat. Future products: utensil drawer organizers, under-sink organizers, pantry shelf inserts.
+- **Customer profile:** Home organizers, Etsy Kitchen/Home buyers, non-printer-owners who value custom fit.
+
+### Secondary Niche: Desk/Keyboard Accessories
+- **Rationale:** Produced two strong products (Headphone Mount 4.4, Wrist Rest 4.4) but showed diminishing returns in new subcategories. Portfolio is strong as-is. Maintain with 1 new product per 3 cycles.
+- **Customer profile:** WFH workers, gamers, mechanical keyboard enthusiasts.
+
+### Wildcard Slot: Pet Accessories
+- **Rationale:** The modular puzzle feeder (4.0) and recurring-revenue model are worth exploring. Maintain 1 wildcard scan per cycle from Cycle 7+.
+
+### Dropped Niches
+- 3D Printer Accessories (saturated free market)
+- Automotive (doesn't scale)
+- Board Games (doesn't scale)
+- Personal Care (saturated)
+- Plants/Garden (dominated by free iconic designs)
