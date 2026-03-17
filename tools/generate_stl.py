@@ -1,8 +1,11 @@
 """
 generate_stl.py — Automated STL generation from customer parameters.
 
-Takes a product slug and parameter overrides, invokes OpenSCAD to generate
-a custom STL file. Validates parameters against the .scad file's ranges.
+Supports two backends:
+  1. CadQuery (Python) — preferred, no external tools needed
+  2. OpenSCAD CLI — fallback if CadQuery designs not available
+
+Takes a product slug and parameter overrides, generates a custom STL file.
 """
 
 import os
@@ -11,6 +14,7 @@ import subprocess
 import shutil
 import json
 import sys
+import importlib
 from pathlib import Path
 from datetime import datetime
 
@@ -18,6 +22,100 @@ from catalog import get_product_details, parse_scad_parameters
 
 
 OUTPUT_DIR = Path(__file__).parent.parent / "output"
+
+# Map product slugs to their CadQuery design modules
+CADQUERY_DESIGNS = {
+    "fifo-can-dispenser": "products/2026-03-16_fifo-can-dispenser/design_cq.py",
+    "utensil-drawer-organizer": "products/2026-03-16_utensil-drawer-organizer/design_cq.py",
+}
+
+# Map .scad parameter names to CadQuery function argument names
+PARAM_MAPPINGS = {
+    "fifo-can-dispenser": {
+        "can_preset": "can_preset",
+        "custom_can_dia": "custom_dia",
+        "custom_can_height": "custom_height",
+        "shelf_depth_inches": "shelf_depth_inches",
+        "cans_per_lane": "cans_per_lane",
+        "wall_thickness": "wall_thickness",
+        "base_thickness": "base_thickness",
+        "side_wall_height_pct": "side_wall_height_pct",
+        "ramp_angle": "ramp_angle",
+        "can_clearance": "can_clearance",
+        "snap_tab_width": "snap_tab_width",
+        "snap_tab_depth": "snap_tab_depth",
+        "render_connectors": "render_connectors",
+    },
+    "utensil-drawer-organizer": {
+        "drawer_width": "drawer_width",
+        "drawer_depth": "drawer_depth",
+        "drawer_height": "drawer_height",
+        "wall_thickness": "wall_thickness",
+        "fork_slots": "fork_slots",
+        "knife_slots": "knife_slots",
+        "spoon_slots": "spoon_slots",
+        "teaspoon_slots": "teaspoon_slots",
+        "serving_spoon_slots": "serving_spoon_slots",
+        "spatula_slots": "spatula_slots",
+        "whisk_slots": "whisk_slots",
+        "tongs_slots": "tongs_slots",
+        "ladle_slots": "ladle_slots",
+        "peeler_slots": "peeler_slots",
+        "catchall_slots": "catchall_slots",
+        "bottom_drain_holes": "drain_holes",
+    },
+}
+
+
+def has_cadquery():
+    """Check if CadQuery is available."""
+    try:
+        import cadquery
+        return True
+    except ImportError:
+        return False
+
+
+def generate_stl_cadquery(slug, overrides, output_path):
+    """Generate STL using CadQuery Python backend.
+
+    Returns dict with 'success', 'output_path', 'errors'.
+    """
+    import cadquery as cq
+
+    repo_root = Path(__file__).parent.parent
+    design_path = repo_root / CADQUERY_DESIGNS[slug]
+
+    # Load the design module dynamically
+    spec = importlib.util.spec_from_file_location("design_cq", str(design_path))
+    design_mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(design_mod)
+
+    # Map parameter names and build kwargs
+    param_map = PARAM_MAPPINGS.get(slug, {})
+    kwargs = {}
+    for scad_name, value in overrides.items():
+        cq_name = param_map.get(scad_name, scad_name)
+        kwargs[cq_name] = value
+
+    # Call the build function
+    if slug == "fifo-can-dispenser":
+        result_obj = design_mod.build_can_dispenser(**kwargs)
+    elif slug == "utensil-drawer-organizer":
+        result_obj = design_mod.build_drawer_organizer(**kwargs)
+    else:
+        return {"success": False, "errors": [f"No CadQuery builder for: {slug}"]}
+
+    # Export
+    cq.exporters.export(result_obj, output_path)
+    file_size = os.path.getsize(output_path)
+
+    return {
+        "success": True,
+        "output_path": output_path,
+        "file_size": file_size,
+        "backend": "cadquery",
+    }
 
 
 def validate_parameters(params_spec, overrides):
@@ -141,13 +239,40 @@ def generate_stl(slug, overrides=None, output_path=None, dry_run=False):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_path = str(OUTPUT_DIR / f"{slug}_{timestamp}.stl")
 
-    # Find OpenSCAD
+    # Try CadQuery backend first (preferred — no external tools needed)
+    if slug in CADQUERY_DESIGNS and has_cadquery() and not dry_run:
+        print(f"Generating STL for {slug} (CadQuery backend)...")
+        print(f"  Parameters: {json.dumps(validated)}")
+        print(f"  Output: {output_path}")
+
+        try:
+            result = generate_stl_cadquery(slug, validated, output_path)
+            if result["success"]:
+                print(f"  Done! STL generated: {output_path} ({result['file_size']:,} bytes)")
+            result["parameters"] = validated
+            result["command"] = f"python design_cq.py (CadQuery)"
+            return result
+        except Exception as e:
+            print(f"  CadQuery failed: {e}")
+            print(f"  Falling back to OpenSCAD...")
+
+    # Fallback: OpenSCAD CLI
     openscad = find_openscad()
     if not openscad and not dry_run:
+        if has_cadquery() and slug not in CADQUERY_DESIGNS:
+            return {
+                "success": False,
+                "errors": [
+                    f"No CadQuery design for '{slug}' and OpenSCAD not found. "
+                    f"Install OpenSCAD: sudo apt install openscad"
+                ],
+            }
         return {
             "success": False,
             "errors": [
-                "OpenSCAD not found. Install it: sudo apt install openscad"
+                "Neither CadQuery nor OpenSCAD available. "
+                "Install CadQuery: pip install cadquery — or — "
+                "Install OpenSCAD: sudo apt install openscad"
             ],
         }
 
