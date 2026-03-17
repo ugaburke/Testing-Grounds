@@ -728,26 +728,103 @@ class GameMap {
 
                     // Add detail for resources
                     if tile.terrain == .forest {
-                        let tree = SKShapeNode(circleOfRadius: tileSize * 0.3)
-                        tree.fillColor = SKColor(red: 0.1, green: 0.35, blue: 0.08, alpha: 1.0)
-                        tree.strokeColor = .clear
-                        tree.position = CGPoint(x: 0, y: tileSize * 0.1)
-                        node.addChild(tree)
+                        // Tree trunk
+                        let trunk = SKShapeNode(rectOf: CGSize(width: tileSize * 0.08, height: tileSize * 0.25))
+                        trunk.fillColor = SKColor(red: 0.4, green: 0.28, blue: 0.12, alpha: 1.0)
+                        trunk.strokeColor = .clear
+                        trunk.position = CGPoint(x: 0, y: -tileSize * 0.05)
+                        trunk.zPosition = 0.1
+                        node.addChild(trunk)
+                        // Tree canopy (layered circles for fuller look)
+                        let canopyBase = SKShapeNode(circleOfRadius: tileSize * 0.32)
+                        canopyBase.fillColor = SKColor(red: 0.08, green: 0.3, blue: 0.06, alpha: 1.0)
+                        canopyBase.strokeColor = .clear
+                        canopyBase.position = CGPoint(x: 0, y: tileSize * 0.12)
+                        canopyBase.zPosition = 0.2
+                        node.addChild(canopyBase)
+                        let canopyTop = SKShapeNode(circleOfRadius: tileSize * 0.22)
+                        canopyTop.fillColor = SKColor(red: 0.12, green: 0.4, blue: 0.1, alpha: 1.0)
+                        canopyTop.strokeColor = .clear
+                        canopyTop.position = CGPoint(x: 0, y: tileSize * 0.22)
+                        canopyTop.zPosition = 0.3
+                        node.addChild(canopyTop)
+                        // Highlight spot
+                        let highlight = SKShapeNode(circleOfRadius: tileSize * 0.1)
+                        highlight.fillColor = SKColor(red: 0.2, green: 0.5, blue: 0.15, alpha: 0.5)
+                        highlight.strokeColor = .clear
+                        highlight.position = CGPoint(x: -tileSize * 0.08, y: tileSize * 0.25)
+                        highlight.zPosition = 0.4
+                        node.addChild(highlight)
                     } else if tile.terrain == .gold {
-                        let nugget = SKShapeNode(rectOf: CGSize(width: tileSize * 0.4, height: tileSize * 0.3))
-                        nugget.fillColor = SKColor(red: 0.9, green: 0.8, blue: 0.1, alpha: 1.0)
-                        nugget.strokeColor = .clear
-                        node.addChild(nugget)
+                        // Gold ore pile (multiple nuggets)
+                        let hash = (x * 31 + y * 47) % 10
+                        let baseNugget = SKShapeNode(rectOf: CGSize(width: tileSize * 0.35, height: tileSize * 0.25), cornerRadius: tileSize * 0.05)
+                        baseNugget.fillColor = SKColor(red: 0.85, green: 0.7, blue: 0.1, alpha: 1.0)
+                        baseNugget.strokeColor = SKColor(red: 0.7, green: 0.55, blue: 0.05, alpha: 1.0)
+                        baseNugget.lineWidth = 1
+                        baseNugget.position = CGPoint(x: 0, y: -tileSize * 0.05)
+                        baseNugget.zPosition = 0.1
+                        node.addChild(baseNugget)
+                        // Top nugget
+                        let topNugget = SKShapeNode(rectOf: CGSize(width: tileSize * 0.2, height: tileSize * 0.15), cornerRadius: tileSize * 0.03)
+                        topNugget.fillColor = SKColor(red: 0.95, green: 0.85, blue: 0.15, alpha: 1.0)
+                        topNugget.strokeColor = SKColor(red: 0.75, green: 0.6, blue: 0.05, alpha: 1.0)
+                        topNugget.lineWidth = 0.5
+                        topNugget.position = CGPoint(x: CGFloat(hash % 3) * 0.5 - 0.5, y: tileSize * 0.1)
+                        topNugget.zPosition = 0.2
+                        node.addChild(topNugget)
+                        // Sparkle
+                        let sparkle = SKShapeNode(circleOfRadius: tileSize * 0.04)
+                        sparkle.fillColor = SKColor(red: 1.0, green: 1.0, blue: 0.8, alpha: 0.7)
+                        sparkle.strokeColor = .clear
+                        sparkle.position = CGPoint(x: tileSize * 0.08, y: tileSize * 0.12)
+                        sparkle.zPosition = 0.3
+                        node.addChild(sparkle)
                     } else if tile.terrain == .stone {
-                        let rock = SKShapeNode(circleOfRadius: tileSize * 0.25)
-                        rock.fillColor = SKColor(red: 0.65, green: 0.65, blue: 0.65, alpha: 1.0)
-                        rock.strokeColor = .clear
-                        node.addChild(rock)
+                        // Stacked stone rocks
+                        let rock1 = SKShapeNode(circleOfRadius: tileSize * 0.2)
+                        rock1.fillColor = SKColor(red: 0.6, green: 0.6, blue: 0.6, alpha: 1.0)
+                        rock1.strokeColor = SKColor(red: 0.45, green: 0.45, blue: 0.45, alpha: 1.0)
+                        rock1.lineWidth = 1
+                        rock1.position = CGPoint(x: -tileSize * 0.05, y: -tileSize * 0.05)
+                        rock1.zPosition = 0.1
+                        node.addChild(rock1)
+                        let rock2 = SKShapeNode(circleOfRadius: tileSize * 0.15)
+                        rock2.fillColor = SKColor(red: 0.68, green: 0.68, blue: 0.68, alpha: 1.0)
+                        rock2.strokeColor = SKColor(red: 0.5, green: 0.5, blue: 0.5, alpha: 1.0)
+                        rock2.lineWidth = 0.5
+                        rock2.position = CGPoint(x: tileSize * 0.1, y: tileSize * 0.08)
+                        rock2.zPosition = 0.2
+                        node.addChild(rock2)
+                        // Stone vein highlight
+                        let vein = SKShapeNode(rectOf: CGSize(width: tileSize * 0.15, height: 1))
+                        vein.fillColor = SKColor(red: 0.75, green: 0.75, blue: 0.75, alpha: 0.5)
+                        vein.strokeColor = .clear
+                        vein.position = CGPoint(x: -tileSize * 0.05, y: -tileSize * 0.02)
+                        vein.zRotation = 0.3
+                        vein.zPosition = 0.15
+                        node.addChild(vein)
                     } else if tile.terrain == .berryBush {
-                        let bush = SKShapeNode(circleOfRadius: tileSize * 0.25)
-                        bush.fillColor = SKColor(red: 0.6, green: 0.15, blue: 0.3, alpha: 1.0)
+                        // Bush foliage
+                        let bush = SKShapeNode(circleOfRadius: tileSize * 0.28)
+                        bush.fillColor = SKColor(red: 0.2, green: 0.45, blue: 0.15, alpha: 1.0)
                         bush.strokeColor = .clear
+                        bush.position = CGPoint(x: 0, y: tileSize * 0.02)
+                        bush.zPosition = 0.1
                         node.addChild(bush)
+                        // Berry clusters
+                        let berryPositions: [(CGFloat, CGFloat)] = [
+                            (-0.1, 0.1), (0.12, 0.08), (0.0, -0.1),
+                            (-0.08, -0.02), (0.1, -0.06)
+                        ]
+                        for (bx, by) in berryPositions {
+                            let berry = SKShapeNode(circleOfRadius: tileSize * 0.05)
+                            berry.fillColor = SKColor(red: 0.75, green: 0.1, blue: 0.2, alpha: 1.0)
+                            berry.strokeColor = .clear
+                            berry.position = CGPoint(x: tileSize * bx, y: tileSize * by + tileSize * 0.02)
+                            berry.zPosition = 0.2
+                            node.addChild(berry)
+                        }
                     }
 
                     // Decorative elements on some grass tiles

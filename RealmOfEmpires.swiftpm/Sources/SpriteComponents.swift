@@ -118,12 +118,36 @@ class SpriteFactory {
             path.addEllipse(in: CGRect(x: -bodySize * 0.5, y: -bodySize * 0.3,
                                         width: bodySize, height: bodySize * 0.6))
             body = SKShapeNode(path: path)
-            // Mane detail
-            let mane = SKShapeNode(rectOf: CGSize(width: bodySize * 0.15, height: bodySize * 0.35))
-            mane.fillColor = playerColor.darker(by: 0.15)
+            // Horse head
+            let head = SKShapeNode(circleOfRadius: bodySize * 0.14)
+            head.fillColor = playerColor.darker(by: 0.1)
+            head.strokeColor = .clear
+            head.position = CGPoint(x: bodySize * 0.38, y: bodySize * 0.18)
+            bodyContainer.addChild(head)
+            // Mane
+            let mane = SKShapeNode(rectOf: CGSize(width: bodySize * 0.08, height: bodySize * 0.3))
+            mane.fillColor = playerColor.darker(by: 0.2)
             mane.strokeColor = .clear
-            mane.position = CGPoint(x: bodySize * 0.2, y: bodySize * 0.1)
+            mane.position = CGPoint(x: bodySize * 0.22, y: bodySize * 0.15)
             bodyContainer.addChild(mane)
+            // Front legs
+            let legF = SKShapeNode(rectOf: CGSize(width: bodySize * 0.06, height: bodySize * 0.22))
+            legF.fillColor = playerColor.darker(by: 0.15)
+            legF.strokeColor = .clear
+            legF.position = CGPoint(x: bodySize * 0.25, y: -bodySize * 0.35)
+            bodyContainer.addChild(legF)
+            // Back legs
+            let legB = SKShapeNode(rectOf: CGSize(width: bodySize * 0.06, height: bodySize * 0.22))
+            legB.fillColor = playerColor.darker(by: 0.15)
+            legB.strokeColor = .clear
+            legB.position = CGPoint(x: -bodySize * 0.25, y: -bodySize * 0.35)
+            bodyContainer.addChild(legB)
+            // Rider silhouette
+            let rider = SKShapeNode(circleOfRadius: bodySize * 0.12)
+            rider.fillColor = playerColor.lighter(by: 0.15)
+            rider.strokeColor = .clear
+            rider.position = CGPoint(x: 0, y: bodySize * 0.28)
+            bodyContainer.addChild(rider)
         } else if unit.type.isRanged {
             // Diamond shape for ranged units
             let path = CGMutablePath()
@@ -133,26 +157,80 @@ class SpriteFactory {
             path.addLine(to: CGPoint(x: bodySize * 0.35, y: 0))
             path.closeSubpath()
             body = SKShapeNode(path: path)
-            // Bowstring/arrow detail
-            let bowString = SKShapeNode(rectOf: CGSize(width: 1, height: bodySize * 0.5))
-            bowString.fillColor = SKColor.white.withAlphaComponent(0.6)
+            // Bow arc
+            let bowArc = SKShapeNode(circleOfRadius: bodySize * 0.22)
+            bowArc.fillColor = .clear
+            bowArc.strokeColor = SKColor(red: 0.55, green: 0.38, blue: 0.15, alpha: 0.9)
+            bowArc.lineWidth = 2
+            bowArc.position = CGPoint(x: -bodySize * 0.08, y: 0)
+            bodyContainer.addChild(bowArc)
+            // Bowstring
+            let bowString = SKShapeNode(rectOf: CGSize(width: 1, height: bodySize * 0.42))
+            bowString.fillColor = SKColor.white.withAlphaComponent(0.7)
             bowString.strokeColor = .clear
-            bowString.position = CGPoint(x: 0, y: bodySize * 0.05)
+            bowString.position = CGPoint(x: -bodySize * 0.08, y: 0)
             bodyContainer.addChild(bowString)
+            // Arrow
+            let arrow = SKShapeNode(rectOf: CGSize(width: bodySize * 0.35, height: 1.5))
+            arrow.fillColor = SKColor(red: 0.6, green: 0.5, blue: 0.3, alpha: 0.8)
+            arrow.strokeColor = .clear
+            arrow.position = CGPoint(x: bodySize * 0.08, y: 0)
+            bodyContainer.addChild(arrow)
+            // Arrowhead
+            let arrowhead = SKShapeNode(rectOf: CGSize(width: bodySize * 0.05, height: bodySize * 0.06))
+            arrowhead.fillColor = SKColor(red: 0.7, green: 0.7, blue: 0.75, alpha: 0.9)
+            arrowhead.strokeColor = .clear
+            arrowhead.position = CGPoint(x: bodySize * 0.28, y: 0)
+            bodyContainer.addChild(arrowhead)
         } else if unit.type == .villager {
             body = SKShapeNode(circleOfRadius: bodySize * 0.35)
+            // Straw hat
+            let hat = SKShapeNode(rectOf: CGSize(width: bodySize * 0.45, height: bodySize * 0.1))
+            hat.fillColor = SKColor(red: 0.75, green: 0.65, blue: 0.3, alpha: 0.9)
+            hat.strokeColor = .clear
+            hat.position = CGPoint(x: 0, y: bodySize * 0.28)
+            bodyContainer.addChild(hat)
+            let hatTop = SKShapeNode(rectOf: CGSize(width: bodySize * 0.25, height: bodySize * 0.12))
+            hatTop.fillColor = SKColor(red: 0.7, green: 0.6, blue: 0.25, alpha: 0.9)
+            hatTop.strokeColor = .clear
+            hatTop.position = CGPoint(x: 0, y: bodySize * 0.35)
+            bodyContainer.addChild(hatTop)
         } else if unit.type == .monk {
-            // Monk: cross/diamond shape
+            // Monk: circle with robe shape
             body = SKShapeNode(circleOfRadius: bodySize * 0.35)
-            let cross1 = SKShapeNode(rectOf: CGSize(width: 2, height: bodySize * 0.4))
-            cross1.fillColor = SKColor(red: 0.9, green: 0.8, blue: 0.2, alpha: 0.8)
+            // Hood
+            let hood = SKShapeNode(circleOfRadius: bodySize * 0.16)
+            hood.fillColor = SKColor(red: 0.6, green: 0.5, blue: 0.2, alpha: 0.9)
+            hood.strokeColor = .clear
+            hood.position = CGPoint(x: 0, y: bodySize * 0.2)
+            bodyContainer.addChild(hood)
+            // Robe drape
+            let robe = SKShapeNode(rectOf: CGSize(width: bodySize * 0.35, height: bodySize * 0.25))
+            robe.fillColor = SKColor(red: 0.55, green: 0.45, blue: 0.15, alpha: 0.7)
+            robe.strokeColor = .clear
+            robe.position = CGPoint(x: 0, y: -bodySize * 0.12)
+            bodyContainer.addChild(robe)
+            // Golden cross held up
+            let cross1 = SKShapeNode(rectOf: CGSize(width: 2.5, height: bodySize * 0.35))
+            cross1.fillColor = SKColor(red: 1.0, green: 0.85, blue: 0.2, alpha: 0.9)
             cross1.strokeColor = .clear
+            cross1.position = CGPoint(x: 0, y: bodySize * 0.05)
             bodyContainer.addChild(cross1)
-            let cross2 = SKShapeNode(rectOf: CGSize(width: bodySize * 0.25, height: 2))
-            cross2.fillColor = SKColor(red: 0.9, green: 0.8, blue: 0.2, alpha: 0.8)
+            let cross2 = SKShapeNode(rectOf: CGSize(width: bodySize * 0.2, height: 2.5))
+            cross2.fillColor = SKColor(red: 1.0, green: 0.85, blue: 0.2, alpha: 0.9)
             cross2.strokeColor = .clear
-            cross2.position = CGPoint(x: 0, y: bodySize * 0.08)
+            cross2.position = CGPoint(x: 0, y: bodySize * 0.12)
             bodyContainer.addChild(cross2)
+            // Holy glow
+            let glow = SKShapeNode(circleOfRadius: bodySize * 0.45)
+            glow.fillColor = SKColor(red: 1.0, green: 0.9, blue: 0.4, alpha: 0.1)
+            glow.strokeColor = .clear
+            bodyContainer.addChild(glow)
+            let glowPulse = SKAction.repeatForever(SKAction.sequence([
+                SKAction.fadeAlpha(to: 0.05, duration: 1.0),
+                SKAction.fadeAlpha(to: 0.15, duration: 1.0)
+            ]))
+            glow.run(glowPulse)
         } else if unit.type == .tradeCart {
             // Trade cart: wider rectangle
             body = SKShapeNode(rectOf: CGSize(width: bodySize * 0.7, height: bodySize * 0.4), cornerRadius: bodySize * 0.06)
@@ -210,16 +288,31 @@ class SpriteFactory {
             mast.position = CGPoint(x: 0, y: bodySize * 0.2)
             bodyContainer.addChild(mast)
         } else if unit.type == .fireShip {
-            // Fire Ship: boat with flame indicator
+            // Fire Ship: boat with animated flames
             let path = CGMutablePath()
             path.addEllipse(in: CGRect(x: -bodySize * 0.4, y: -bodySize * 0.2,
                                         width: bodySize * 0.8, height: bodySize * 0.4))
             body = SKShapeNode(path: path)
-            let flame = SKShapeNode(circleOfRadius: bodySize * 0.15)
-            flame.fillColor = SKColor(red: 1.0, green: 0.4, blue: 0.1, alpha: 0.8)
-            flame.strokeColor = .clear
-            flame.position = CGPoint(x: bodySize * 0.2, y: bodySize * 0.1)
-            bodyContainer.addChild(flame)
+            // Multiple flame layers for depth
+            let flameOuter = SKShapeNode(circleOfRadius: bodySize * 0.18)
+            flameOuter.fillColor = SKColor(red: 1.0, green: 0.3, blue: 0.05, alpha: 0.6)
+            flameOuter.strokeColor = .clear
+            flameOuter.position = CGPoint(x: bodySize * 0.15, y: bodySize * 0.12)
+            bodyContainer.addChild(flameOuter)
+            let flameInner = SKShapeNode(circleOfRadius: bodySize * 0.1)
+            flameInner.fillColor = SKColor(red: 1.0, green: 0.7, blue: 0.1, alpha: 0.9)
+            flameInner.strokeColor = .clear
+            flameInner.position = CGPoint(x: bodySize * 0.15, y: bodySize * 0.15)
+            bodyContainer.addChild(flameInner)
+            // Flame flicker animation
+            let flicker = SKAction.repeatForever(SKAction.sequence([
+                SKAction.scale(to: 1.2, duration: 0.2),
+                SKAction.scale(to: 0.85, duration: 0.15),
+                SKAction.scale(to: 1.1, duration: 0.25),
+                SKAction.scale(to: 0.9, duration: 0.2)
+            ]))
+            flameOuter.run(flicker)
+            flameInner.run(SKAction.sequence([SKAction.wait(forDuration: 0.1), flicker]))
         } else if unit.type == .petard {
             // Petard: small circle with fuse
             body = SKShapeNode(circleOfRadius: bodySize * 0.3)
@@ -332,18 +425,38 @@ class SpriteFactory {
                                             width: bodySize * 0.64, height: bodySize * 0.64),
                                 cornerWidth: bodySize * 0.12, cornerHeight: bodySize * 0.12)
             body = SKShapeNode(path: path)
-            // Sword detail
-            let sword = SKShapeNode(rectOf: CGSize(width: 2, height: bodySize * 0.4))
-            sword.fillColor = SKColor(red: 0.8, green: 0.8, blue: 0.85, alpha: 0.8)
+            // Helmet
+            let helmet = SKShapeNode(rectOf: CGSize(width: bodySize * 0.35, height: bodySize * 0.12))
+            helmet.fillColor = SKColor(red: 0.55, green: 0.55, blue: 0.6, alpha: 0.9)
+            helmet.strokeColor = .clear
+            helmet.position = CGPoint(x: 0, y: bodySize * 0.28)
+            bodyContainer.addChild(helmet)
+            let helmetTop = SKShapeNode(circleOfRadius: bodySize * 0.1)
+            helmetTop.fillColor = SKColor(red: 0.5, green: 0.5, blue: 0.55, alpha: 0.9)
+            helmetTop.strokeColor = .clear
+            helmetTop.position = CGPoint(x: 0, y: bodySize * 0.32)
+            bodyContainer.addChild(helmetTop)
+            // Shield on left
+            let shield = SKShapeNode(rectOf: CGSize(width: bodySize * 0.18, height: bodySize * 0.28))
+            shield.fillColor = playerColor.lighter(by: 0.1)
+            shield.strokeColor = playerColor.darker(by: 0.1)
+            shield.lineWidth = 1
+            shield.position = CGPoint(x: -bodySize * 0.22, y: -bodySize * 0.02)
+            bodyContainer.addChild(shield)
+            // Sword on right
+            let sword = SKShapeNode(rectOf: CGSize(width: 2, height: bodySize * 0.45))
+            sword.fillColor = SKColor(red: 0.85, green: 0.85, blue: 0.9, alpha: 0.9)
             sword.strokeColor = .clear
-            sword.position = CGPoint(x: bodySize * 0.2, y: bodySize * 0.05)
+            sword.position = CGPoint(x: bodySize * 0.22, y: bodySize * 0.08)
             sword.zRotation = -0.3
             bodyContainer.addChild(sword)
-            // Horizontal armor line
-            let armor = SKShapeNode(rectOf: CGSize(width: bodySize * 0.4, height: 1.5))
-            armor.fillColor = playerColor.darker(by: 0.1)
-            armor.strokeColor = .clear
-            bodyContainer.addChild(armor)
+            // Sword guard
+            let guard_ = SKShapeNode(rectOf: CGSize(width: bodySize * 0.12, height: 2))
+            guard_.fillColor = SKColor(red: 0.6, green: 0.5, blue: 0.2, alpha: 0.9)
+            guard_.strokeColor = .clear
+            guard_.position = CGPoint(x: bodySize * 0.18, y: -bodySize * 0.05)
+            guard_.zRotation = -0.3
+            bodyContainer.addChild(guard_)
         }
 
         body.fillColor = playerColor
@@ -608,19 +721,102 @@ class SpriteFactory {
         foundation.zPosition = 0.5
         container.addChild(foundation)
 
-        // Roof triangle on TC and Castle
-        if building.type == .townCenter || building.type == .castle {
+        // Roof shapes per building type
+        switch building.type {
+        case .townCenter:
+            // Large peaked roof
             let roofPath = CGMutablePath()
-            roofPath.move(to: CGPoint(x: -w * 0.45, y: h * 0.4))
-            roofPath.addLine(to: CGPoint(x: 0, y: h * 0.6))
-            roofPath.addLine(to: CGPoint(x: w * 0.45, y: h * 0.4))
+            roofPath.move(to: CGPoint(x: -w * 0.5, y: h * 0.35))
+            roofPath.addLine(to: CGPoint(x: 0, y: h * 0.65))
+            roofPath.addLine(to: CGPoint(x: w * 0.5, y: h * 0.35))
             roofPath.closeSubpath()
             let roof = SKShapeNode(path: roofPath)
-            roof.fillColor = SKColor(red: 0.5, green: 0.25, blue: 0.1, alpha: 0.8)
-            roof.strokeColor = playerColor.withAlphaComponent(0.5)
+            roof.fillColor = SKColor(red: 0.55, green: 0.2, blue: 0.08, alpha: 0.9)
+            roof.strokeColor = SKColor(red: 0.4, green: 0.15, blue: 0.05, alpha: 1.0)
             roof.lineWidth = 1
             roof.zPosition = 1.1
             container.addChild(roof)
+        case .castle:
+            // Crenellated battlement top
+            let battlementY = h * 0.4
+            for i in 0..<5 {
+                let merlon = SKShapeNode(rectOf: CGSize(width: w * 0.12, height: h * 0.1))
+                merlon.fillColor = SKColor(red: 0.55, green: 0.55, blue: 0.55, alpha: 1.0)
+                merlon.strokeColor = SKColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0)
+                merlon.lineWidth = 0.5
+                merlon.position = CGPoint(x: -w * 0.36 + CGFloat(i) * w * 0.18, y: battlementY)
+                merlon.zPosition = 1.1
+                container.addChild(merlon)
+            }
+        case .house:
+            // Small peaked roof
+            let roofPath = CGMutablePath()
+            roofPath.move(to: CGPoint(x: -w * 0.48, y: h * 0.3))
+            roofPath.addLine(to: CGPoint(x: 0, y: h * 0.58))
+            roofPath.addLine(to: CGPoint(x: w * 0.48, y: h * 0.3))
+            roofPath.closeSubpath()
+            let roof = SKShapeNode(path: roofPath)
+            roof.fillColor = SKColor(red: 0.6, green: 0.3, blue: 0.1, alpha: 0.85)
+            roof.strokeColor = SKColor(red: 0.45, green: 0.2, blue: 0.08, alpha: 1.0)
+            roof.lineWidth = 1
+            roof.zPosition = 1.1
+            container.addChild(roof)
+        case .barracks, .archeryRange, .stable, .siegeWorkshop:
+            // Flat military roof with ridge
+            let roofPath = CGMutablePath()
+            roofPath.move(to: CGPoint(x: -w * 0.48, y: h * 0.32))
+            roofPath.addLine(to: CGPoint(x: -w * 0.1, y: h * 0.48))
+            roofPath.addLine(to: CGPoint(x: w * 0.1, y: h * 0.48))
+            roofPath.addLine(to: CGPoint(x: w * 0.48, y: h * 0.32))
+            roofPath.closeSubpath()
+            let roof = SKShapeNode(path: roofPath)
+            roof.fillColor = SKColor(red: 0.4, green: 0.2, blue: 0.1, alpha: 0.8)
+            roof.strokeColor = .clear
+            roof.zPosition = 1.1
+            container.addChild(roof)
+        case .monastery:
+            // Dome shape
+            let dome = SKShapeNode(circleOfRadius: w * 0.28)
+            dome.fillColor = SKColor(red: 0.65, green: 0.5, blue: 0.6, alpha: 0.9)
+            dome.strokeColor = SKColor(red: 0.5, green: 0.35, blue: 0.45, alpha: 1.0)
+            dome.lineWidth = 1
+            dome.position = CGPoint(x: 0, y: h * 0.25)
+            dome.zPosition = 1.1
+            container.addChild(dome)
+            // Cross on top
+            let cross1 = SKShapeNode(rectOf: CGSize(width: 2, height: 10))
+            cross1.fillColor = .yellow
+            cross1.strokeColor = .clear
+            cross1.position = CGPoint(x: 0, y: h * 0.48)
+            cross1.zPosition = 1.2
+            container.addChild(cross1)
+            let cross2 = SKShapeNode(rectOf: CGSize(width: 6, height: 2))
+            cross2.fillColor = .yellow
+            cross2.strokeColor = .clear
+            cross2.position = CGPoint(x: 0, y: h * 0.5)
+            cross2.zPosition = 1.2
+            container.addChild(cross2)
+        case .wonder:
+            // Tiered pyramid roof
+            for i in 0..<3 {
+                let tierW = w * (0.8 - CGFloat(i) * 0.2)
+                let tier = SKShapeNode(rectOf: CGSize(width: tierW, height: h * 0.08))
+                tier.fillColor = SKColor(red: 0.8 - CGFloat(i) * 0.05, green: 0.7 - CGFloat(i) * 0.05, blue: 0.35, alpha: 0.9)
+                tier.strokeColor = SKColor(red: 0.6, green: 0.5, blue: 0.2, alpha: 1.0)
+                tier.lineWidth = 0.5
+                tier.position = CGPoint(x: 0, y: h * 0.32 + CGFloat(i) * h * 0.1)
+                tier.zPosition = 1.1 + CGFloat(i) * 0.1
+                container.addChild(tier)
+            }
+            // Spire
+            let spire = SKShapeNode(rectOf: CGSize(width: 2, height: h * 0.15))
+            spire.fillColor = .yellow
+            spire.strokeColor = .clear
+            spire.position = CGPoint(x: 0, y: h * 0.6)
+            spire.zPosition = 1.5
+            container.addChild(spire)
+        default:
+            break
         }
 
         // Architectural detail per building type
@@ -725,113 +921,443 @@ class SpriteFactory {
 
         switch type {
         case .townCenter:
-            // Door
-            let door = SKShapeNode(rectOf: CGSize(width: w * 0.15, height: h * 0.25))
-            door.fillColor = SKColor(red: 0.3, green: 0.2, blue: 0.1, alpha: 1.0)
-            door.strokeColor = .clear
+            // Arched doorway
+            let door = SKShapeNode(rectOf: CGSize(width: w * 0.16, height: h * 0.22))
+            door.fillColor = SKColor(red: 0.2, green: 0.12, blue: 0.06, alpha: 1.0)
+            door.strokeColor = SKColor(red: 0.35, green: 0.25, blue: 0.12, alpha: 1.0)
+            door.lineWidth = 1
             door.position = CGPoint(x: 0, y: -h * 0.25)
             door.zPosition = detailZ
             container.addChild(door)
-            // Windows
+            // Door arch
+            let arch = SKShapeNode(circleOfRadius: w * 0.08)
+            arch.fillColor = SKColor(red: 0.2, green: 0.12, blue: 0.06, alpha: 1.0)
+            arch.strokeColor = SKColor(red: 0.35, green: 0.25, blue: 0.12, alpha: 1.0)
+            arch.lineWidth = 1
+            arch.position = CGPoint(x: 0, y: -h * 0.14)
+            arch.zPosition = detailZ
+            container.addChild(arch)
+            // Windows with warm glow
             for xOff in [-w * 0.25, w * 0.25] {
-                let window = SKShapeNode(rectOf: CGSize(width: w * 0.08, height: h * 0.08))
-                window.fillColor = SKColor(red: 0.6, green: 0.7, blue: 0.9, alpha: 0.8)
-                window.strokeColor = SKColor.white.withAlphaComponent(0.5)
-                window.lineWidth = 0.5
-                window.position = CGPoint(x: xOff, y: h * 0.1)
+                let window = SKShapeNode(rectOf: CGSize(width: w * 0.09, height: h * 0.09))
+                window.fillColor = SKColor(red: 0.9, green: 0.8, blue: 0.4, alpha: 0.8)
+                window.strokeColor = SKColor(red: 0.4, green: 0.3, blue: 0.15, alpha: 1.0)
+                window.lineWidth = 1
+                window.position = CGPoint(x: xOff, y: h * 0.08)
                 window.zPosition = detailZ
                 container.addChild(window)
+                // Window glow
+                let glow = SKShapeNode(circleOfRadius: w * 0.06)
+                glow.fillColor = SKColor(red: 1.0, green: 0.9, blue: 0.5, alpha: 0.15)
+                glow.strokeColor = .clear
+                glow.position = CGPoint(x: xOff, y: h * 0.08)
+                glow.zPosition = detailZ - 0.1
+                container.addChild(glow)
+            }
+            // Stone columns flanking door
+            for xOff in [-w * 0.12, w * 0.12] as [CGFloat] {
+                let col = SKShapeNode(rectOf: CGSize(width: w * 0.04, height: h * 0.3))
+                col.fillColor = SKColor(red: 0.55, green: 0.5, blue: 0.4, alpha: 0.8)
+                col.strokeColor = .clear
+                col.position = CGPoint(x: xOff, y: -h * 0.18)
+                col.zPosition = detailZ
+                container.addChild(col)
             }
 
         case .house:
-            // Small door
-            let door = SKShapeNode(rectOf: CGSize(width: w * 0.12, height: h * 0.2))
-            door.fillColor = SKColor(red: 0.35, green: 0.25, blue: 0.12, alpha: 1.0)
-            door.strokeColor = .clear
-            door.position = CGPoint(x: -w * 0.15, y: -h * 0.28)
+            // Door with frame
+            let door = SKShapeNode(rectOf: CGSize(width: w * 0.14, height: h * 0.22))
+            door.fillColor = SKColor(red: 0.3, green: 0.2, blue: 0.08, alpha: 1.0)
+            door.strokeColor = SKColor(red: 0.45, green: 0.3, blue: 0.15, alpha: 1.0)
+            door.lineWidth = 0.5
+            door.position = CGPoint(x: -w * 0.12, y: -h * 0.26)
             door.zPosition = detailZ
             container.addChild(door)
-            // Window
-            let window = SKShapeNode(rectOf: CGSize(width: w * 0.1, height: w * 0.1))
-            window.fillColor = SKColor(red: 0.6, green: 0.7, blue: 0.9, alpha: 0.7)
-            window.strokeColor = SKColor.white.withAlphaComponent(0.4)
+            // Window with shutters
+            let window = SKShapeNode(rectOf: CGSize(width: w * 0.12, height: w * 0.1))
+            window.fillColor = SKColor(red: 0.85, green: 0.75, blue: 0.4, alpha: 0.7)
+            window.strokeColor = SKColor(red: 0.4, green: 0.3, blue: 0.15, alpha: 0.8)
             window.lineWidth = 0.5
-            window.position = CGPoint(x: w * 0.15, y: h * 0.05)
+            window.position = CGPoint(x: w * 0.15, y: h * 0.02)
             window.zPosition = detailZ
             container.addChild(window)
+            // Window cross pane
+            let paneH = SKShapeNode(rectOf: CGSize(width: w * 0.12, height: 0.5))
+            paneH.fillColor = SKColor(red: 0.4, green: 0.3, blue: 0.15, alpha: 0.8)
+            paneH.strokeColor = .clear
+            paneH.position = CGPoint(x: w * 0.15, y: h * 0.02)
+            paneH.zPosition = detailZ + 0.1
+            container.addChild(paneH)
+            let paneV = SKShapeNode(rectOf: CGSize(width: 0.5, height: w * 0.1))
+            paneV.fillColor = SKColor(red: 0.4, green: 0.3, blue: 0.15, alpha: 0.8)
+            paneV.strokeColor = .clear
+            paneV.position = CGPoint(x: w * 0.15, y: h * 0.02)
+            paneV.zPosition = detailZ + 0.1
+            container.addChild(paneV)
+            // Chimney
+            let chimney = SKShapeNode(rectOf: CGSize(width: w * 0.08, height: h * 0.15))
+            chimney.fillColor = SKColor(red: 0.45, green: 0.35, blue: 0.25, alpha: 0.9)
+            chimney.strokeColor = .clear
+            chimney.position = CGPoint(x: w * 0.28, y: h * 0.35)
+            chimney.zPosition = detailZ
+            container.addChild(chimney)
 
-        case .barracks, .archeryRange, .stable:
+        case .barracks:
+            // Large double doors with iron bracing
+            for xOff in [-w * 0.07, w * 0.07] as [CGFloat] {
+                let door = SKShapeNode(rectOf: CGSize(width: w * 0.12, height: h * 0.24))
+                door.fillColor = SKColor(red: 0.25, green: 0.15, blue: 0.08, alpha: 1.0)
+                door.strokeColor = SKColor(red: 0.4, green: 0.3, blue: 0.15, alpha: 1.0)
+                door.lineWidth = 0.5
+                door.position = CGPoint(x: xOff, y: -h * 0.24)
+                door.zPosition = detailZ
+                container.addChild(door)
+            }
+            // Crossed swords emblem
+            let sword1 = SKShapeNode(rectOf: CGSize(width: 2, height: 12))
+            sword1.fillColor = SKColor(red: 0.8, green: 0.8, blue: 0.85, alpha: 1.0)
+            sword1.strokeColor = .clear
+            sword1.position = CGPoint(x: 0, y: h * 0.08)
+            sword1.zRotation = .pi / 6
+            sword1.zPosition = detailZ
+            container.addChild(sword1)
+            let sword2 = SKShapeNode(rectOf: CGSize(width: 2, height: 12))
+            sword2.fillColor = SKColor(red: 0.8, green: 0.8, blue: 0.85, alpha: 1.0)
+            sword2.strokeColor = .clear
+            sword2.position = CGPoint(x: 0, y: h * 0.08)
+            sword2.zRotation = -.pi / 6
+            sword2.zPosition = detailZ
+            container.addChild(sword2)
+            // Training dummy
+            let dummyPole = SKShapeNode(rectOf: CGSize(width: 1.5, height: 8))
+            dummyPole.fillColor = SKColor(red: 0.5, green: 0.35, blue: 0.15, alpha: 0.7)
+            dummyPole.strokeColor = .clear
+            dummyPole.position = CGPoint(x: w * 0.3, y: -h * 0.15)
+            dummyPole.zPosition = detailZ
+            container.addChild(dummyPole)
+            let dummyArm = SKShapeNode(rectOf: CGSize(width: 6, height: 1.5))
+            dummyArm.fillColor = SKColor(red: 0.5, green: 0.35, blue: 0.15, alpha: 0.7)
+            dummyArm.strokeColor = .clear
+            dummyArm.position = CGPoint(x: w * 0.3, y: -h * 0.1)
+            dummyArm.zPosition = detailZ
+            container.addChild(dummyArm)
+
+        case .archeryRange:
             // Double door
             for xOff in [-w * 0.06, w * 0.06] as [CGFloat] {
                 let door = SKShapeNode(rectOf: CGSize(width: w * 0.1, height: h * 0.22))
-                door.fillColor = SKColor(red: 0.3, green: 0.2, blue: 0.1, alpha: 1.0)
+                door.fillColor = SKColor(red: 0.25, green: 0.15, blue: 0.08, alpha: 1.0)
                 door.strokeColor = .clear
                 door.position = CGPoint(x: xOff, y: -h * 0.26)
                 door.zPosition = detailZ
                 container.addChild(door)
             }
-            // Emblem
-            if type == .barracks {
-                let emblem = SKShapeNode(rectOf: CGSize(width: 3, height: 8))
-                emblem.fillColor = .white
-                emblem.strokeColor = .clear
-                emblem.position = CGPoint(x: 0, y: h * 0.1)
-                emblem.zPosition = detailZ
-                container.addChild(emblem)
-                let crossbar = SKShapeNode(rectOf: CGSize(width: 6, height: 2))
-                crossbar.fillColor = .white
-                crossbar.strokeColor = .clear
-                crossbar.position = CGPoint(x: 0, y: h * 0.13)
-                crossbar.zPosition = detailZ
-                container.addChild(crossbar)
-            }
+            // Target
+            let targetOuter = SKShapeNode(circleOfRadius: w * 0.1)
+            targetOuter.fillColor = SKColor(red: 0.8, green: 0.2, blue: 0.15, alpha: 0.9)
+            targetOuter.strokeColor = .clear
+            targetOuter.position = CGPoint(x: w * 0.28, y: h * 0.05)
+            targetOuter.zPosition = detailZ
+            container.addChild(targetOuter)
+            let targetMid = SKShapeNode(circleOfRadius: w * 0.065)
+            targetMid.fillColor = .white
+            targetMid.strokeColor = .clear
+            targetMid.position = CGPoint(x: w * 0.28, y: h * 0.05)
+            targetMid.zPosition = detailZ + 0.1
+            container.addChild(targetMid)
+            let targetInner = SKShapeNode(circleOfRadius: w * 0.035)
+            targetInner.fillColor = SKColor(red: 0.8, green: 0.2, blue: 0.15, alpha: 0.9)
+            targetInner.strokeColor = .clear
+            targetInner.position = CGPoint(x: w * 0.28, y: h * 0.05)
+            targetInner.zPosition = detailZ + 0.2
+            container.addChild(targetInner)
+
+        case .stable:
+            // Stable door (half-door style)
+            let door = SKShapeNode(rectOf: CGSize(width: w * 0.2, height: h * 0.14))
+            door.fillColor = SKColor(red: 0.3, green: 0.2, blue: 0.1, alpha: 1.0)
+            door.strokeColor = SKColor(red: 0.45, green: 0.3, blue: 0.15, alpha: 1.0)
+            door.lineWidth = 0.5
+            door.position = CGPoint(x: 0, y: -h * 0.3)
+            door.zPosition = detailZ
+            container.addChild(door)
+            // Hay bale
+            let hay = SKShapeNode(rectOf: CGSize(width: w * 0.12, height: h * 0.08))
+            hay.fillColor = SKColor(red: 0.75, green: 0.65, blue: 0.25, alpha: 0.8)
+            hay.strokeColor = .clear
+            hay.position = CGPoint(x: -w * 0.28, y: -h * 0.32)
+            hay.zPosition = detailZ
+            container.addChild(hay)
+            // Horseshoe emblem
+            let horseshoe = SKShapeNode(circleOfRadius: w * 0.06)
+            horseshoe.fillColor = .clear
+            horseshoe.strokeColor = SKColor(red: 0.6, green: 0.55, blue: 0.5, alpha: 0.9)
+            horseshoe.lineWidth = 2
+            horseshoe.position = CGPoint(x: 0, y: h * 0.1)
+            horseshoe.zPosition = detailZ
+            container.addChild(horseshoe)
 
         case .castle:
-            // Gate
-            let gate = SKShapeNode(rectOf: CGSize(width: w * 0.18, height: h * 0.22))
-            gate.fillColor = SKColor(red: 0.25, green: 0.2, blue: 0.15, alpha: 1.0)
-            gate.strokeColor = .clear
-            gate.position = CGPoint(x: 0, y: -h * 0.28)
+            // Portcullis gate with iron grid
+            let gate = SKShapeNode(rectOf: CGSize(width: w * 0.18, height: h * 0.24))
+            gate.fillColor = SKColor(red: 0.15, green: 0.1, blue: 0.05, alpha: 1.0)
+            gate.strokeColor = SKColor(red: 0.3, green: 0.25, blue: 0.2, alpha: 1.0)
+            gate.lineWidth = 1
+            gate.position = CGPoint(x: 0, y: -h * 0.26)
             gate.zPosition = detailZ
             container.addChild(gate)
-            // Corner turrets with merlons
-            for (xOff, yOff) in [(-w * 0.35, h * 0.35), (w * 0.35, h * 0.35),
-                                  (-w * 0.35, -h * 0.35), (w * 0.35, -h * 0.35)] {
-                let turret = SKShapeNode(circleOfRadius: w * 0.08)
-                turret.fillColor = type.color.darker(by: 0.1)
+            // Portcullis grid lines
+            for i in 0..<3 {
+                let gridH = SKShapeNode(rectOf: CGSize(width: w * 0.16, height: 0.5))
+                gridH.fillColor = SKColor(red: 0.35, green: 0.3, blue: 0.25, alpha: 0.7)
+                gridH.strokeColor = .clear
+                gridH.position = CGPoint(x: 0, y: -h * 0.18 - CGFloat(i) * h * 0.06)
+                gridH.zPosition = detailZ + 0.1
+                container.addChild(gridH)
+            }
+            // Corner turrets with conical tops
+            for (xOff, yOff) in [(-w * 0.38, h * 0.35), (w * 0.38, h * 0.35),
+                                  (-w * 0.38, -h * 0.35), (w * 0.38, -h * 0.35)] {
+                let turret = SKShapeNode(circleOfRadius: w * 0.09)
+                turret.fillColor = SKColor(red: 0.52, green: 0.52, blue: 0.52, alpha: 1.0)
                 turret.strokeColor = playerColor
-                turret.lineWidth = 1
+                turret.lineWidth = 1.5
                 turret.position = CGPoint(x: xOff, y: yOff)
                 turret.zPosition = detailZ
                 container.addChild(turret)
+                // Turret cap
+                let cap = SKShapeNode(circleOfRadius: w * 0.05)
+                cap.fillColor = playerColor
+                cap.strokeColor = .clear
+                cap.position = CGPoint(x: xOff, y: yOff + h * 0.04)
+                cap.zPosition = detailZ + 0.1
+                container.addChild(cap)
             }
+            // Banner
+            let banner = SKShapeNode(rectOf: CGSize(width: w * 0.06, height: h * 0.12))
+            banner.fillColor = playerColor
+            banner.strokeColor = .clear
+            banner.position = CGPoint(x: 0, y: h * 0.15)
+            banner.zPosition = detailZ
+            container.addChild(banner)
 
         case .tower:
             // Arrow slits
-            for yOff in [-h * 0.1, h * 0.1] as [CGFloat] {
-                let slit = SKShapeNode(rectOf: CGSize(width: 2, height: h * 0.15))
-                slit.fillColor = SKColor.black.withAlphaComponent(0.6)
+            for yOff in [-h * 0.12, 0.0, h * 0.12] as [CGFloat] {
+                let slit = SKShapeNode(rectOf: CGSize(width: 1.5, height: h * 0.1))
+                slit.fillColor = SKColor.black.withAlphaComponent(0.7)
                 slit.strokeColor = .clear
                 slit.position = CGPoint(x: 0, y: yOff)
                 slit.zPosition = detailZ
                 container.addChild(slit)
             }
+            // Pointed cap
+            let capPath = CGMutablePath()
+            capPath.move(to: CGPoint(x: -w * 0.4, y: h * 0.35))
+            capPath.addLine(to: CGPoint(x: 0, y: h * 0.6))
+            capPath.addLine(to: CGPoint(x: w * 0.4, y: h * 0.35))
+            capPath.closeSubpath()
+            let cap = SKShapeNode(path: capPath)
+            cap.fillColor = SKColor(red: 0.4, green: 0.35, blue: 0.3, alpha: 0.9)
+            cap.strokeColor = playerColor.withAlphaComponent(0.5)
+            cap.lineWidth = 0.5
+            cap.zPosition = detailZ
+            container.addChild(cap)
 
         case .blacksmith:
-            // Anvil shape
-            let anvil = SKShapeNode(rectOf: CGSize(width: w * 0.2, height: h * 0.12))
-            anvil.fillColor = SKColor(red: 0.3, green: 0.3, blue: 0.35, alpha: 1.0)
-            anvil.strokeColor = .clear
-            anvil.position = CGPoint(x: 0, y: -h * 0.1)
-            anvil.zPosition = detailZ
-            container.addChild(anvil)
-            // Chimney
-            let chimney = SKShapeNode(rectOf: CGSize(width: w * 0.08, height: h * 0.2))
-            chimney.fillColor = type.color.darker(by: 0.15)
+            // Anvil
+            let anvilTop = SKShapeNode(rectOf: CGSize(width: w * 0.22, height: h * 0.06))
+            anvilTop.fillColor = SKColor(red: 0.35, green: 0.35, blue: 0.4, alpha: 1.0)
+            anvilTop.strokeColor = .clear
+            anvilTop.position = CGPoint(x: -w * 0.05, y: -h * 0.06)
+            anvilTop.zPosition = detailZ
+            container.addChild(anvilTop)
+            let anvilBase = SKShapeNode(rectOf: CGSize(width: w * 0.14, height: h * 0.08))
+            anvilBase.fillColor = SKColor(red: 0.3, green: 0.3, blue: 0.35, alpha: 1.0)
+            anvilBase.strokeColor = .clear
+            anvilBase.position = CGPoint(x: -w * 0.05, y: -h * 0.14)
+            anvilBase.zPosition = detailZ
+            container.addChild(anvilBase)
+            // Chimney with smoke
+            let chimney = SKShapeNode(rectOf: CGSize(width: w * 0.1, height: h * 0.25))
+            chimney.fillColor = SKColor(red: 0.35, green: 0.28, blue: 0.2, alpha: 1.0)
             chimney.strokeColor = .clear
-            chimney.position = CGPoint(x: w * 0.3, y: h * 0.3)
+            chimney.position = CGPoint(x: w * 0.3, y: h * 0.25)
             chimney.zPosition = detailZ
             container.addChild(chimney)
+            // Forge glow
+            let glow = SKShapeNode(circleOfRadius: w * 0.08)
+            glow.fillColor = SKColor(red: 1.0, green: 0.5, blue: 0.1, alpha: 0.4)
+            glow.strokeColor = .clear
+            glow.position = CGPoint(x: w * 0.15, y: -h * 0.05)
+            glow.zPosition = detailZ - 0.1
+            container.addChild(glow)
+            let glowPulse = SKAction.repeatForever(SKAction.sequence([
+                SKAction.fadeAlpha(to: 0.2, duration: 0.8),
+                SKAction.fadeAlpha(to: 0.5, duration: 0.6)
+            ]))
+            glow.run(glowPulse)
+
+        case .market:
+            // Awning/canopy
+            let awning = SKShapeNode(rectOf: CGSize(width: w * 0.7, height: h * 0.12))
+            awning.fillColor = SKColor(red: 0.7, green: 0.15, blue: 0.1, alpha: 0.8)
+            awning.strokeColor = .clear
+            awning.position = CGPoint(x: 0, y: h * 0.2)
+            awning.zPosition = detailZ
+            container.addChild(awning)
+            // Crates
+            for xOff in [-w * 0.2, w * 0.15] as [CGFloat] {
+                let crate = SKShapeNode(rectOf: CGSize(width: w * 0.1, height: h * 0.1))
+                crate.fillColor = SKColor(red: 0.55, green: 0.4, blue: 0.2, alpha: 0.9)
+                crate.strokeColor = SKColor(red: 0.4, green: 0.3, blue: 0.12, alpha: 1.0)
+                crate.lineWidth = 0.5
+                crate.position = CGPoint(x: xOff, y: -h * 0.25)
+                crate.zPosition = detailZ
+                container.addChild(crate)
+            }
+
+        case .monastery:
+            // Stained glass window
+            let stainedGlass = SKShapeNode(circleOfRadius: w * 0.1)
+            stainedGlass.fillColor = SKColor(red: 0.4, green: 0.3, blue: 0.7, alpha: 0.7)
+            stainedGlass.strokeColor = SKColor(red: 0.6, green: 0.5, blue: 0.8, alpha: 1.0)
+            stainedGlass.lineWidth = 1
+            stainedGlass.position = CGPoint(x: 0, y: h * 0.05)
+            stainedGlass.zPosition = detailZ
+            container.addChild(stainedGlass)
+            // Door
+            let door = SKShapeNode(rectOf: CGSize(width: w * 0.14, height: h * 0.2))
+            door.fillColor = SKColor(red: 0.3, green: 0.18, blue: 0.1, alpha: 1.0)
+            door.strokeColor = .clear
+            door.position = CGPoint(x: 0, y: -h * 0.28)
+            door.zPosition = detailZ
+            container.addChild(door)
+
+        case .dock:
+            // Wooden planks extending over water
+            for i in 0..<3 {
+                let plank = SKShapeNode(rectOf: CGSize(width: w * 0.8, height: h * 0.06))
+                plank.fillColor = SKColor(red: 0.5, green: 0.35, blue: 0.15, alpha: 0.8)
+                plank.strokeColor = .clear
+                plank.position = CGPoint(x: 0, y: -h * 0.15 - CGFloat(i) * h * 0.1)
+                plank.zPosition = detailZ
+                container.addChild(plank)
+            }
+            // Mooring post
+            let post = SKShapeNode(rectOf: CGSize(width: 3, height: h * 0.2))
+            post.fillColor = SKColor(red: 0.4, green: 0.3, blue: 0.15, alpha: 1.0)
+            post.strokeColor = .clear
+            post.position = CGPoint(x: w * 0.3, y: -h * 0.05)
+            post.zPosition = detailZ
+            container.addChild(post)
+
+        case .university:
+            // Columns
+            for xOff in [-w * 0.25, 0.0, w * 0.25] as [CGFloat] {
+                let col = SKShapeNode(rectOf: CGSize(width: w * 0.05, height: h * 0.35))
+                col.fillColor = SKColor(red: 0.55, green: 0.5, blue: 0.55, alpha: 0.9)
+                col.strokeColor = .clear
+                col.position = CGPoint(x: xOff, y: -h * 0.08)
+                col.zPosition = detailZ
+                container.addChild(col)
+            }
+            // Open book emblem
+            let bookL = SKShapeNode(rectOf: CGSize(width: w * 0.08, height: h * 0.06))
+            bookL.fillColor = SKColor(red: 0.85, green: 0.8, blue: 0.65, alpha: 0.9)
+            bookL.strokeColor = .clear
+            bookL.position = CGPoint(x: -w * 0.05, y: h * 0.12)
+            bookL.zRotation = 0.15
+            bookL.zPosition = detailZ
+            container.addChild(bookL)
+            let bookR = SKShapeNode(rectOf: CGSize(width: w * 0.08, height: h * 0.06))
+            bookR.fillColor = SKColor(red: 0.85, green: 0.8, blue: 0.65, alpha: 0.9)
+            bookR.strokeColor = .clear
+            bookR.position = CGPoint(x: w * 0.05, y: h * 0.12)
+            bookR.zRotation = -0.15
+            bookR.zPosition = detailZ
+            container.addChild(bookR)
+
+        case .farm:
+            // Crop rows
+            for i in 0..<4 {
+                let row = SKShapeNode(rectOf: CGSize(width: w * 0.65, height: h * 0.04))
+                row.fillColor = SKColor(red: 0.35, green: 0.55, blue: 0.15, alpha: 0.7)
+                row.strokeColor = .clear
+                row.position = CGPoint(x: 0, y: -h * 0.25 + CGFloat(i) * h * 0.15)
+                row.zPosition = detailZ
+                container.addChild(row)
+            }
+
+        case .lumberCamp:
+            // Log pile
+            for i in 0..<3 {
+                let log = SKShapeNode(rectOf: CGSize(width: w * 0.3, height: h * 0.06))
+                log.fillColor = SKColor(red: 0.45, green: 0.3, blue: 0.12, alpha: 0.9)
+                log.strokeColor = SKColor(red: 0.35, green: 0.22, blue: 0.08, alpha: 1.0)
+                log.lineWidth = 0.5
+                log.position = CGPoint(x: w * 0.15, y: -h * 0.2 + CGFloat(i) * h * 0.08)
+                log.zPosition = detailZ
+                container.addChild(log)
+            }
+
+        case .miningCamp:
+            // Ore pile
+            for i in 0..<3 {
+                let ore = SKShapeNode(circleOfRadius: w * 0.06)
+                ore.fillColor = SKColor(red: 0.5, green: 0.45, blue: 0.35, alpha: 0.9)
+                ore.strokeColor = .clear
+                ore.position = CGPoint(x: -w * 0.15 + CGFloat(i) * w * 0.12, y: -h * 0.25)
+                ore.zPosition = detailZ
+                container.addChild(ore)
+            }
+            // Minecart
+            let cart = SKShapeNode(rectOf: CGSize(width: w * 0.15, height: h * 0.08))
+            cart.fillColor = SKColor(red: 0.4, green: 0.35, blue: 0.3, alpha: 0.9)
+            cart.strokeColor = .clear
+            cart.position = CGPoint(x: w * 0.2, y: -h * 0.15)
+            cart.zPosition = detailZ
+            container.addChild(cart)
+
+        case .siegeWorkshop:
+            // Wooden frame
+            let frame = SKShapeNode(rectOf: CGSize(width: w * 0.5, height: h * 0.04))
+            frame.fillColor = SKColor(red: 0.5, green: 0.35, blue: 0.15, alpha: 0.8)
+            frame.strokeColor = .clear
+            frame.position = CGPoint(x: 0, y: -h * 0.1)
+            frame.zPosition = detailZ
+            container.addChild(frame)
+            // Wheel
+            let wheel = SKShapeNode(circleOfRadius: w * 0.08)
+            wheel.fillColor = .clear
+            wheel.strokeColor = SKColor(red: 0.45, green: 0.3, blue: 0.15, alpha: 0.9)
+            wheel.lineWidth = 2
+            wheel.position = CGPoint(x: w * 0.2, y: -h * 0.25)
+            wheel.zPosition = detailZ
+            container.addChild(wheel)
+
+        case .wonder:
+            // Grand pillars
+            for xOff in [-w * 0.3, -w * 0.1, w * 0.1, w * 0.3] as [CGFloat] {
+                let pillar = SKShapeNode(rectOf: CGSize(width: w * 0.05, height: h * 0.5))
+                pillar.fillColor = SKColor(red: 0.8, green: 0.75, blue: 0.55, alpha: 0.9)
+                pillar.strokeColor = .clear
+                pillar.position = CGPoint(x: xOff, y: -h * 0.05)
+                pillar.zPosition = detailZ
+                container.addChild(pillar)
+            }
+            // Golden glow
+            let wGlow = SKShapeNode(circleOfRadius: w * 0.3)
+            wGlow.fillColor = SKColor(red: 1.0, green: 0.9, blue: 0.5, alpha: 0.15)
+            wGlow.strokeColor = .clear
+            wGlow.position = .zero
+            wGlow.zPosition = detailZ - 0.1
+            container.addChild(wGlow)
+            let glowPulse = SKAction.repeatForever(SKAction.sequence([
+                SKAction.fadeAlpha(to: 0.08, duration: 1.5),
+                SKAction.fadeAlpha(to: 0.2, duration: 1.5)
+            ]))
+            wGlow.run(glowPulse)
 
         default:
             break
