@@ -359,57 +359,85 @@ class HUDOverlay {
     private func setupGameButtons() {
         let btnY = viewSize.height - 36 - safeAreaTop
 
+        // Row 1: Game control buttons (right to left, properly spaced)
+        // Exit button
+        exitButton = createHUDButton(text: "Quit", x: viewSize.width - 30, y: btnY, name: "exitBtn", width: 44)
+        hudNode.addChild(exitButton)
+
+        // Pause button
+        pauseButton = createHUDButton(text: "Pause", x: viewSize.width - 84, y: btnY, name: "pauseBtn", width: 52)
+        hudNode.addChild(pauseButton)
+
+        // Help button
+        let helpBtn = createHUDButton(text: "?", x: viewSize.width - 138, y: btnY, name: "helpBtn", width: 44)
+        hudNode.addChild(helpBtn)
+
         // Speed button
-        speedButton = createHUDButton(text: "1x", x: viewSize.width - 300, y: btnY, name: "speedBtn", width: 44)
+        speedButton = createHUDButton(text: "1x", x: viewSize.width - 190, y: btnY, name: "speedBtn", width: 44)
         hudNode.addChild(speedButton)
 
+        // Row 2: Context buttons (right to left, below row 1)
+        let btnY2 = viewSize.height - 76 - safeAreaTop
+
         // Age up button
-        ageUpButton = createHUDButton(text: "AGE UP", x: viewSize.width - 240, y: btnY, name: "ageUpBtn", width: 80)
+        ageUpButton = createHUDButton(text: "AGE UP", x: viewSize.width - 48, y: btnY2, name: "ageUpBtn", width: 80)
         hudNode.addChild(ageUpButton)
 
         // Deselect button
-        deselectButton = createHUDButton(text: "Deselect", x: viewSize.width - 155, y: btnY, name: "deselectBtn", width: 62)
+        deselectButton = createHUDButton(text: "Deselect", x: viewSize.width - 127, y: btnY2, name: "deselectBtn", width: 62)
         hudNode.addChild(deselectButton)
-
-        // Help button
-        let helpBtn = createHUDButton(text: "?", x: viewSize.width - 105, y: btnY, name: "helpBtn", width: 44)
-        hudNode.addChild(helpBtn)
-
-        // Pause button
-        pauseButton = createHUDButton(text: "Pause", x: viewSize.width - 55, y: btnY, name: "pauseBtn", width: 52)
-        hudNode.addChild(pauseButton)
-
-        // Exit button
-        exitButton = createHUDButton(text: "Quit", x: viewSize.width - 10, y: btnY, name: "exitBtn", width: 44)
-        hudNode.addChild(exitButton)
     }
 
     private func setupIdleVillagerButton() {
-        idleVillagerBtn = SKNode()
-        idleVillagerBtn.position = CGPoint(x: viewSize.width - 350, y: viewSize.height - 36 - safeAreaTop)
-        idleVillagerBtn.name = "idleVillagerBtn"
-        idleVillagerBtn.isHidden = true
+        let btnY2 = viewSize.height - 76 - safeAreaTop
 
-        let bg = SKShapeNode(rectOf: CGSize(width: 60, height: 34), cornerRadius: 5)
-        bg.fillColor = SKColor(red: 0.5, green: 0.4, blue: 0.1, alpha: 0.9)
-        bg.strokeColor = SKColor(red: 0.8, green: 0.7, blue: 0.3, alpha: 1.0)
-        bg.lineWidth = 1.5
-        bg.name = "idleVillagerBtn"
-        idleVillagerBtn.addChild(bg)
+        // Civ bonuses button (row 2, after deselect)
+        let civBtn = SKNode()
+        civBtn.position = CGPoint(x: viewSize.width - 178, y: btnY2)
+        civBtn.name = "btn_showCivBonuses"
 
-        idleVillagerCountLabel = SKLabelNode(text: "Idle: 0")
-        idleVillagerCountLabel.fontSize = 12
-        idleVillagerCountLabel.fontName = "Helvetica-Bold"
-        idleVillagerCountLabel.fontColor = .yellow
-        idleVillagerCountLabel.verticalAlignmentMode = .center
-        idleVillagerCountLabel.name = "idleVillagerBtn"
-        idleVillagerBtn.addChild(idleVillagerCountLabel)
+        let civBg = SKShapeNode(rectOf: CGSize(width: 24, height: 24), cornerRadius: 4)
+        civBg.fillColor = SKColor(red: 0.35, green: 0.25, blue: 0.1, alpha: 0.9)
+        civBg.strokeColor = SKColor(red: 0.7, green: 0.55, blue: 0.25, alpha: 1.0)
+        civBg.lineWidth = 1
+        civBg.name = "btn_showCivBonuses"
+        civBtn.addChild(civBg)
 
-        hudNode.addChild(idleVillagerBtn)
+        let civIcon = SKLabelNode(text: "\u{2606}")
+        civIcon.fontSize = 14
+        civIcon.fontName = "Helvetica"
+        civIcon.fontColor = SKColor(red: 0.9, green: 0.75, blue: 0.35, alpha: 1)
+        civIcon.verticalAlignmentMode = .center
+        civIcon.name = "btn_showCivBonuses"
+        civBtn.addChild(civIcon)
 
-        // Idle military button (next to idle villager)
+        hudNode.addChild(civBtn)
+
+        // Scoreboard button (row 2, after civ bonuses)
+        let scoreBtn = SKNode()
+        scoreBtn.position = CGPoint(x: viewSize.width - 210, y: btnY2)
+        scoreBtn.name = "btn_showScoreboard"
+
+        let scoreBg = SKShapeNode(rectOf: CGSize(width: 24, height: 24), cornerRadius: 4)
+        scoreBg.fillColor = SKColor(red: 0.2, green: 0.2, blue: 0.35, alpha: 0.9)
+        scoreBg.strokeColor = SKColor(red: 0.4, green: 0.4, blue: 0.6, alpha: 1.0)
+        scoreBg.lineWidth = 1
+        scoreBg.name = "btn_showScoreboard"
+        scoreBtn.addChild(scoreBg)
+
+        let scoreIcon = SKLabelNode(text: "\u{2630}")
+        scoreIcon.fontSize = 14
+        scoreIcon.fontName = "Helvetica"
+        scoreIcon.fontColor = .white
+        scoreIcon.verticalAlignmentMode = .center
+        scoreIcon.name = "btn_showScoreboard"
+        scoreBtn.addChild(scoreIcon)
+
+        hudNode.addChild(scoreBtn)
+
+        // Idle military button (row 2, after scoreboard)
         idleMilitaryBtn = SKNode()
-        idleMilitaryBtn.position = CGPoint(x: viewSize.width - 280, y: viewSize.height - 36 - safeAreaTop)
+        idleMilitaryBtn.position = CGPoint(x: viewSize.width - 262, y: btnY2)
         idleMilitaryBtn.name = "btn_selectIdleMilitary"
         idleMilitaryBtn.isHidden = true
 
@@ -430,49 +458,28 @@ class HUDOverlay {
 
         hudNode.addChild(idleMilitaryBtn)
 
-        // Scoreboard button
-        let scoreBtn = SKNode()
-        scoreBtn.position = CGPoint(x: viewSize.width - 210, y: viewSize.height - 36 - safeAreaTop)
-        scoreBtn.name = "btn_showScoreboard"
+        // Idle villager button (row 2, after idle military)
+        idleVillagerBtn = SKNode()
+        idleVillagerBtn.position = CGPoint(x: viewSize.width - 330, y: btnY2)
+        idleVillagerBtn.name = "idleVillagerBtn"
+        idleVillagerBtn.isHidden = true
 
-        let scoreBg = SKShapeNode(rectOf: CGSize(width: 24, height: 24), cornerRadius: 4)
-        scoreBg.fillColor = SKColor(red: 0.2, green: 0.2, blue: 0.35, alpha: 0.9)
-        scoreBg.strokeColor = SKColor(red: 0.4, green: 0.4, blue: 0.6, alpha: 1.0)
-        scoreBg.lineWidth = 1
-        scoreBg.name = "btn_showScoreboard"
-        scoreBtn.addChild(scoreBg)
+        let bg = SKShapeNode(rectOf: CGSize(width: 60, height: 34), cornerRadius: 5)
+        bg.fillColor = SKColor(red: 0.5, green: 0.4, blue: 0.1, alpha: 0.9)
+        bg.strokeColor = SKColor(red: 0.8, green: 0.7, blue: 0.3, alpha: 1.0)
+        bg.lineWidth = 1.5
+        bg.name = "idleVillagerBtn"
+        idleVillagerBtn.addChild(bg)
 
-        let scoreIcon = SKLabelNode(text: "\u{2630}")
-        scoreIcon.fontSize = 14
-        scoreIcon.fontName = "Helvetica"
-        scoreIcon.fontColor = .white
-        scoreIcon.verticalAlignmentMode = .center
-        scoreIcon.name = "btn_showScoreboard"
-        scoreBtn.addChild(scoreIcon)
+        idleVillagerCountLabel = SKLabelNode(text: "Idle: 0")
+        idleVillagerCountLabel.fontSize = 12
+        idleVillagerCountLabel.fontName = "Helvetica-Bold"
+        idleVillagerCountLabel.fontColor = .yellow
+        idleVillagerCountLabel.verticalAlignmentMode = .center
+        idleVillagerCountLabel.name = "idleVillagerBtn"
+        idleVillagerBtn.addChild(idleVillagerCountLabel)
 
-        hudNode.addChild(scoreBtn)
-
-        // Civ bonuses button
-        let civBtn = SKNode()
-        civBtn.position = CGPoint(x: viewSize.width - 180, y: viewSize.height - 36 - safeAreaTop)
-        civBtn.name = "btn_showCivBonuses"
-
-        let civBg = SKShapeNode(rectOf: CGSize(width: 24, height: 24), cornerRadius: 4)
-        civBg.fillColor = SKColor(red: 0.35, green: 0.25, blue: 0.1, alpha: 0.9)
-        civBg.strokeColor = SKColor(red: 0.7, green: 0.55, blue: 0.25, alpha: 1.0)
-        civBg.lineWidth = 1
-        civBg.name = "btn_showCivBonuses"
-        civBtn.addChild(civBg)
-
-        let civIcon = SKLabelNode(text: "\u{2606}")
-        civIcon.fontSize = 14
-        civIcon.fontName = "Helvetica"
-        civIcon.fontColor = SKColor(red: 0.9, green: 0.75, blue: 0.35, alpha: 1)
-        civIcon.verticalAlignmentMode = .center
-        civIcon.name = "btn_showCivBonuses"
-        civBtn.addChild(civIcon)
-
-        hudNode.addChild(civBtn)
+        hudNode.addChild(idleVillagerBtn)
     }
 
     func updateIdleVillagerCount(player: Player) {
@@ -2137,6 +2144,7 @@ class HUDOverlay {
 
     func isPointInHUD(_ point: CGPoint) -> Bool {
         if isShowingExitConfirm { return true }
+        if point.y > viewSize.height - 80 - safeAreaTop && point.x > viewSize.width - 370 { return true }
         if point.y > viewSize.height - 40 - safeAreaTop { return true }
         if point.x < minimapSize + 20 && point.y < minimapSize + 20 { return true }
         if point.x > viewSize.width - 300 && point.y < 180 { return true }
