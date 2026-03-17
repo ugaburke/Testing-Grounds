@@ -357,9 +357,9 @@ class HUDOverlay {
     }
 
     private func setupGameButtons() {
-        let btnY = viewSize.height - 36 - safeAreaTop
+        let btnY = viewSize.height - 58 - safeAreaTop
 
-        // Row 1: Game control buttons (right to left, properly spaced)
+        // Row 1: Game control buttons (right to left, below resource bar)
         // Exit button
         exitButton = createHUDButton(text: "Quit", x: viewSize.width - 30, y: btnY, name: "exitBtn", width: 44)
         hudNode.addChild(exitButton)
@@ -377,7 +377,7 @@ class HUDOverlay {
         hudNode.addChild(speedButton)
 
         // Row 2: Context buttons (right to left, below row 1)
-        let btnY2 = viewSize.height - 76 - safeAreaTop
+        let btnY2 = viewSize.height - 98 - safeAreaTop
 
         // Age up button
         ageUpButton = createHUDButton(text: "AGE UP", x: viewSize.width - 48, y: btnY2, name: "ageUpBtn", width: 80)
@@ -389,7 +389,7 @@ class HUDOverlay {
     }
 
     private func setupIdleVillagerButton() {
-        let btnY2 = viewSize.height - 76 - safeAreaTop
+        let btnY2 = viewSize.height - 98 - safeAreaTop
 
         // Civ bonuses button (row 2, after deselect)
         let civBtn = SKNode()
@@ -552,7 +552,7 @@ class HUDOverlay {
         villagerAllocLabel.fontSize = 11
         villagerAllocLabel.fontName = "Helvetica"
         villagerAllocLabel.fontColor = SKColor(red: 0.8, green: 0.8, blue: 0.6, alpha: 0.9)
-        villagerAllocLabel.position = CGPoint(x: viewSize.width / 2, y: viewSize.height - 50 - safeAreaTop)
+        villagerAllocLabel.position = CGPoint(x: viewSize.width / 2, y: viewSize.height - 58 - safeAreaTop)
         villagerAllocLabel.horizontalAlignmentMode = .center
         villagerAllocLabel.verticalAlignmentMode = .center
         villagerAllocLabel.zPosition = 101
@@ -563,7 +563,7 @@ class HUDOverlay {
         eventLogBg = SKShapeNode(rectOf: CGSize(width: 250, height: 80), cornerRadius: 4)
         eventLogBg.fillColor = SKColor.black.withAlphaComponent(0.4)
         eventLogBg.strokeColor = .clear
-        eventLogBg.position = CGPoint(x: viewSize.width - 135, y: viewSize.height - 130 - safeAreaTop)
+        eventLogBg.position = CGPoint(x: viewSize.width - 135, y: viewSize.height - 160 - safeAreaTop)
         eventLogBg.zPosition = 99
         eventLogBg.alpha = 0
         hudNode.addChild(eventLogBg)
@@ -1808,9 +1808,37 @@ class HUDOverlay {
         hint.position = CGPoint(x: 0, y: -130)
         overlay.addChild(hint)
 
-        // Auto-dismiss after 8 seconds or on tap
+        // Close button
+        let closeBtn = SKNode()
+        closeBtn.position = CGPoint(x: 180, y: 120)
+        closeBtn.name = "scoreboardOverlay"
+
+        let closeBg = SKShapeNode(rectOf: CGSize(width: 28, height: 28), cornerRadius: 4)
+        closeBg.fillColor = SKColor(red: 0.6, green: 0.15, blue: 0.1, alpha: 0.9)
+        closeBg.strokeColor = .white
+        closeBg.lineWidth = 1
+        closeBg.name = "scoreboardOverlay"
+        closeBtn.addChild(closeBg)
+
+        let closeLabel = SKLabelNode(text: "X")
+        closeLabel.fontSize = 16
+        closeLabel.fontName = "Helvetica-Bold"
+        closeLabel.fontColor = .white
+        closeLabel.verticalAlignmentMode = .center
+        closeLabel.name = "scoreboardOverlay"
+        closeBtn.addChild(closeLabel)
+
+        overlay.addChild(closeBtn)
+
+        // Make all children tappable for close
+        overlay.isUserInteractionEnabled = false
+        for child in overlay.children {
+            if child.name == nil { child.name = "scoreboardOverlay" }
+        }
+
+        // Auto-dismiss after 15 seconds if not manually closed
         overlay.run(SKAction.sequence([
-            SKAction.wait(forDuration: 8.0),
+            SKAction.wait(forDuration: 15.0),
             SKAction.fadeOut(withDuration: 0.3),
             SKAction.removeFromParent()
         ]))
@@ -2071,6 +2099,18 @@ class HUDOverlay {
                 animateButtonPress(node)
             }
 
+            // Scoreboard tap-to-close
+            if name == "scoreboardOverlay" {
+                if let overlay = hudNode.childNode(withName: "scoreboardOverlay") {
+                    overlay.removeAllActions()
+                    overlay.run(SKAction.sequence([
+                        SKAction.fadeOut(withDuration: 0.15),
+                        SKAction.removeFromParent()
+                    ]))
+                }
+                return nil
+            }
+
             // Exit confirmation
             if name == "exitConfirmYes" { return .confirmExit }
             if name == "exitConfirmNo" || (name == "exitConfirm" && isShowingExitConfirm) { return .cancelExit }
@@ -2144,7 +2184,7 @@ class HUDOverlay {
 
     func isPointInHUD(_ point: CGPoint) -> Bool {
         if isShowingExitConfirm { return true }
-        if point.y > viewSize.height - 80 - safeAreaTop && point.x > viewSize.width - 370 { return true }
+        if point.y > viewSize.height - 120 - safeAreaTop && point.x > viewSize.width - 370 { return true }
         if point.y > viewSize.height - 40 - safeAreaTop { return true }
         if point.x < minimapSize + 20 && point.y < minimapSize + 20 { return true }
         if point.x > viewSize.width - 300 && point.y < 180 { return true }

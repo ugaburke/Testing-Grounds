@@ -481,7 +481,7 @@ class GameScene: SKScene {
 
         // Tile rendering (throttled — faster during active pan)
         tileRenderTimer += deltaTime
-        let renderInterval: CGFloat = (isPanning || panVelocity.x != 0 || panVelocity.y != 0) ? 0.1 : 0.25
+        let renderInterval: CGFloat = (isPanning || panVelocity.x != 0 || panVelocity.y != 0) ? 0.05 : 0.2
         if tileRenderTimer >= renderInterval {
             tileRenderTimer = 0
             renderTiles()
@@ -702,7 +702,12 @@ class GameScene: SKScene {
         cameraPosition.x = max(0, min(mapWidth, cameraPosition.x))
         cameraPosition.y = max(0, min(mapHeight, cameraPosition.y))
 
-        hudCamera.position = cameraPosition
+        // Smooth camera interpolation for fluid movement
+        let lerpFactor: CGFloat = isPanning ? 0.55 : 0.35
+        let currentPos = hudCamera.position
+        let targetX = currentPos.x + (cameraPosition.x - currentPos.x) * lerpFactor
+        let targetY = currentPos.y + (cameraPosition.y - currentPos.y) * lerpFactor
+        hudCamera.position = CGPoint(x: targetX, y: targetY)
         hudCamera.setScale(zoomScale)
     }
 
@@ -712,8 +717,8 @@ class GameScene: SKScene {
         if abs(panVelocity.x) > 1 || abs(panVelocity.y) > 1 {
             cameraPosition.x += panVelocity.x * deltaTime
             cameraPosition.y += panVelocity.y * deltaTime
-            // Frame-rate independent decay (~0.92 per frame at 60fps)
-            let decayRate: CGFloat = 60.0 * -log(0.92)
+            // Frame-rate independent decay (~0.95 per frame at 60fps for smoother coasting)
+            let decayRate: CGFloat = 60.0 * -log(0.95)
             let decay = exp(-decayRate * deltaTime)
             panVelocity.x *= decay
             panVelocity.y *= decay
@@ -957,7 +962,7 @@ class GameScene: SKScene {
                 let moveDelta = CGFloat(max(now - lastTouchMoveTime, 1.0 / 120.0))
                 lastTouchMoveTime = now
                 let instantVelocity = CGPoint(x: -dx / moveDelta, y: -dy / moveDelta)
-                let smoothing: CGFloat = 0.3
+                let smoothing: CGFloat = 0.45
                 panVelocity = CGPoint(
                     x: panVelocity.x * (1 - smoothing) + instantVelocity.x * smoothing,
                     y: panVelocity.y * (1 - smoothing) + instantVelocity.y * smoothing
@@ -1384,7 +1389,7 @@ class GameScene: SKScene {
                     totalUnitsTrainedHuman += 1
                 } else {
                     if !humanPlayer.canAfford(type.cost) {
-                        hud.showStatus("Not enough resources!")
+                        hud.showStatus(resourceShortageMessage(cost: type.cost, player: humanPlayer))
                     } else if humanPlayer.population >= humanPlayer.populationCap {
                         hud.showStatus("Need more houses!")
                     } else {
@@ -1426,7 +1431,7 @@ class GameScene: SKScene {
                 return
             }
             guard humanPlayer.canAfford(tech.cost) else {
-                hud.showStatus("Not enough resources!")
+                hud.showStatus(resourceShortageMessage(cost: tech.cost, player: humanPlayer))
                 return
             }
             humanPlayer.spend(tech.cost)
@@ -1611,7 +1616,7 @@ class GameScene: SKScene {
 
     private func handleBuildingPlacement(type: BuildingType, at gridPos: GridPosition) {
         guard humanPlayer.canAfford(type.cost) else {
-            hud.showStatus("Not enough resources!")
+            hud.showStatus(resourceShortageMessage(cost: type.cost, player: humanPlayer))
             return
         }
         guard humanPlayer.currentAge.rawValue >= type.requiredAge.rawValue else {
@@ -1712,6 +1717,16 @@ class GameScene: SKScene {
         }
     }
 
+    private func resourceShortageMessage(cost: Resources, player: Player) -> String {
+        var needed: [String] = []
+        let r = player.resources
+        if cost.food > r.food { needed.append("F:\(cost.food - r.food)") }
+        if cost.wood > r.wood { needed.append("W:\(cost.wood - r.wood)") }
+        if cost.gold > r.gold { needed.append("G:\(cost.gold - r.gold)") }
+        if cost.stone > r.stone { needed.append("S:\(cost.stone - r.stone)") }
+        return "Need \(needed.joined(separator: " ")) more"
+    }
+
     private func attemptAgeAdvance() {
         guard !humanPlayer.isAdvancingAge else {
             hud.showStatus("Already advancing!")
@@ -1725,13 +1740,7 @@ class GameScene: SKScene {
         let nextAge = Age(rawValue: humanPlayer.currentAge.rawValue + 1)!
         let cost = nextAge.advanceCost
         guard humanPlayer.canAfford(cost) else {
-            var needed: [String] = []
-            let r = humanPlayer.resources
-            if cost.food > r.food { needed.append("F:\(cost.food - r.food)") }
-            if cost.wood > r.wood { needed.append("W:\(cost.wood - r.wood)") }
-            if cost.gold > r.gold { needed.append("G:\(cost.gold - r.gold)") }
-            if cost.stone > r.stone { needed.append("S:\(cost.stone - r.stone)") }
-            hud.showStatus("Need \(needed.joined(separator: " ")) more for \(nextAge.displayName)")
+            hud.showStatus("\(resourceShortageMessage(cost: cost, player: humanPlayer)) for \(nextAge.displayName)")
             return
         }
 

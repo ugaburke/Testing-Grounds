@@ -180,41 +180,31 @@ class FogOfWar {
                         tileNode.run(SKAction.fadeAlpha(to: 1.0, duration: fadeDuration), withKey: "fogFade")
                     }
                 } else if tile.isExplored {
-                    // Explored but not visible - smooth boundary transition
+                    // Explored but not visible — dimmed with consistent fog overlay
                     let visNeighbors = visibleNeighborCount(x: x, y: y)
 
-                    // Tile alpha: more visible neighbors means brighter (smoother edge)
+                    // Tile stays visible but dimmed
                     let tileAlpha: CGFloat = visNeighbors > 0
-                        ? min(0.9, 0.65 + CGFloat(visNeighbors) * 0.035)
-                        : 0.65
+                        ? min(0.85, 0.6 + CGFloat(visNeighbors) * 0.04)
+                        : 0.6
 
                     if let tileNode = tile.node, abs(tileNode.alpha - tileAlpha) > 0.03 {
                         tileNode.run(SKAction.fadeAlpha(to: tileAlpha, duration: fadeDuration), withKey: "fogFade")
                     }
 
-                    // Fog overlay alpha: boundary tiles get lighter fog for gradient effect
+                    // Fog overlay: single alpha value (no separate fill alpha)
                     let fogTargetAlpha: CGFloat = visNeighbors > 0
-                        ? max(0.2, 1.0 - CGFloat(visNeighbors) * 0.1)
-                        : 1.0
-
-                    // Fog fill opacity also varies at boundary for smoother blend
-                    let fogFillAlpha: CGFloat = visNeighbors > 0
-                        ? max(0.08, 0.25 - CGFloat(visNeighbors) * 0.02)
-                        : 0.25
+                        ? max(0.15, 0.4 - CGFloat(visNeighbors) * 0.04)
+                        : 0.4
 
                     if let fogNode = fogNodes[y][x] {
-                        // Reuse existing fog node — adjust alpha
                         if abs(fogNode.alpha - fogTargetAlpha) > 0.05 {
                             fogNode.run(SKAction.fadeAlpha(to: fogTargetAlpha, duration: fadeDuration), withKey: "fogFade")
                         }
-                        fogNode.fillColor = SKColor.black.withAlphaComponent(fogFillAlpha)
+                        fogNode.fillColor = SKColor.black
                     } else {
-                        // Use slightly larger fog node at boundaries for overlap blending
-                        let nodeSize = visNeighbors > 0
-                            ? CGSize(width: map.tileSize * 1.15, height: map.tileSize * 1.15)
-                            : CGSize(width: map.tileSize, height: map.tileSize)
-                        let fogNode = SKShapeNode(rectOf: nodeSize, cornerRadius: visNeighbors > 0 ? map.tileSize * 0.15 : 0)
-                        fogNode.fillColor = SKColor.black.withAlphaComponent(fogFillAlpha)
+                        let fogNode = SKShapeNode(rectOf: CGSize(width: map.tileSize * 1.05, height: map.tileSize * 1.05))
+                        fogNode.fillColor = SKColor.black
                         fogNode.strokeColor = .clear
                         fogNode.position = map.gridToWorld(GridPosition(x: x, y: y))
                         fogNode.zPosition = 50
@@ -224,29 +214,30 @@ class FogOfWar {
                         fogNodes[y][x] = fogNode
                     }
                 } else {
-                    // Unexplored — smooth boundary for tiles adjacent to explored areas
+                    // Unexplored — fully black with soft edges at boundary
                     let expNeighbors = exploredNeighborCount(x: x, y: y)
 
                     if let tileNode = tile.node, tileNode.alpha > 0.05 {
                         tileNode.run(SKAction.fadeAlpha(to: 0.0, duration: fadeDuration), withKey: "fogFade")
                     }
 
-                    // Boundary unexplored tiles get softer fog for gradient transition
-                    let unexploredFillAlpha: CGFloat = expNeighbors > 0
-                        ? max(0.45, 0.75 - CGFloat(expNeighbors) * 0.04)
-                        : 0.75
+                    // Unexplored tiles are fully opaque black; boundary tiles slightly softer
+                    let fogTargetAlpha: CGFloat = expNeighbors > 0
+                        ? max(0.7, 0.95 - CGFloat(expNeighbors) * 0.04)
+                        : 1.0
 
                     if let fogNode = fogNodes[y][x] {
-                        fogNode.fillColor = SKColor.black.withAlphaComponent(unexploredFillAlpha)
+                        if abs(fogNode.alpha - fogTargetAlpha) > 0.05 {
+                            fogNode.run(SKAction.fadeAlpha(to: fogTargetAlpha, duration: fadeDuration), withKey: "fogFade")
+                        }
+                        fogNode.fillColor = SKColor.black
                     } else {
-                        let nodeSize = expNeighbors > 0
-                            ? CGSize(width: map.tileSize * 1.1, height: map.tileSize * 1.1)
-                            : CGSize(width: map.tileSize, height: map.tileSize)
-                        let fogNode = SKShapeNode(rectOf: nodeSize, cornerRadius: expNeighbors > 0 ? map.tileSize * 0.1 : 0)
-                        fogNode.fillColor = SKColor.black.withAlphaComponent(unexploredFillAlpha)
+                        let fogNode = SKShapeNode(rectOf: CGSize(width: map.tileSize * 1.05, height: map.tileSize * 1.05))
+                        fogNode.fillColor = SKColor.black
                         fogNode.strokeColor = .clear
                         fogNode.position = map.gridToWorld(GridPosition(x: x, y: y))
                         fogNode.zPosition = 50
+                        fogNode.alpha = fogTargetAlpha
                         map.mapNode.addChild(fogNode)
                         fogNodes[y][x] = fogNode
                     }
