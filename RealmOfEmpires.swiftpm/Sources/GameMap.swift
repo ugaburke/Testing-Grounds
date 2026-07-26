@@ -1238,7 +1238,7 @@ class GameMap {
                     // Animate shore foam alpha pulsing
                     node.enumerateChildNodes(withName: "shoreFoam") { foam, _ in
                         let foamOffset = CGFloat(x * 11 + y * 19)
-                        let foamAlpha = 0.15 + 0.10 * (0.5 + 0.5 * sin(time * 1.2 + foamOffset))
+                        let foamAlpha = 0.15 + 0.20 * (0.5 + 0.5 * sin(time * 1.2 + foamOffset))
                         (foam as? SKShapeNode)?.fillColor = SKColor.white.withAlphaComponent(foamAlpha)
                     }
                 } else if tile.terrain == .gold {
