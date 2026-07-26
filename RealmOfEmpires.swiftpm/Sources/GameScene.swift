@@ -104,6 +104,17 @@ class GameScene: SKScene {
     var ambientBirdTimer: CGFloat = 0
     var deerUpdateTimer: CGFloat = 0
 
+    // Ambient particle system
+    var ambientParticleTimer: CGFloat = 0
+
+    // Screen shake
+    var screenShakeOffset: CGPoint = .zero
+    var screenShakeTimer: CGFloat = 0
+    var screenShakeIntensity: CGFloat = 0
+
+    // Lightning flash tracking
+    var lastLightningTime: TimeInterval = 0
+
     // Tutorial
     var tutorialStep: Int = -1  // -1 means no tutorial
     var tutorialOverlay: SKNode?
@@ -523,6 +534,22 @@ class GameScene: SKScene {
         // Deer wandering (every frame, internal timer per herd)
         updateDeerHerds(deltaTime: deltaTime)
 
+        // Ambient particles
+        updateAmbientParticles(deltaTime: deltaTime)
+
+        // Screen shake countdown
+        if screenShakeTimer > 0 {
+            screenShakeTimer -= rawDelta
+            let shakeX = CGFloat.random(in: -screenShakeIntensity...screenShakeIntensity) * 4.0
+            let shakeY = CGFloat.random(in: -screenShakeIntensity...screenShakeIntensity) * 4.0
+            screenShakeOffset = CGPoint(x: shakeX, y: shakeY)
+            if screenShakeTimer <= 0 {
+                screenShakeTimer = 0
+                screenShakeOffset = .zero
+                screenShakeIntensity = 0
+            }
+        }
+
         // Day/Night cycle
         dayNightTimer += deltaTime
         if dayNightTimer >= dayLength { dayNightTimer = 0 }
@@ -663,6 +690,168 @@ class GameScene: SKScene {
         }
     }
 
+    // MARK: - Ambient Particles
+
+    private func updateAmbientParticles(deltaTime: CGFloat) {
+        ambientParticleTimer += deltaTime
+        let spawnInterval = CGFloat.random(in: 0.3...0.5)
+        guard ambientParticleTimer >= spawnInterval else { return }
+        ambientParticleTimer = 0
+
+        // Cap total ambient particles
+        let existingCount = gameWorld.children.filter { $0.name == "ambientParticle" }.count
+        guard existingCount < 18 else { return }
+
+        // Determine current day phase for firefly spawning
+        let progress = dayNightTimer / dayLength
+        let isNight = progress >= 0.8
+
+        // Spawn 1-2 particles
+        let count = Int.random(in: 1...2)
+        for _ in 0..<count {
+            // Random screen position within viewport
+            let halfWidth = size.width * zoomScale * 0.5
+            let halfHeight = size.height * zoomScale * 0.5
+            let screenX = CGFloat.random(in: -halfWidth...halfWidth)
+            let screenY = CGFloat.random(in: -halfHeight...halfHeight)
+            // Convert screen-relative position to world position
+            let worldX = cameraPosition.x + screenX
+            let worldY = cameraPosition.y + screenY
+
+            let worldPos = CGPoint(x: worldX, y: worldY)
+            let gridPos = gameMap.worldToGrid(worldPos)
+
+            // Check for nearby trees to decide particle type
+            var hasNearbyTrees = false
+            for dy in -2...2 {
+                for dx in -2...2 {
+                    let checkPos = GridPosition(x: gridPos.x + dx, y: gridPos.y + dy)
+                    if gameMap.isValid(checkPos) && gameMap.tiles[checkPos.y][checkPos.x].terrain == .forest {
+                        hasNearbyTrees = true
+                        break
+                    }
+                }
+                if hasNearbyTrees { break }
+            }
+
+            // Pick particle type
+            let roll = CGFloat.random(in: 0...1)
+            if isNight && roll < 0.35 {
+                // Firefly (only at night)
+                spawnFirefly(at: worldPos)
+            } else if hasNearbyTrees && roll < 0.55 {
+                // Falling leaf (only near trees)
+                spawnFallingLeaf(at: worldPos)
+            } else {
+                // Dust mote (always available)
+                spawnDustMote(at: worldPos)
+            }
+        }
+    }
+
+    private func spawnDustMote(at position: CGPoint) {
+        let radius = CGFloat.random(in: 1.0...1.5)
+        let mote = SKShapeNode(circleOfRadius: radius)
+        mote.name = "ambientParticle"
+        mote.fillColor = SKColor(red: 0.95, green: 0.9, blue: 0.8, alpha: CGFloat.random(in: 0.15...0.25))
+        mote.strokeColor = .clear
+        mote.position = position
+        mote.zPosition = 45
+
+        let duration = TimeInterval(CGFloat.random(in: 3.0...5.0))
+        let driftX = CGFloat.random(in: -15...15)
+        let driftY = CGFloat.random(in: 10...25)
+
+        mote.run(SKAction.sequence([
+            SKAction.group([
+                SKAction.moveBy(x: driftX, y: driftY, duration: duration),
+                SKAction.sequence([
+                    SKAction.wait(forDuration: duration * 0.7),
+                    SKAction.fadeOut(withDuration: duration * 0.3)
+                ])
+            ]),
+            SKAction.removeFromParent()
+        ]))
+        gameWorld.addChild(mote)
+    }
+
+    private func spawnFallingLeaf(at position: CGPoint) {
+        let leaf = SKShapeNode(ellipseOf: CGSize(width: 3.0, height: 1.5))
+        leaf.name = "ambientParticle"
+        let greenBrown = CGFloat.random(in: 0...1)
+        let r: CGFloat = 0.3 + greenBrown * 0.3
+        let g: CGFloat = 0.45 - greenBrown * 0.15
+        let b: CGFloat = 0.1
+        leaf.fillColor = SKColor(red: r, green: g, blue: b, alpha: 0.4)
+        leaf.strokeColor = .clear
+        leaf.position = position
+        leaf.zPosition = 45
+
+        let duration = TimeInterval(CGFloat.random(in: 2.0...4.0))
+        let driftX = CGFloat.random(in: -20...20)
+        let driftY = CGFloat.random(in: -30 ... -15)
+        let rotation = CGFloat.random(in: -3...3)
+
+        leaf.run(SKAction.sequence([
+            SKAction.group([
+                SKAction.moveBy(x: driftX, y: driftY, duration: duration),
+                SKAction.rotate(byAngle: rotation, duration: duration),
+                SKAction.sequence([
+                    SKAction.wait(forDuration: duration * 0.65),
+                    SKAction.fadeOut(withDuration: duration * 0.35)
+                ])
+            ]),
+            SKAction.removeFromParent()
+        ]))
+        gameWorld.addChild(leaf)
+    }
+
+    private func spawnFirefly(at position: CGPoint) {
+        let firefly = SKShapeNode(circleOfRadius: 0.8)
+        firefly.name = "ambientParticle"
+        firefly.fillColor = SKColor(red: 0.8, green: 1.0, blue: 0.3, alpha: CGFloat.random(in: 0.3...0.5))
+        firefly.strokeColor = .clear
+        firefly.position = position
+        firefly.zPosition = 45
+        // Add a small glow
+        firefly.glowWidth = 1.5
+
+        let duration = TimeInterval(CGFloat.random(in: 2.0...3.0))
+        let arcX1 = CGFloat.random(in: -8...8)
+        let arcY1 = CGFloat.random(in: -5...5)
+        let arcX2 = CGFloat.random(in: -8...8)
+        let arcY2 = CGFloat.random(in: -5...5)
+
+        let pulseAction = SKAction.repeatForever(SKAction.sequence([
+            SKAction.fadeAlpha(to: CGFloat.random(in: 0.1...0.2), duration: 0.3),
+            SKAction.fadeAlpha(to: CGFloat.random(in: 0.4...0.5), duration: 0.3)
+        ]))
+
+        let moveAction = SKAction.sequence([
+            SKAction.moveBy(x: arcX1, y: arcY1, duration: duration * 0.5),
+            SKAction.moveBy(x: arcX2, y: arcY2, duration: duration * 0.5)
+        ])
+
+        firefly.run(pulseAction, withKey: "pulse")
+        firefly.run(SKAction.sequence([
+            moveAction,
+            SKAction.fadeOut(withDuration: 0.3),
+            SKAction.removeFromParent()
+        ]))
+        gameWorld.addChild(firefly)
+    }
+
+    // MARK: - Screen Shake
+
+    func triggerScreenShake(intensity: CGFloat) {
+        let clampedIntensity = max(0, min(1, intensity))
+        // Only override if new shake is stronger than current
+        if clampedIntensity > screenShakeIntensity {
+            screenShakeIntensity = clampedIntensity
+        }
+        screenShakeTimer = CGFloat.random(in: 0.15...0.2)
+    }
+
     private func checkAttackAlerts() {
         guard gameTime - lastAttackAlertTime > 10.0 else { return }
 
@@ -705,8 +894,8 @@ class GameScene: SKScene {
         // Smooth camera interpolation for fluid movement
         let lerpFactor: CGFloat = isPanning ? 0.55 : 0.35
         let currentPos = hudCamera.position
-        let targetX = currentPos.x + (cameraPosition.x - currentPos.x) * lerpFactor
-        let targetY = currentPos.y + (cameraPosition.y - currentPos.y) * lerpFactor
+        let targetX = currentPos.x + (cameraPosition.x - currentPos.x) * lerpFactor + screenShakeOffset.x
+        let targetY = currentPos.y + (cameraPosition.y - currentPos.y) * lerpFactor + screenShakeOffset.y
         hudCamera.position = CGPoint(x: targetX, y: targetY)
         hudCamera.setScale(zoomScale)
     }
@@ -790,17 +979,77 @@ class GameScene: SKScene {
 
     private func updateDayNightCycle() {
         let progress = dayNightTimer / dayLength
-        let timeOfDay: TimeOfDay
-        if progress < 0.2 { timeOfDay = .dawn }
-        else if progress < 0.5 { timeOfDay = .day }
-        else if progress < 0.7 { timeOfDay = .dusk }
-        else { timeOfDay = .night }
 
         if dayNightOverlay == nil {
             dayNightOverlay = spriteFactory.createDayNightOverlay(viewSize: size)
             hudCamera.addChild(dayNightOverlay!)
         }
-        dayNightOverlay?.fillColor = timeOfDay.ambientColor.withAlphaComponent(timeOfDay.ambientAlpha)
+
+        // Enhanced day/night cycle with smooth interpolation between phases
+        let overlayColor: SKColor
+        let overlayAlpha: CGFloat
+
+        if progress < 0.2 {
+            // Dawn phase: pink-gold tint
+            let dawnProgress = progress / 0.2
+            let r: CGFloat = 1.0
+            let g: CGFloat = 0.65 + dawnProgress * 0.15
+            let b: CGFloat = 0.5 + dawnProgress * 0.1
+            // Fade from alpha 0.1 at start of dawn down to 0 at end
+            overlayAlpha = 0.1 * (1.0 - dawnProgress)
+            overlayColor = SKColor(red: r, green: g, blue: b, alpha: 1.0)
+        } else if progress < 0.7 {
+            // Day phase: clear, no overlay
+            overlayAlpha = 0
+            overlayColor = .clear
+        } else if progress < 0.8 {
+            // Golden hour: warm amber overlay
+            let goldenProgress = (progress - 0.7) / 0.1
+            let r: CGFloat = 1.0
+            let g: CGFloat = 0.75 - goldenProgress * 0.1
+            let b: CGFloat = 0.3
+            // Ramp alpha from 0 to 0.1 across golden hour
+            overlayAlpha = goldenProgress * 0.1
+            overlayColor = SKColor(red: r, green: g, blue: b, alpha: 1.0)
+        } else {
+            // Night phase: deep blue-black tint
+            let nightProgress = (progress - 0.8) / 0.2
+            let r: CGFloat = 0.05
+            let g: CGFloat = 0.05
+            let b: CGFloat = 0.2
+            // Ramp alpha from 0.1 to 0.25 across the night
+            overlayAlpha = 0.1 + nightProgress * 0.15
+            overlayColor = SKColor(red: r, green: g, blue: b, alpha: 1.0)
+        }
+
+        // Additional darkening during rain
+        var finalAlpha = overlayAlpha
+        if currentWeather == .rain {
+            finalAlpha += 0.05
+        }
+
+        dayNightOverlay?.fillColor = overlayColor.withAlphaComponent(finalAlpha)
+
+        // Lightning flash during rain (every 15-20 seconds)
+        if currentWeather == .rain && gameTime - lastLightningTime > Double.random(in: 15...20) {
+            lastLightningTime = gameTime
+            // Brief white flash on the day/night overlay
+            dayNightOverlay?.fillColor = SKColor.white.withAlphaComponent(0.3)
+            // Fade back to normal after 0.1 seconds
+            dayNightOverlay?.run(SKAction.sequence([
+                SKAction.wait(forDuration: 0.05),
+                SKAction.customAction(withDuration: 0.1) { node, elapsed in
+                    guard let overlay = node as? SKShapeNode else { return }
+                    let t = elapsed / 0.1
+                    // Interpolate from white flash back to normal
+                    let flashAlpha = 0.3 * (1.0 - t) + finalAlpha * t
+                    let flashR = 1.0 * (1.0 - t)
+                    let flashG = 1.0 * (1.0 - t)
+                    let flashB = 1.0 * (1.0 - t)
+                    overlay.fillColor = SKColor(red: flashR, green: flashG, blue: flashB, alpha: flashAlpha)
+                }
+            ]))
+        }
     }
 
     // MARK: - Wonder Victory Timer

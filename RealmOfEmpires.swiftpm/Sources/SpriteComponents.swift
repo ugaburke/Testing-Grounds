@@ -32,12 +32,14 @@ class SpriteFactory {
                                 space: colorSpace, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
         let center = CGFloat(size) / 2.0
         let radius = CGFloat(size) / 2.0
+        // Elliptical shadow: 1.3x wider than tall to suggest above-right light source
+        let ellipseScaleX: CGFloat = 1.0 / 1.3  // compress x contribution so gradient extends wider
         for y in 0..<size {
             for x in 0..<size {
                 let dx = CGFloat(x) - center
                 let dy = CGFloat(y) - center
-                let dist = sqrt(dx * dx + dy * dy) / radius
-                let alpha = max(0, 1.0 - dist) * 0.3
+                let dist = sqrt((dx * ellipseScaleX) * (dx * ellipseScaleX) + dy * dy) / radius
+                let alpha = max(0, 1.0 - dist) * 0.35
                 let ptr = context.data!.assumingMemoryBound(to: UInt8.self)
                 let offset = (y * size + x) * 4
                 ptr[offset] = 0
@@ -58,7 +60,33 @@ class SpriteFactory {
         container.zPosition = 10
 
         let playerColor = SpriteFactory.playerColors[unit.ownerID % SpriteFactory.playerColors.count]
-        let bodySize = tileSize * 0.85
+        var bodySize = tileSize * 0.85
+
+        // Scale differentiation by unit category
+        switch unit.type {
+        case .villager:
+            bodySize = tileSize * 0.7
+        case .militia, .manAtArms, .spearman, .samurai, .berserk:
+            bodySize = tileSize * 0.85
+        case .scout, .knight, .lightCavalry, .camelRider, .cataphract, .mangudai:
+            bodySize = tileSize * 0.95
+        case .batteringRam, .mangonel, .trebuchet:
+            bodySize = tileSize * 1.1
+        case .warElephant:
+            bodySize = tileSize * 1.25
+        case .archer, .crossbowman, .handCannoneer, .chuKoNu, .skirmisher, .longbowman:
+            bodySize = tileSize * 0.8
+        case .monk:
+            bodySize = tileSize * 0.75
+        case .tradeCart:
+            bodySize = tileSize * 0.9
+        case .fishingBoat, .warGalley, .fireShip:
+            bodySize = tileSize * 1.0
+        case .petard:
+            bodySize = tileSize * 0.65
+        default:
+            bodySize = tileSize * 0.85
+        }
 
         // Shadow (gradient)
         if let shadowTex = shadowTexture {
@@ -148,6 +176,29 @@ class SpriteFactory {
             rider.strokeColor = .clear
             rider.position = CGPoint(x: 0, y: bodySize * 0.28)
             bodyContainer.addChild(rider)
+            // Tail at the back
+            let tail = SKShapeNode(rectOf: CGSize(width: bodySize * 0.06, height: bodySize * 0.18))
+            tail.fillColor = SKColor(red: 0.45, green: 0.3, blue: 0.15, alpha: 0.9)
+            tail.strokeColor = .clear
+            tail.position = CGPoint(x: -bodySize * 0.48, y: bodySize * 0.05)
+            tail.zRotation = 0.4
+            tail.name = "horseTail"
+            bodyContainer.addChild(tail)
+            // Saddle detail
+            let saddle = SKShapeNode(rectOf: CGSize(width: bodySize * 0.2, height: bodySize * 0.08))
+            saddle.fillColor = SKColor(red: 0.5, green: 0.28, blue: 0.1, alpha: 0.9)
+            saddle.strokeColor = .clear
+            saddle.position = CGPoint(x: 0, y: bodySize * 0.18)
+            saddle.name = "saddle"
+            bodyContainer.addChild(saddle)
+            // Reins from horse head toward rider
+            let reins = SKShapeNode(rectOf: CGSize(width: bodySize * 0.3, height: 0.5))
+            reins.fillColor = SKColor(red: 0.3, green: 0.2, blue: 0.1, alpha: 0.8)
+            reins.strokeColor = .clear
+            reins.position = CGPoint(x: bodySize * 0.2, y: bodySize * 0.23)
+            reins.zRotation = -0.3
+            reins.name = "reins"
+            bodyContainer.addChild(reins)
         } else if unit.type.isRanged {
             // Diamond shape for ranged units
             let path = CGMutablePath()
@@ -182,6 +233,26 @@ class SpriteFactory {
             arrowhead.strokeColor = .clear
             arrowhead.position = CGPoint(x: bodySize * 0.28, y: 0)
             bodyContainer.addChild(arrowhead)
+            // Quiver on the back
+            let quiver = SKShapeNode(rectOf: CGSize(width: bodySize * 0.06, height: bodySize * 0.25))
+            quiver.fillColor = SKColor(red: 0.45, green: 0.3, blue: 0.12, alpha: 0.85)
+            quiver.strokeColor = SKColor(red: 0.35, green: 0.22, blue: 0.08, alpha: 0.6)
+            quiver.lineWidth = 0.5
+            quiver.position = CGPoint(x: -bodySize * 0.22, y: bodySize * 0.05)
+            quiver.zRotation = 0.25
+            quiver.name = "quiver"
+            bodyContainer.addChild(quiver)
+            // Feather fletchings on arrow (V shape at arrow base)
+            let fletchPath = CGMutablePath()
+            fletchPath.move(to: CGPoint(x: -bodySize * 0.08, y: bodySize * 0.03))
+            fletchPath.addLine(to: CGPoint(x: -bodySize * 0.1, y: 0))
+            fletchPath.addLine(to: CGPoint(x: -bodySize * 0.08, y: -bodySize * 0.03))
+            let fletching = SKShapeNode(path: fletchPath)
+            fletching.fillColor = .clear
+            fletching.strokeColor = SKColor(red: 0.8, green: 0.75, blue: 0.65, alpha: 0.7)
+            fletching.lineWidth = 1
+            fletching.name = "fletching"
+            bodyContainer.addChild(fletching)
         } else if unit.type == .villager {
             body = SKShapeNode(circleOfRadius: bodySize * 0.35)
             // Straw hat
@@ -457,6 +528,31 @@ class SpriteFactory {
             guard_.position = CGPoint(x: bodySize * 0.18, y: -bodySize * 0.05)
             guard_.zRotation = -0.3
             bodyContainer.addChild(guard_)
+            // Visor slit on helmet
+            let visor = SKShapeNode(rectOf: CGSize(width: bodySize * 0.08, height: bodySize * 0.02))
+            visor.fillColor = SKColor(red: 0.15, green: 0.12, blue: 0.1, alpha: 0.9)
+            visor.strokeColor = .clear
+            visor.position = CGPoint(x: 0, y: bodySize * 0.28)
+            visor.name = "helmetVisor"
+            bodyContainer.addChild(visor)
+            // Chain mail texture hint: 3 horizontal gray lines on body
+            for i in 0..<3 {
+                let mailLine = SKShapeNode(rectOf: CGSize(width: bodySize * 0.15, height: 0.5))
+                mailLine.fillColor = SKColor(red: 0.6, green: 0.6, blue: 0.65, alpha: 0.3)
+                mailLine.strokeColor = .clear
+                mailLine.position = CGPoint(x: 0, y: bodySize * 0.08 - CGFloat(i) * bodySize * 0.08)
+                mailLine.name = "chainMail"
+                bodyContainer.addChild(mailLine)
+            }
+            // Boot detail: two small dark rectangles at bottom
+            for xOff in [-bodySize * 0.1, bodySize * 0.1] as [CGFloat] {
+                let boot = SKShapeNode(rectOf: CGSize(width: bodySize * 0.08, height: bodySize * 0.06))
+                boot.fillColor = SKColor(red: 0.2, green: 0.15, blue: 0.1, alpha: 0.85)
+                boot.strokeColor = .clear
+                boot.position = CGPoint(x: xOff, y: -bodySize * 0.32)
+                boot.name = "boot"
+                bodyContainer.addChild(boot)
+            }
         }
 
         body.fillColor = playerColor
@@ -713,6 +809,15 @@ class SpriteFactory {
         body.name = "buildingBody"
         container.addChild(body)
 
+        // Ground shadow beneath building
+        let groundShadow = SKShapeNode(ellipseOf: CGSize(width: w * 1.1, height: h * 0.3))
+        groundShadow.fillColor = SKColor.black.withAlphaComponent(0.15)
+        groundShadow.strokeColor = .clear
+        groundShadow.position = CGPoint(x: 0, y: -h * 0.35)
+        groundShadow.zPosition = -1
+        groundShadow.name = "groundShadow"
+        container.addChild(groundShadow)
+
         // Dark foundation band at building base
         let foundation = SKShapeNode(rectOf: CGSize(width: w, height: h * 0.12))
         foundation.fillColor = SKColor(red: 0.15, green: 0.12, blue: 0.08, alpha: 0.6)
@@ -963,6 +1068,61 @@ class SpriteFactory {
                 col.zPosition = detailZ
                 container.addChild(col)
             }
+            // Banner/flag on roof peak
+            let tcFlagPole = SKShapeNode(rectOf: CGSize(width: 1, height: h * 0.12))
+            tcFlagPole.fillColor = .gray
+            tcFlagPole.strokeColor = .clear
+            tcFlagPole.position = CGPoint(x: 0, y: h * 0.65)
+            tcFlagPole.zPosition = detailZ + 0.2
+            tcFlagPole.name = "roofFlagPole"
+            container.addChild(tcFlagPole)
+            let tcFlag = SKShapeNode(rectOf: CGSize(width: 6, height: 4))
+            tcFlag.fillColor = playerColor
+            tcFlag.strokeColor = .clear
+            tcFlag.position = CGPoint(x: 3.5, y: h * 0.7)
+            tcFlag.zPosition = detailZ + 0.2
+            tcFlag.name = "roofFlag"
+            container.addChild(tcFlag)
+            let tcFlagWave = SKAction.repeatForever(SKAction.sequence([
+                SKAction.scaleX(to: 0.8, duration: 0.4),
+                SKAction.scaleX(to: 1.1, duration: 0.3),
+                SKAction.scaleX(to: 1.0, duration: 0.3)
+            ]))
+            tcFlag.run(tcFlagWave)
+            // Second row of windows (smaller, higher up)
+            for xOff in [-w * 0.2, w * 0.2] as [CGFloat] {
+                let upperWindow = SKShapeNode(rectOf: CGSize(width: w * 0.06, height: h * 0.06))
+                upperWindow.fillColor = SKColor(red: 0.9, green: 0.8, blue: 0.4, alpha: 0.6)
+                upperWindow.strokeColor = SKColor(red: 0.4, green: 0.3, blue: 0.15, alpha: 0.8)
+                upperWindow.lineWidth = 0.5
+                upperWindow.position = CGPoint(x: xOff, y: h * 0.22)
+                upperWindow.zPosition = detailZ
+                upperWindow.name = "upperWindow"
+                container.addChild(upperWindow)
+            }
+            // Torch brackets flanking door
+            for xOff in [-w * 0.2, w * 0.2] as [CGFloat] {
+                let torch = SKShapeNode(circleOfRadius: w * 0.025)
+                torch.fillColor = SKColor(red: 1.0, green: 0.75, blue: 0.2, alpha: 0.9)
+                torch.strokeColor = .clear
+                torch.position = CGPoint(x: xOff, y: -h * 0.15)
+                torch.zPosition = detailZ + 0.1
+                torch.name = "torchBracket"
+                container.addChild(torch)
+                // Subtle glow around torch
+                let torchGlow = SKShapeNode(circleOfRadius: w * 0.06)
+                torchGlow.fillColor = SKColor(red: 1.0, green: 0.8, blue: 0.3, alpha: 0.12)
+                torchGlow.strokeColor = .clear
+                torchGlow.position = CGPoint(x: xOff, y: -h * 0.15)
+                torchGlow.zPosition = detailZ
+                torchGlow.name = "torchGlow"
+                container.addChild(torchGlow)
+                let torchPulse = SKAction.repeatForever(SKAction.sequence([
+                    SKAction.fadeAlpha(to: 0.06, duration: 0.6),
+                    SKAction.fadeAlpha(to: 0.15, duration: 0.6)
+                ]))
+                torchGlow.run(torchPulse)
+            }
 
         case .house:
             // Door with frame
@@ -1140,6 +1300,17 @@ class SpriteFactory {
             banner.position = CGPoint(x: 0, y: h * 0.15)
             banner.zPosition = detailZ
             container.addChild(banner)
+            // Stone course lines across castle body
+            for i in 0..<6 {
+                let stoneLine = SKShapeNode(rectOf: CGSize(width: w * 0.9, height: 0.5))
+                stoneLine.fillColor = SKColor(red: 0.65, green: 0.65, blue: 0.65, alpha: 0.2)
+                stoneLine.strokeColor = .clear
+                let yFraction = -h * 0.38 + CGFloat(i) * (h * 0.7 / 5.0)
+                stoneLine.position = CGPoint(x: 0, y: yFraction)
+                stoneLine.zPosition = detailZ - 0.05
+                stoneLine.name = "stoneCourse"
+                container.addChild(stoneLine)
+            }
 
         case .tower:
             // Arrow slits
@@ -1163,6 +1334,17 @@ class SpriteFactory {
             cap.lineWidth = 0.5
             cap.zPosition = detailZ
             container.addChild(cap)
+            // Stone course lines across tower body
+            for i in 0..<5 {
+                let towerStoneLine = SKShapeNode(rectOf: CGSize(width: w * 0.85, height: 0.5))
+                towerStoneLine.fillColor = SKColor(red: 0.65, green: 0.65, blue: 0.65, alpha: 0.2)
+                towerStoneLine.strokeColor = .clear
+                let yFrac = -h * 0.3 + CGFloat(i) * (h * 0.6 / 4.0)
+                towerStoneLine.position = CGPoint(x: 0, y: yFrac)
+                towerStoneLine.zPosition = detailZ - 0.05
+                towerStoneLine.name = "stoneCourse"
+                container.addChild(towerStoneLine)
+            }
 
         case .blacksmith:
             // Anvil
@@ -1710,8 +1892,8 @@ class SpriteFactory {
         ]))
         container.addChild(flash)
 
-        // 16 particles with wider spread
-        for _ in 0..<16 {
+        // 20 particles with wider spread
+        for _ in 0..<20 {
             let particle = SKShapeNode(circleOfRadius: CGFloat.random(in: 1.5...3.5))
             particle.fillColor = [SKColor.orange, SKColor.red, SKColor.yellow].randomElement()!
             particle.strokeColor = .clear
@@ -1732,20 +1914,54 @@ class SpriteFactory {
             container.addChild(particle)
         }
 
-        // Scorch mark on ground (persists 3s)
-        let scorch = SKShapeNode(circleOfRadius: tileSize * 0.35)
+        // 4 bone/debris fragments that spin while falling
+        for _ in 0..<4 {
+            let fragment = SKShapeNode(rectOf: CGSize(width: CGFloat.random(in: 2...4),
+                                                       height: CGFloat.random(in: 1...2)))
+            fragment.fillColor = SKColor(red: 0.9, green: 0.88, blue: 0.82, alpha: 0.9)
+            fragment.strokeColor = .clear
+            fragment.position = .zero
+            fragment.name = "boneFragment"
+
+            let launchDx = CGFloat.random(in: -18...18)
+            let launchDy = CGFloat.random(in: 10...25)
+
+            // Arc trajectory: rise then fall
+            let arcUp = SKAction.moveBy(x: launchDx * 0.5, y: launchDy, duration: 0.35)
+            arcUp.timingMode = .easeOut
+            let arcDown = SKAction.moveBy(x: launchDx * 0.5, y: -launchDy * 1.4, duration: 0.45)
+            arcDown.timingMode = .easeIn
+
+            let spin = SKAction.rotate(byAngle: CGFloat.random(in: 3...8) * (Bool.random() ? 1 : -1), duration: 0.8)
+            let fade = SKAction.fadeOut(withDuration: 0.8)
+
+            let fragmentAnim = SKAction.sequence([
+                SKAction.group([
+                    SKAction.sequence([arcUp, arcDown]),
+                    spin,
+                    fade
+                ]),
+                SKAction.removeFromParent()
+            ])
+            fragment.run(fragmentAnim)
+            container.addChild(fragment)
+        }
+
+        // Scorch mark on ground (persists 5s, slightly larger)
+        let scorch = SKShapeNode(circleOfRadius: tileSize * 0.42)
         scorch.fillColor = SKColor(red: 0.15, green: 0.1, blue: 0.05, alpha: 0.5)
         scorch.strokeColor = .clear
         scorch.zPosition = -1
+        scorch.name = "scorchMark"
         scorch.run(SKAction.sequence([
-            SKAction.wait(forDuration: 3.0),
+            SKAction.wait(forDuration: 5.0),
             SKAction.fadeOut(withDuration: 0.5),
             SKAction.removeFromParent()
         ]))
         container.addChild(scorch)
 
         let cleanup = SKAction.sequence([
-            SKAction.wait(forDuration: 3.8),
+            SKAction.wait(forDuration: 5.8),
             SKAction.removeFromParent()
         ])
         container.run(cleanup)
@@ -2127,6 +2343,32 @@ class SpriteFactory {
                 SKAction.removeFromParent()
             ]))
             container.addChild(particle)
+        }
+
+        // Screen shake hint node for GameScene to detect
+        let shakeHint = SKNode()
+        shakeHint.name = "shakeHint"
+        container.addChild(shakeHint)
+
+        // 4 smoke puffs that expand and fade after the blast
+        for i in 0..<4 {
+            let smoke = SKShapeNode(circleOfRadius: tileSize * 0.15)
+            smoke.fillColor = SKColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 0.5)
+            smoke.strokeColor = .clear
+            let smokeAngle = CGFloat.random(in: 0...(2 * .pi))
+            let smokeDist = CGFloat.random(in: 5...15)
+            smoke.position = CGPoint(x: cos(smokeAngle) * smokeDist,
+                                     y: sin(smokeAngle) * smokeDist)
+            smoke.name = "smokePuff"
+            smoke.run(SKAction.sequence([
+                SKAction.wait(forDuration: 0.2 + TimeInterval(i) * 0.1),
+                SKAction.group([
+                    SKAction.scale(to: 3.0, duration: 1.5),
+                    SKAction.fadeOut(withDuration: 1.5)
+                ]),
+                SKAction.removeFromParent()
+            ]))
+            container.addChild(smoke)
         }
 
         container.run(SKAction.sequence([

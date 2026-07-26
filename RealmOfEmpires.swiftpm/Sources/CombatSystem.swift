@@ -44,6 +44,7 @@ class CombatSystem {
 
             for unit in unitsToRemove {
                 scene.unitSystem.killUnit(unit, player: player)
+                scene.triggerScreenShake(intensity: 0.3)
             }
 
             // Check destroyed buildings
@@ -58,6 +59,7 @@ class CombatSystem {
                     let effect = scene.spriteFactory.createDeathEffect(at: pos)
                     scene.gameWorld.addChild(effect)
                 }
+                scene.triggerScreenShake(intensity: 0.6)
                 scene.buildingSystem.destroyBuilding(building, player: player, map: map)
             }
         }
