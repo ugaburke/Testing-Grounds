@@ -81,6 +81,9 @@ class GameScene: SKScene {
     var lastIdleVillagerIndex: Int = 0
     var lastAttackAlertTime: TimeInterval = 0
 
+    // Pause overlay
+    var pauseOverlay: SKNode?
+
     // Day/Night cycle
     var dayNightOverlay: SKShapeNode?
     var dayNightTimer: CGFloat = 0
@@ -386,8 +389,28 @@ class GameScene: SKScene {
 
     @objc private func handlePinch(_ gesture: UIPinchGestureRecognizer) {
         if gesture.state == .changed {
-            let newZoom = zoomScale / gesture.scale
-            zoomScale = max(minZoom, min(maxZoom, newZoom))
+            let newZoom = max(minZoom, min(maxZoom, zoomScale / gesture.scale))
+
+            // Calculate pinch center in view, then convert to world coordinates
+            guard let view = self.view else { return }
+            let pinchCenter = gesture.location(in: view)
+            // Convert from view coordinates to scene-relative offset from camera center
+            let viewCenter = CGPoint(x: view.bounds.width / 2, y: view.bounds.height / 2)
+            let offsetX = (pinchCenter.x - viewCenter.x) * zoomScale
+            let offsetY = -(pinchCenter.y - viewCenter.y) * zoomScale  // Y is flipped
+
+            // World point under the pinch center before zoom
+            let worldX = cameraPosition.x + offsetX
+            let worldY = cameraPosition.y + offsetY
+
+            // After zoom, adjust camera so the same world point stays under the pinch center
+            let newOffsetX = (pinchCenter.x - viewCenter.x) * newZoom
+            let newOffsetY = -(pinchCenter.y - viewCenter.y) * newZoom
+
+            cameraPosition.x = worldX - newOffsetX
+            cameraPosition.y = worldY - newOffsetY
+
+            zoomScale = newZoom
             gesture.scale = 1.0
             updateCamera()
         }
@@ -1172,7 +1195,7 @@ class GameScene: SKScene {
             return
         }
 
-        if dist > 5 {
+        if dist > 12 {
             let currentSelected = unitSystem.selectedUnits(for: humanPlayer)
 
             // Box select if: touch started on empty ground AND no units selected AND dragged far enough
@@ -1183,7 +1206,7 @@ class GameScene: SKScene {
                 let tdy = location.y - start.y
                 totalDragDist = sqrt(tdx * tdx + tdy * tdy)
             }
-            if touchStartedOnEmptyGround && currentSelected.isEmpty && totalDragDist > 30, let start = selectionStart {
+            if touchStartedOnEmptyGround && totalDragDist > 30, let start = selectionStart {
                 // Box selection mode — only activate with significant drag
                 if selectionRect == nil {
                     selectionRect = SKShapeNode()
@@ -1302,9 +1325,16 @@ class GameScene: SKScene {
         lastTouchPosition = nil
         touchStartedOnEmptyGround = false
 
-        // Handle game over tap
+        // Handle game over tap — only exit on tapping the return button, not anywhere
         if gameState == .victory || gameState == .defeat {
-            onExit?()
+            let locationInHUD = touch.location(in: hudCamera)
+            let hudPoint = CGPoint(x: locationInHUD.x + size.width / 2,
+                                   y: locationInHUD.y + size.height / 2)
+            if let action = hud.handleTouch(at: hudPoint) {
+                if case .confirmExit = action {
+                    onExit?()
+                }
+            }
             return
         }
 
@@ -1472,7 +1502,17 @@ class GameScene: SKScene {
             if let friendlyUnit = tappedFriendlyUnit {
                 let now = gameTime
                 if now - lastTapTime < 0.4 && lastTappedUnitType == friendlyUnit.type {
+                    // Only select units visible on screen
+                    let halfW = size.width * zoomScale * 0.5
+                    let halfH = size.height * zoomScale * 0.5
+                    let viewRect = CGRect(
+                        x: cameraPosition.x - halfW,
+                        y: cameraPosition.y - halfH,
+                        width: halfW * 2,
+                        height: halfH * 2
+                    )
                     for u in humanPlayer.units where u.type == friendlyUnit.type {
+                        guard viewRect.contains(u.position) else { continue }
                         u.isSelected = true
                     }
                     selectedBuilding = nil
@@ -1509,9 +1549,18 @@ class GameScene: SKScene {
             // Double-tap detection: select all visible of same type
             let now = gameTime
             if now - lastTapTime < 0.4 && lastTappedUnitType == unit.type {
-                // Double tap — select all visible units of this type
+                // Double tap — select all visible units of this type (on screen only)
+                let halfW = size.width * zoomScale * 0.5
+                let halfH = size.height * zoomScale * 0.5
+                let viewRect = CGRect(
+                    x: cameraPosition.x - halfW,
+                    y: cameraPosition.y - halfH,
+                    width: halfW * 2,
+                    height: halfH * 2
+                )
                 for u in humanPlayer.units {
                     if u.type == unit.type {
+                        guard viewRect.contains(u.position) else { continue }
                         u.isSelected = true
                     }
                 }
@@ -1564,6 +1613,42 @@ class GameScene: SKScene {
         case .pause:
             gameState = gameState == .paused ? .playing : .paused
             hud.showStatus(gameState == .paused ? "PAUSED" : "")
+
+            if gameState == .paused {
+                let overlay = SKNode()
+                overlay.name = "pauseOverlay"
+                overlay.zPosition = 150
+
+                let bg = SKShapeNode(rectOf: CGSize(width: size.width * 2, height: size.height * 2))
+                bg.fillColor = SKColor.black.withAlphaComponent(0.4)
+                bg.strokeColor = .clear
+                bg.name = "pauseOverlay"
+                overlay.addChild(bg)
+
+                let label = SKLabelNode(text: "PAUSED")
+                label.fontSize = 32
+                label.fontName = "Helvetica-Bold"
+                label.fontColor = SKColor(red: 0.85, green: 0.7, blue: 0.4, alpha: 1.0)
+                label.verticalAlignmentMode = .center
+                label.name = "pauseOverlay"
+                overlay.addChild(label)
+
+                let hint = SKLabelNode(text: "Tap Pause to resume")
+                hint.fontSize = 14
+                hint.fontName = "Helvetica"
+                hint.fontColor = .lightGray
+                hint.verticalAlignmentMode = .center
+                hint.position = CGPoint(x: 0, y: -30)
+                hint.name = "pauseOverlay"
+                overlay.addChild(hint)
+
+                pauseOverlay = overlay
+                hudCamera.addChild(overlay)
+            } else {
+                // Unpausing
+                pauseOverlay?.removeFromParent()
+                pauseOverlay = nil
+            }
 
         case .exit:
             hud.showExitConfirmation()

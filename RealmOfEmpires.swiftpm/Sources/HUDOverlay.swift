@@ -357,7 +357,7 @@ class HUDOverlay {
     }
 
     private func setupGameButtons() {
-        let btnY = viewSize.height - 58 - safeAreaTop
+        let btnY = viewSize.height - 62 - safeAreaTop
 
         // Row 1: Game control buttons (right to left, below resource bar)
         // Exit button
@@ -377,7 +377,7 @@ class HUDOverlay {
         hudNode.addChild(speedButton)
 
         // Row 2: Context buttons (right to left, below row 1)
-        let btnY2 = viewSize.height - 98 - safeAreaTop
+        let btnY2 = viewSize.height - 108 - safeAreaTop
 
         // Age up button
         ageUpButton = createHUDButton(text: "AGE UP", x: viewSize.width - 48, y: btnY2, name: "ageUpBtn", width: 80)
@@ -389,14 +389,14 @@ class HUDOverlay {
     }
 
     private func setupIdleVillagerButton() {
-        let btnY2 = viewSize.height - 98 - safeAreaTop
+        let btnY2 = viewSize.height - 108 - safeAreaTop
 
         // Civ bonuses button (row 2, after deselect)
         let civBtn = SKNode()
-        civBtn.position = CGPoint(x: viewSize.width - 178, y: btnY2)
+        civBtn.position = CGPoint(x: viewSize.width - 184, y: btnY2)
         civBtn.name = "btn_showCivBonuses"
 
-        let civBg = SKShapeNode(rectOf: CGSize(width: 24, height: 24), cornerRadius: 4)
+        let civBg = SKShapeNode(rectOf: CGSize(width: 38, height: 38), cornerRadius: 4)
         civBg.fillColor = SKColor(red: 0.35, green: 0.25, blue: 0.1, alpha: 0.9)
         civBg.strokeColor = SKColor(red: 0.7, green: 0.55, blue: 0.25, alpha: 1.0)
         civBg.lineWidth = 1
@@ -404,7 +404,7 @@ class HUDOverlay {
         civBtn.addChild(civBg)
 
         let civIcon = SKLabelNode(text: "\u{2606}")
-        civIcon.fontSize = 14
+        civIcon.fontSize = 18
         civIcon.fontName = "Helvetica"
         civIcon.fontColor = SKColor(red: 0.9, green: 0.75, blue: 0.35, alpha: 1)
         civIcon.verticalAlignmentMode = .center
@@ -415,10 +415,10 @@ class HUDOverlay {
 
         // Scoreboard button (row 2, after civ bonuses)
         let scoreBtn = SKNode()
-        scoreBtn.position = CGPoint(x: viewSize.width - 210, y: btnY2)
+        scoreBtn.position = CGPoint(x: viewSize.width - 226, y: btnY2)
         scoreBtn.name = "btn_showScoreboard"
 
-        let scoreBg = SKShapeNode(rectOf: CGSize(width: 24, height: 24), cornerRadius: 4)
+        let scoreBg = SKShapeNode(rectOf: CGSize(width: 38, height: 38), cornerRadius: 4)
         scoreBg.fillColor = SKColor(red: 0.2, green: 0.2, blue: 0.35, alpha: 0.9)
         scoreBg.strokeColor = SKColor(red: 0.4, green: 0.4, blue: 0.6, alpha: 1.0)
         scoreBg.lineWidth = 1
@@ -426,7 +426,7 @@ class HUDOverlay {
         scoreBtn.addChild(scoreBg)
 
         let scoreIcon = SKLabelNode(text: "\u{2630}")
-        scoreIcon.fontSize = 14
+        scoreIcon.fontSize = 18
         scoreIcon.fontName = "Helvetica"
         scoreIcon.fontColor = .white
         scoreIcon.verticalAlignmentMode = .center
@@ -437,11 +437,11 @@ class HUDOverlay {
 
         // Idle military button (row 2, after scoreboard)
         idleMilitaryBtn = SKNode()
-        idleMilitaryBtn.position = CGPoint(x: viewSize.width - 262, y: btnY2)
+        idleMilitaryBtn.position = CGPoint(x: viewSize.width - 282, y: btnY2)
         idleMilitaryBtn.name = "btn_selectIdleMilitary"
         idleMilitaryBtn.isHidden = true
 
-        let milBg = SKShapeNode(rectOf: CGSize(width: 60, height: 34), cornerRadius: 5)
+        let milBg = SKShapeNode(rectOf: CGSize(width: 64, height: 44), cornerRadius: 5)
         milBg.fillColor = SKColor(red: 0.5, green: 0.15, blue: 0.1, alpha: 0.9)
         milBg.strokeColor = SKColor(red: 0.8, green: 0.3, blue: 0.2, alpha: 1.0)
         milBg.lineWidth = 1.5
@@ -460,11 +460,11 @@ class HUDOverlay {
 
         // Idle villager button (row 2, after idle military)
         idleVillagerBtn = SKNode()
-        idleVillagerBtn.position = CGPoint(x: viewSize.width - 330, y: btnY2)
+        idleVillagerBtn.position = CGPoint(x: viewSize.width - 354, y: btnY2)
         idleVillagerBtn.name = "idleVillagerBtn"
         idleVillagerBtn.isHidden = true
 
-        let bg = SKShapeNode(rectOf: CGSize(width: 60, height: 34), cornerRadius: 5)
+        let bg = SKShapeNode(rectOf: CGSize(width: 64, height: 44), cornerRadius: 5)
         bg.fillColor = SKColor(red: 0.5, green: 0.4, blue: 0.1, alpha: 0.9)
         bg.strokeColor = SKColor(red: 0.8, green: 0.7, blue: 0.3, alpha: 1.0)
         bg.lineWidth = 1.5
@@ -552,7 +552,7 @@ class HUDOverlay {
         villagerAllocLabel.fontSize = 11
         villagerAllocLabel.fontName = "Helvetica"
         villagerAllocLabel.fontColor = SKColor(red: 0.8, green: 0.8, blue: 0.6, alpha: 0.9)
-        villagerAllocLabel.position = CGPoint(x: viewSize.width / 2, y: viewSize.height - 58 - safeAreaTop)
+        villagerAllocLabel.position = CGPoint(x: viewSize.width / 2, y: viewSize.height - 88 - safeAreaTop)
         villagerAllocLabel.horizontalAlignmentMode = .center
         villagerAllocLabel.verticalAlignmentMode = .center
         villagerAllocLabel.zPosition = 101
@@ -574,7 +574,7 @@ class HUDOverlay {
         container.position = CGPoint(x: x, y: y)
         container.name = name
 
-        let bg = SKShapeNode(rectOf: CGSize(width: width, height: 34), cornerRadius: 5)
+        let bg = SKShapeNode(rectOf: CGSize(width: width, height: 44), cornerRadius: 5)
         bg.fillColor = SKColor(red: 0.3, green: 0.2, blue: 0.1, alpha: 0.9)
         bg.strokeColor = SKColor(red: 0.6, green: 0.5, blue: 0.3, alpha: 1.0)
         bg.lineWidth = 1
@@ -597,12 +597,12 @@ class HUDOverlay {
     func updateModeIndicator(mode: ActionMode) {
         switch mode {
         case .placingBuilding(let type):
-            modeIndicatorLabel.text = "PLACING: \(type.displayName)"
+            modeIndicatorLabel.text = "PLACING: \(type.displayName) (Deselect to cancel)"
             modeIndicatorLabel.fontColor = .orange
             modeIndicatorLabel.isHidden = false
             modeIndicatorBg.isHidden = false
         case .settingRallyPoint:
-            modeIndicatorLabel.text = "SET RALLY POINT"
+            modeIndicatorLabel.text = "SET RALLY POINT (Deselect to cancel)"
             modeIndicatorLabel.fontColor = SKColor(red: 0.3, green: 0.7, blue: 1.0, alpha: 1.0)
             modeIndicatorLabel.isHidden = false
             modeIndicatorBg.isHidden = false
@@ -633,7 +633,7 @@ class HUDOverlay {
         label.fontName = "Helvetica"
         label.fontColor = SKColor(red: 0.9, green: 0.8, blue: 0.6, alpha: 0.9)
         label.horizontalAlignmentMode = .right
-        label.position = CGPoint(x: viewSize.width - 20, y: viewSize.height - 110 - safeAreaTop)
+        label.position = CGPoint(x: viewSize.width - 20, y: viewSize.height - 160 - safeAreaTop)
         label.zPosition = 100
         hudNode.addChild(label)
 
@@ -1149,7 +1149,7 @@ class HUDOverlay {
                 // Cancel research button (shown when researching)
                 if building.currentResearch != nil {
                     let cancelResBtn = createActionButton(
-                        text: "CxRes", icon: "XR",
+                        text: "CxRes", icon: "\u{2715}",
                         color: SKColor(red: 0.6, green: 0.15, blue: 0.15, alpha: 1.0),
                         name: "btn_cancelResearch",
                         x: startX + CGFloat(cols - 2) * (buttonSize + padding),
@@ -1172,7 +1172,7 @@ class HUDOverlay {
 
                 if garrisonCount > 0 {
                     let ungarrisonBtn = createActionButton(
-                        text: "Ungarr", icon: "UG",
+                        text: "Ungarr", icon: "\u{2191}",
                         color: SKColor(red: 0.5, green: 0.35, blue: 0.2, alpha: 1.0),
                         name: "btn_ungarrison",
                         x: startX + (buttonSize + padding), y: startY - 2 * (buttonSize + padding), size: buttonSize)
@@ -1259,7 +1259,7 @@ class HUDOverlay {
         // Repair button when a damaged building is selected
         if let b = building, b.hp < b.maxHP {
             let repairBtn = createActionButton(
-                text: "Repair", icon: "RP",
+                text: "Repair", icon: "\u{1F527}",
                 color: SKColor(red: 0.3, green: 0.5, blue: 0.3, alpha: 1.0),
                 name: "btn_repair",
                 x: startX + CGFloat(actionButtons.count) * (buttonSize + padding), y: startY, size: buttonSize)
@@ -1461,7 +1461,7 @@ class HUDOverlay {
         closeBtn.position = CGPoint(x: 190, y: 110)
         closeBtn.name = "closeBuildMenu"
 
-        let closeBg = SKShapeNode(rectOf: CGSize(width: 28, height: 28), cornerRadius: 4)
+        let closeBg = SKShapeNode(rectOf: CGSize(width: 44, height: 44), cornerRadius: 6)
         closeBg.fillColor = SKColor(red: 0.6, green: 0.15, blue: 0.1, alpha: 0.9)
         closeBg.strokeColor = .white
         closeBg.lineWidth = 1
@@ -1469,7 +1469,7 @@ class HUDOverlay {
         closeBtn.addChild(closeBg)
 
         let closeLabel = SKLabelNode(text: "X")
-        closeLabel.fontSize = 16
+        closeLabel.fontSize = 20
         closeLabel.fontName = "Helvetica-Bold"
         closeLabel.fontColor = .white
         closeLabel.verticalAlignmentMode = .center
@@ -1618,7 +1618,7 @@ class HUDOverlay {
             container.addChild(iconLabel)
 
             let nameLabel = SKLabelNode(text: tech.displayName)
-            nameLabel.fontSize = 8
+            nameLabel.fontSize = 11
             nameLabel.fontName = "Helvetica"
             nameLabel.fontColor = .lightGray
             nameLabel.verticalAlignmentMode = .center
@@ -1640,7 +1640,7 @@ class HUDOverlay {
                 effectColor = .gray
             }
             let effectLabel = SKLabelNode(text: effectText)
-            effectLabel.fontSize = 7
+            effectLabel.fontSize = 10
             effectLabel.fontName = "Helvetica"
             effectLabel.fontColor = effectColor
             effectLabel.verticalAlignmentMode = .center
@@ -1649,7 +1649,7 @@ class HUDOverlay {
             container.addChild(effectLabel)
 
             let costLabel = SKLabelNode(text: researched ? "" : formatCost(tech.cost))
-            costLabel.fontSize = 7
+            costLabel.fontSize = 10
             costLabel.fontName = "Helvetica"
             costLabel.fontColor = affordable ? .lightGray : .red
             costLabel.verticalAlignmentMode = .center
@@ -1664,14 +1664,14 @@ class HUDOverlay {
         let closeBtn = SKNode()
         closeBtn.position = CGPoint(x: 190, y: 140)
         closeBtn.name = "closeTechMenu"
-        let closeBg = SKShapeNode(rectOf: CGSize(width: 28, height: 28), cornerRadius: 4)
+        let closeBg = SKShapeNode(rectOf: CGSize(width: 44, height: 44), cornerRadius: 6)
         closeBg.fillColor = SKColor(red: 0.6, green: 0.15, blue: 0.1, alpha: 0.9)
         closeBg.strokeColor = .white
         closeBg.lineWidth = 1
         closeBg.name = "closeTechMenu"
         closeBtn.addChild(closeBg)
         let closeLabel = SKLabelNode(text: "X")
-        closeLabel.fontSize = 16
+        closeLabel.fontSize = 20
         closeLabel.fontName = "Helvetica-Bold"
         closeLabel.fontColor = .white
         closeLabel.verticalAlignmentMode = .center
@@ -1813,7 +1813,7 @@ class HUDOverlay {
         closeBtn.position = CGPoint(x: 180, y: 120)
         closeBtn.name = "scoreboardOverlay"
 
-        let closeBg = SKShapeNode(rectOf: CGSize(width: 28, height: 28), cornerRadius: 4)
+        let closeBg = SKShapeNode(rectOf: CGSize(width: 44, height: 44), cornerRadius: 6)
         closeBg.fillColor = SKColor(red: 0.6, green: 0.15, blue: 0.1, alpha: 0.9)
         closeBg.strokeColor = .white
         closeBg.lineWidth = 1
@@ -1821,7 +1821,7 @@ class HUDOverlay {
         closeBtn.addChild(closeBg)
 
         let closeLabel = SKLabelNode(text: "X")
-        closeLabel.fontSize = 16
+        closeLabel.fontSize = 20
         closeLabel.fontName = "Helvetica-Bold"
         closeLabel.fontColor = .white
         closeLabel.verticalAlignmentMode = .center
@@ -2094,8 +2094,10 @@ class HUDOverlay {
 
             // Animate button press for any named node
             if name.hasPrefix("btn_") || name.hasPrefix("build_") || name.hasPrefix("train_") ||
-               name.hasPrefix("tech_") || name == "pauseBtn" || name == "ageUpBtn" ||
-               name == "helpBtn" || name == "speedBtn" {
+               name.hasPrefix("tech_") || name.hasPrefix("close") || name.hasPrefix("exitConfirm") ||
+               name == "pauseBtn" || name == "ageUpBtn" || name == "helpBtn" || name == "speedBtn" ||
+               name == "exitBtn" || name == "deselectBtn" || name == "idleVillagerBtn" ||
+               name == "gameOverExit" || name == "scoreboardOverlay" {
                 animateButtonPress(node)
             }
 
