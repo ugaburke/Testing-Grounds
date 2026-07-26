@@ -947,17 +947,28 @@ class GameMap {
                         }
                     }
 
-                    // Decorative elements on some grass tiles
+                    // Decorative elements on some grass tiles (~18%)
                     if tile.terrain == .grass && tile.building == nil {
                         let hash = (x * 31 + y * 47) % 100
                         if hash < 5 {
-                            // Small flower cluster
-                            let flower = SKShapeNode(circleOfRadius: tileSize * 0.08)
-                            flower.fillColor = hash < 2 ? SKColor.yellow : SKColor(red: 0.8, green: 0.3, blue: 0.5, alpha: 1.0)
-                            flower.strokeColor = .clear
-                            flower.position = CGPoint(x: CGFloat(hash % 3) * 3 - 3, y: CGFloat(hash % 5) * 2 - 4)
-                            flower.name = "decor"
-                            node.addChild(flower)
+                            // Small flower cluster (2-3 flowers)
+                            let flowerCount = 2 + (hash % 2)
+                            for fi in 0..<flowerCount {
+                                let flower = SKShapeNode(circleOfRadius: tileSize * 0.06)
+                                let flowerColors: [SKColor] = [
+                                    SKColor.yellow,
+                                    SKColor(red: 0.8, green: 0.3, blue: 0.5, alpha: 1.0),
+                                    SKColor(red: 0.6, green: 0.4, blue: 0.8, alpha: 1.0)
+                                ]
+                                flower.fillColor = flowerColors[fi % flowerColors.count]
+                                flower.strokeColor = .clear
+                                let fx = CGFloat(hash % 3) * 3 - 3 + CGFloat(fi) * 2.5 - 1.5
+                                let fy = CGFloat(hash % 5) * 2 - 4 + CGFloat(fi % 2) * 1.5
+                                flower.position = CGPoint(x: fx, y: fy)
+                                flower.name = "decor"
+                                flower.zPosition = 0.1
+                                node.addChild(flower)
+                            }
                         } else if hash >= 5 && hash < 8 {
                             // Small rock
                             let rock = SKShapeNode(circleOfRadius: tileSize * 0.06)
@@ -965,21 +976,107 @@ class GameMap {
                             rock.strokeColor = .clear
                             rock.position = CGPoint(x: CGFloat(hash % 7) - 3, y: CGFloat(hash % 5) - 2)
                             rock.name = "decor"
+                            rock.zPosition = 0.1
                             node.addChild(rock)
                         } else if hash >= 8 && hash < 11 {
                             // Small mushroom
-                            let stem = SKShapeNode(rectOf: CGSize(width: tileSize * 0.05, height: tileSize * 0.08))
-                            stem.fillColor = SKColor(red: 0.85, green: 0.8, blue: 0.7, alpha: 0.8)
-                            stem.strokeColor = .clear
-                            stem.position = CGPoint(x: CGFloat(hash % 5) - 2, y: CGFloat(hash % 3) - 3)
-                            stem.name = "decor"
-                            node.addChild(stem)
+                            let mStem = SKShapeNode(rectOf: CGSize(width: tileSize * 0.05, height: tileSize * 0.08))
+                            mStem.fillColor = SKColor(red: 0.85, green: 0.8, blue: 0.7, alpha: 0.8)
+                            mStem.strokeColor = .clear
+                            mStem.position = CGPoint(x: CGFloat(hash % 5) - 2, y: CGFloat(hash % 3) - 3)
+                            mStem.name = "decor"
+                            mStem.zPosition = 0.1
+                            node.addChild(mStem)
                             let cap = SKShapeNode(circleOfRadius: tileSize * 0.06)
                             cap.fillColor = hash < 10 ? SKColor(red: 0.7, green: 0.2, blue: 0.15, alpha: 0.8) : SKColor(red: 0.6, green: 0.5, blue: 0.2, alpha: 0.8)
                             cap.strokeColor = .clear
                             cap.position = CGPoint(x: CGFloat(hash % 5) - 2, y: CGFloat(hash % 3) - 3 + tileSize * 0.06)
                             cap.name = "decor"
+                            cap.zPosition = 0.12
                             node.addChild(cap)
+                        } else if hash >= 11 && hash < 15 {
+                            // Small grass clump - 3 tiny green lines fanned out
+                            let clumpX = CGFloat(hash % 7) - 3.0
+                            let clumpY = CGFloat(hash % 5) - 2.0
+                            let angles: [CGFloat] = [-0.4, 0.0, 0.4]
+                            for (ai, angle) in angles.enumerated() {
+                                let bladePath = CGMutablePath()
+                                bladePath.move(to: CGPoint(x: clumpX, y: clumpY))
+                                let tipX = clumpX + sin(angle) * tileSize * 0.12
+                                let tipY = clumpY + cos(angle) * tileSize * 0.12
+                                bladePath.addLine(to: CGPoint(x: tipX, y: tipY))
+                                let blade = SKShapeNode(path: bladePath)
+                                let gv = CGFloat(ai) * 0.05
+                                blade.strokeColor = SKColor(red: 0.18 + gv, green: 0.45 + gv, blue: 0.12, alpha: 0.65)
+                                blade.lineWidth = 0.5
+                                blade.name = "decorGrassClump"
+                                blade.zPosition = 0.05
+                                node.addChild(blade)
+                            }
+                        } else if hash >= 15 && hash < 18 {
+                            // Cattails near water edges (only if adjacent to water)
+                            var nearWater = false
+                            for neighbor in GridPosition(x: x, y: y).neighbors {
+                                if isValid(neighbor) {
+                                    let nt = tiles[neighbor.y][neighbor.x].terrain
+                                    if nt == .water || nt == .deepWater {
+                                        nearWater = true
+                                        break
+                                    }
+                                }
+                            }
+                            if nearWater {
+                                // Cattail: thin brown stick with oval brown top
+                                let stickPath = CGMutablePath()
+                                stickPath.move(to: CGPoint(x: 0, y: -tileSize * 0.1))
+                                stickPath.addLine(to: CGPoint(x: 0, y: tileSize * 0.15))
+                                let stick = SKShapeNode(path: stickPath)
+                                stick.strokeColor = SKColor(red: 0.45, green: 0.35, blue: 0.18, alpha: 0.8)
+                                stick.lineWidth = 1.0
+                                stick.name = "decorCattail"
+                                stick.zPosition = 0.15
+                                node.addChild(stick)
+                                let cattailTop = SKShapeNode(ellipseOf: CGSize(width: 2.5, height: 5))
+                                cattailTop.fillColor = SKColor(red: 0.4, green: 0.28, blue: 0.12, alpha: 0.9)
+                                cattailTop.strokeColor = .clear
+                                cattailTop.position = CGPoint(x: 0, y: tileSize * 0.17)
+                                cattailTop.name = "decorCattailTop"
+                                cattailTop.zPosition = 0.16
+                                node.addChild(cattailTop)
+                            }
+                        }
+                    }
+
+                    // Shore foam on sand tiles adjacent to water
+                    if tile.terrain == .sand {
+                        for neighbor in GridPosition(x: x, y: y).neighbors {
+                            if isValid(neighbor) {
+                                let nt = tiles[neighbor.y][neighbor.x].terrain
+                                if nt == .water || nt == .deepWater {
+                                    let dx = CGFloat(neighbor.x - x)
+                                    let dy = CGFloat(neighbor.y - y)
+                                    let foamSeed = (x * 53 + y * 71 + neighbor.x * 37) % 100
+                                    let foamCount = 2 + foamSeed % 2 // 2-3 foam patches
+                                    for fi in 0..<foamCount {
+                                        let foam = SKShapeNode(ellipseOf: CGSize(width: tileSize * 0.2, height: tileSize * 0.06))
+                                        let foamAlpha = 0.15 + CGFloat(foamSeed % 15) / 100.0
+                                        foam.fillColor = SKColor.white.withAlphaComponent(foamAlpha)
+                                        foam.strokeColor = .clear
+                                        let spreadOffset = CGFloat(fi) * tileSize * 0.2 - tileSize * 0.15
+                                        let edgeX = dx * tileSize * 0.35
+                                        let edgeY = dy * tileSize * 0.35
+                                        if dx != 0 {
+                                            foam.position = CGPoint(x: edgeX, y: spreadOffset)
+                                        } else {
+                                            foam.position = CGPoint(x: spreadOffset, y: edgeY)
+                                        }
+                                        foam.name = "shoreFoam"
+                                        foam.zPosition = 0.1
+                                        node.addChild(foam)
+                                    }
+                                    break // Only add foam for one water neighbor
+                                }
+                            }
                         }
                     }
 
@@ -1045,9 +1142,10 @@ class GameMap {
                                              blue: min(1, b + wave),
                                              alpha: a)
 
-                    // Move wave highlight child if exists
+                    // Create wave highlight ellipses if they don't exist
                     if node.childNode(withName: "waveHighlight") == nil {
-                        let highlight = SKShapeNode(rectOf: CGSize(width: tileSize * 0.4, height: 2))
+                        // First wave - ellipse instead of rectangle for curved look
+                        let highlight = SKShapeNode(ellipseOf: CGSize(width: tileSize * 0.4, height: 3))
                         highlight.fillColor = SKColor.white.withAlphaComponent(0.2)
                         highlight.strokeColor = .clear
                         highlight.name = "waveHighlight"
@@ -1055,24 +1153,58 @@ class GameMap {
                         node.addChild(highlight)
 
                         // Second wave offset by half phase
-                        let highlight2 = SKShapeNode(rectOf: CGSize(width: tileSize * 0.3, height: 1.5))
+                        let highlight2 = SKShapeNode(ellipseOf: CGSize(width: tileSize * 0.3, height: 2.5))
                         highlight2.fillColor = SKColor.white.withAlphaComponent(0.15)
                         highlight2.strokeColor = .clear
                         highlight2.name = "waveHighlight2"
                         highlight2.zPosition = 0.1
                         node.addChild(highlight2)
+
+                        // Third wave - shorter and brighter, offset by 2*pi/3
+                        let highlight3 = SKShapeNode(ellipseOf: CGSize(width: tileSize * 0.2, height: 2))
+                        highlight3.fillColor = SKColor.white.withAlphaComponent(0.25)
+                        highlight3.strokeColor = .clear
+                        highlight3.name = "waveHighlight3"
+                        highlight3.zPosition = 0.12
+                        node.addChild(highlight3)
+
+                        // Deep water undercurrent effect
+                        if tile.terrain == .deepWater {
+                            let undercurrent = SKShapeNode(rectOf: CGSize(width: tileSize * 0.5, height: 1.5))
+                            undercurrent.fillColor = SKColor(red: 0, green: 0, blue: 0.1, alpha: 0.08)
+                            undercurrent.strokeColor = .clear
+                            undercurrent.name = "undercurrent"
+                            undercurrent.zPosition = 0.08
+                            node.addChild(undercurrent)
+                        }
                     }
                     if let highlight = node.childNode(withName: "waveHighlight") {
                         let waveX = sin(time * 2.0 + offset) * tileSize * 0.2
                         let waveY = cos(time * 1.3 + offset) * tileSize * 0.15
                         highlight.position = CGPoint(x: waveX, y: waveY)
-                        let alpha = 0.1 + 0.25 * (0.5 + 0.5 * sin(time * 1.5 + offset))
-                        (highlight as? SKShapeNode)?.fillColor = SKColor.white.withAlphaComponent(alpha)
+                        let wAlpha = 0.1 + 0.25 * (0.5 + 0.5 * sin(time * 1.5 + offset))
+                        (highlight as? SKShapeNode)?.fillColor = SKColor.white.withAlphaComponent(wAlpha)
                     }
                     if let highlight2 = node.childNode(withName: "waveHighlight2") {
                         let waveX2 = sin(time * 2.0 + offset + .pi) * tileSize * 0.15
                         let waveY2 = cos(time * 1.3 + offset + .pi) * tileSize * 0.1
                         highlight2.position = CGPoint(x: waveX2, y: waveY2)
+                        let w2Alpha = 0.08 + 0.2 * (0.5 + 0.5 * sin(time * 1.5 + offset + .pi))
+                        (highlight2 as? SKShapeNode)?.fillColor = SKColor.white.withAlphaComponent(w2Alpha)
+                    }
+                    if let highlight3 = node.childNode(withName: "waveHighlight3") {
+                        let phase3 = 2.0 * CGFloat.pi / 3.0
+                        let waveX3 = sin(time * 2.0 + offset + phase3) * tileSize * 0.18
+                        let waveY3 = cos(time * 1.3 + offset + phase3) * tileSize * 0.12
+                        highlight3.position = CGPoint(x: waveX3, y: waveY3)
+                        let w3Alpha = 0.12 + 0.3 * (0.5 + 0.5 * sin(time * 1.8 + offset + phase3))
+                        (highlight3 as? SKShapeNode)?.fillColor = SKColor.white.withAlphaComponent(w3Alpha)
+                    }
+                    // Animate deep water undercurrent
+                    if let undercurrent = node.childNode(withName: "undercurrent") {
+                        let ucX = sin(time * 0.5 + offset * 0.3) * tileSize * 0.3
+                        let ucY = cos(time * 0.3 + offset * 0.2) * tileSize * 0.1
+                        undercurrent.position = CGPoint(x: ucX, y: ucY)
                     }
                     // Fish jumping animation on deep water with fish
                     if tile.terrain == .deepWater && tile.resourceRemaining > 0 {
@@ -1094,11 +1226,27 @@ class GameMap {
                         }
                     }
                 } else if tile.terrain == .forest {
-                    // Tree swaying
-                    if let canopy = node.children.first {
-                        let phase = CGFloat(x * 17 + y * 23)
-                        let sway = sin(time * 0.7 + phase) * 1.5
-                        canopy.position.x = sway
+                    // Tree swaying - sway all canopy layers
+                    let phase = CGFloat(x * 17 + y * 23)
+                    let sway = sin(time * 0.7 + phase) * 1.5
+                    for canopyName in ["canopy1", "canopy2", "canopy3", "treeHighlight"] {
+                        if let child = node.childNode(withName: canopyName) {
+                            child.position.x = sway
+                        }
+                    }
+                } else if tile.terrain == .sand {
+                    // Animate shore foam alpha pulsing
+                    node.enumerateChildNodes(withName: "shoreFoam") { foam, _ in
+                        let foamOffset = CGFloat(x * 11 + y * 19)
+                        let foamAlpha = 0.15 + 0.10 * (0.5 + 0.5 * sin(time * 1.2 + foamOffset))
+                        (foam as? SKShapeNode)?.fillColor = SKColor.white.withAlphaComponent(foamAlpha)
+                    }
+                } else if tile.terrain == .gold {
+                    // Animate gold sparkle alpha pulse
+                    if let sparkle = node.childNode(withName: "goldSparkle") as? SKShapeNode {
+                        let sparkleOffset = CGFloat(x * 23 + y * 37)
+                        let sparkleAlpha = 0.3 + 0.5 * (0.5 + 0.5 * sin(time * 2.5 + sparkleOffset))
+                        sparkle.fillColor = SKColor(red: 1.0, green: 1.0, blue: 0.8, alpha: sparkleAlpha)
                     }
                 }
             }
@@ -1125,7 +1273,7 @@ class GameMap {
                 guard node.childNode(withName: "blend") == nil else { continue }
 
                 let terrain = tile.terrain
-                // Check each edge neighbor
+                // Check each edge neighbor (cardinal directions)
                 let edgeNeighbors: [(dx: Int, dy: Int, offsetX: CGFloat, offsetY: CGFloat)] = [
                     (1, 0, tileSize * 0.35, 0),
                     (-1, 0, -tileSize * 0.35, 0),
@@ -1150,12 +1298,40 @@ class GameMap {
                         CGSize(width: tileSize, height: tileSize * 0.3)
 
                     let blend = SKShapeNode(rectOf: blendSize)
-                    blend.fillColor = neighborTerrain.color.withAlphaComponent(0.25)
+                    blend.fillColor = neighborTerrain.color.withAlphaComponent(0.35)
                     blend.strokeColor = .clear
                     blend.position = CGPoint(x: neighbor.offsetX, y: neighbor.offsetY)
                     blend.name = "blend"
                     blend.zPosition = 0.05
                     node.addChild(blend)
+                }
+
+                // Diagonal blending for corner neighbors at lower alpha
+                let diagonalNeighbors: [(dx: Int, dy: Int, offsetX: CGFloat, offsetY: CGFloat)] = [
+                    (1, 1, tileSize * 0.35, tileSize * 0.35),
+                    (-1, 1, -tileSize * 0.35, tileSize * 0.35),
+                    (1, -1, tileSize * 0.35, -tileSize * 0.35),
+                    (-1, -1, -tileSize * 0.35, -tileSize * 0.35),
+                ]
+
+                for diag in diagonalNeighbors {
+                    let nx = x + diag.dx
+                    let ny = y + diag.dy
+                    guard nx >= 0 && nx < width && ny >= 0 && ny < height else { continue }
+                    let neighborTerrain = tiles[ny][nx].terrain
+                    if neighborTerrain == terrain { continue }
+
+                    let key1 = "\(terrain)-\(neighborTerrain)"
+                    let key2 = "\(neighborTerrain)-\(terrain)"
+                    guard blendPairs.contains(key1) || blendPairs.contains(key2) else { continue }
+
+                    let diagBlend = SKShapeNode(rectOf: CGSize(width: tileSize * 0.25, height: tileSize * 0.25))
+                    diagBlend.fillColor = neighborTerrain.color.withAlphaComponent(0.15)
+                    diagBlend.strokeColor = .clear
+                    diagBlend.position = CGPoint(x: diag.offsetX, y: diag.offsetY)
+                    diagBlend.name = "blend"
+                    diagBlend.zPosition = 0.05
+                    node.addChild(diagBlend)
                 }
             }
         }
