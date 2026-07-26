@@ -527,7 +527,7 @@ class HUDOverlay {
     }
 
     private func setupModeIndicator() {
-        modeIndicatorBg = SKShapeNode(rectOf: CGSize(width: 200, height: 28), cornerRadius: 6)
+        modeIndicatorBg = SKShapeNode(rectOf: CGSize(width: 360, height: 28), cornerRadius: 6)
         modeIndicatorBg.fillColor = SKColor.black.withAlphaComponent(0.7)
         modeIndicatorBg.strokeColor = .clear
         modeIndicatorBg.position = CGPoint(x: viewSize.width / 2, y: viewSize.height - 90 - safeAreaTop)
@@ -607,17 +607,17 @@ class HUDOverlay {
             modeIndicatorLabel.isHidden = false
             modeIndicatorBg.isHidden = false
         case .attackMove:
-            modeIndicatorLabel.text = "ATTACK MOVE"
+            modeIndicatorLabel.text = "ATTACK MOVE (Deselect to cancel)"
             modeIndicatorLabel.fontColor = .red
             modeIndicatorLabel.isHidden = false
             modeIndicatorBg.isHidden = false
         case .settingPatrol:
-            modeIndicatorLabel.text = "SET PATROL POINT"
+            modeIndicatorLabel.text = "SET PATROL POINT (Deselect to cancel)"
             modeIndicatorLabel.fontColor = SKColor(red: 0.3, green: 0.6, blue: 1.0, alpha: 1.0)
             modeIndicatorLabel.isHidden = false
             modeIndicatorBg.isHidden = false
         case .guardMode:
-            modeIndicatorLabel.text = "GUARD MODE"
+            modeIndicatorLabel.text = "GUARD MODE (Deselect to cancel)"
             modeIndicatorLabel.fontColor = SKColor(red: 0.3, green: 0.6, blue: 0.8, alpha: 1.0)
             modeIndicatorLabel.isHidden = false
             modeIndicatorBg.isHidden = false
@@ -700,6 +700,15 @@ class HUDOverlay {
                     if speed == 1.0 { label.text = "1x" }
                     else if speed == 1.5 { label.text = "1.5x" }
                     else { label.text = "2x" }
+                }
+                if let bg = child as? SKShapeNode {
+                    if speed == 1.0 {
+                        bg.fillColor = SKColor(red: 0.3, green: 0.2, blue: 0.1, alpha: 0.9)
+                    } else if speed == 1.5 {
+                        bg.fillColor = SKColor(red: 0.5, green: 0.4, blue: 0.1, alpha: 0.9)
+                    } else {
+                        bg.fillColor = SKColor(red: 0.6, green: 0.3, blue: 0.1, alpha: 0.9)
+                    }
                 }
             }
         }
@@ -1194,64 +1203,41 @@ class HUDOverlay {
             }
         }
 
-        // Military unit action buttons (attack-move, patrol)
+        // Military unit action buttons (attack-move, patrol, stance, guard, etc.)
         if unit == nil && building == nil {
             let selected = player.units.filter { $0.isSelected && $0.type != .villager }
             if !selected.isEmpty {
-                let atkBtn = createActionButton(
-                    text: "A-Move", icon: "AM",
-                    color: SKColor(red: 0.6, green: 0.2, blue: 0.2, alpha: 1.0),
-                    name: "btn_attackMove",
-                    x: startX, y: startY, size: buttonSize)
-                actionPanel.addChild(atkBtn)
-                actionButtons.append(atkBtn)
-
-                let patrolBtn = createActionButton(
-                    text: "Patrol", icon: "PT",
-                    color: SKColor(red: 0.2, green: 0.4, blue: 0.6, alpha: 1.0),
-                    name: "btn_patrol",
-                    x: startX + (buttonSize + padding), y: startY, size: buttonSize)
-                actionPanel.addChild(patrolBtn)
-                actionButtons.append(patrolBtn)
-
-                let stanceBtn = createActionButton(
-                    text: "Stance", icon: "ST",
-                    color: SKColor(red: 0.5, green: 0.5, blue: 0.2, alpha: 1.0),
-                    name: "btn_stance",
-                    x: startX + 2 * (buttonSize + padding), y: startY, size: buttonSize)
-                actionPanel.addChild(stanceBtn)
-                actionButtons.append(stanceBtn)
-
-                let guardBtn = createActionButton(
-                    text: "Guard", icon: "GD",
-                    color: SKColor(red: 0.3, green: 0.4, blue: 0.5, alpha: 1.0),
-                    name: "btn_guard",
-                    x: startX + 3 * (buttonSize + padding), y: startY, size: buttonSize)
-                actionPanel.addChild(guardBtn)
-                actionButtons.append(guardBtn)
+                var militaryButtons: [(text: String, icon: String, color: SKColor, name: String)] = [
+                    ("A-Move", "\u{2694}", SKColor(red: 0.6, green: 0.2, blue: 0.2, alpha: 1.0), "btn_attackMove"),
+                    ("Patrol", "\u{2194}", SKColor(red: 0.2, green: 0.4, blue: 0.6, alpha: 1.0), "btn_patrol"),
+                    ("Stance", "\u{25C6}", SKColor(red: 0.5, green: 0.5, blue: 0.2, alpha: 1.0), "btn_stance"),
+                    ("Guard", "\u{1F6E1}", SKColor(red: 0.3, green: 0.4, blue: 0.5, alpha: 1.0), "btn_guard")
+                ]
 
                 // Auto-scout button for scout/light cavalry
                 let hasScout = selected.contains { $0.type == .scout || $0.type == .lightCavalry }
                 if hasScout {
-                    let scoutBtn = createActionButton(
-                        text: "Auto", icon: "AS",
-                        color: SKColor(red: 0.4, green: 0.5, blue: 0.3, alpha: 1.0),
-                        name: "btn_autoScout",
-                        x: startX + 4 * (buttonSize + padding), y: startY, size: buttonSize)
-                    actionPanel.addChild(scoutBtn)
-                    actionButtons.append(scoutBtn)
+                    militaryButtons.append(("Auto", "\u{1F441}", SKColor(red: 0.4, green: 0.5, blue: 0.3, alpha: 1.0), "btn_autoScout"))
                 }
 
                 // Collect relic button for monks
                 let hasMonk = selected.contains { $0.type == .monk }
                 if hasMonk {
-                    let relicBtn = createActionButton(
-                        text: "Relic", icon: "RL",
-                        color: SKColor(red: 0.7, green: 0.6, blue: 0.2, alpha: 1.0),
-                        name: "btn_collectRelic",
-                        x: startX + (hasScout ? 5 : 4) * (buttonSize + padding), y: startY, size: buttonSize)
-                    actionPanel.addChild(relicBtn)
-                    actionButtons.append(relicBtn)
+                    militaryButtons.append(("Relic", "\u{271D}", SKColor(red: 0.7, green: 0.6, blue: 0.2, alpha: 1.0), "btn_collectRelic"))
+                }
+
+                for (i, btn) in militaryButtons.enumerated() {
+                    let col = i % 3
+                    let row = i / 3
+                    let x = startX + CGFloat(col) * (buttonSize + padding)
+                    let y = startY - CGFloat(row) * (buttonSize + padding)
+                    let button = createActionButton(
+                        text: btn.text, icon: btn.icon,
+                        color: btn.color,
+                        name: btn.name,
+                        x: x, y: y, size: buttonSize)
+                    actionPanel.addChild(button)
+                    actionButtons.append(button)
                 }
             }
         }
@@ -1838,7 +1824,7 @@ class HUDOverlay {
 
         // Auto-dismiss after 15 seconds if not manually closed
         overlay.run(SKAction.sequence([
-            SKAction.wait(forDuration: 15.0),
+            SKAction.wait(forDuration: 60.0),
             SKAction.fadeOut(withDuration: 0.3),
             SKAction.removeFromParent()
         ]))
@@ -1919,7 +1905,7 @@ class HUDOverlay {
 
         // Auto-dismiss after 10 seconds
         panel.run(SKAction.sequence([
-            SKAction.wait(forDuration: 10.0),
+            SKAction.wait(forDuration: 60.0),
             SKAction.fadeOut(withDuration: 0.3),
             SKAction.removeFromParent()
         ]))
@@ -2186,11 +2172,11 @@ class HUDOverlay {
 
     func isPointInHUD(_ point: CGPoint) -> Bool {
         if isShowingExitConfirm { return true }
-        if point.y > viewSize.height - 120 - safeAreaTop && point.x > viewSize.width - 370 { return true }
+        if point.y > viewSize.height - 120 - safeAreaTop && point.x > viewSize.width - 360 { return true }
         if point.y > viewSize.height - 40 - safeAreaTop { return true }
         if point.x < minimapSize + 20 && point.y < minimapSize + 20 { return true }
-        if point.x > viewSize.width - 300 && point.y < 180 { return true }
-        if point.x > minimapSize + 20 && point.x < minimapSize + 250 && point.y < 180 { return true }
+        if !actionButtons.isEmpty && point.x > viewSize.width - 300 && point.y < 180 { return true }
+        if infoPanel != nil && !infoPanel.isHidden && point.x > minimapSize + 20 && point.x < minimapSize + 250 && point.y < 180 { return true }
         if isBuildMenuOpen { return true }
         if isTechMenuOpen { return true }
         return false
